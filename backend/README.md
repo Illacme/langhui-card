@@ -144,9 +144,10 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ### 写 + 审核流（员工 / 超管，账号密码，JWT）
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token + refreshToken |
-| POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 返回 token + refreshToken |
-| POST | /api/refresh | 否（凭 refreshToken） | 用 refresh 令牌换发新 access（body: refreshToken） |
+| POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token + refreshToken（小程序 Bearer） |
+| POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 写 httpOnly Cookie，响应体仅 expiresIn |
+| POST | /api/refresh | 否 | 换发新 access（PC 读 refresh Cookie；小程序 body 传 refreshToken） |
+| POST | /api/logout | 否 | 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
 | POST | /api/apply/open | 否 | 员工自助提交开通申请（pending） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息） |
@@ -213,6 +214,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - **健康检查**：`GET /healthz` 返回 `{status:"ok"}`，供容器编排 / 负载均衡探活；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。
 - **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
 - **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
+- **PC 管理后台 httpOnly Cookie 鉴权**：`/api/admin/login` 将 access/refresh 写入 `HttpOnly; SameSite=Lax` 的 Cookie（`access_token` / `refresh_token`，见 `handler/cookie.go`），响应体不再回传令牌；`AuthMiddleware` 支持「Authorization 头 或 `access_token` Cookie」两种来源（小程序走 Bearer，PC 走 Cookie）；`POST /api/logout` 清除 Cookie。`COOKIE_SECURE`（生产 HTTPS 置 true）/ `COOKIE_DOMAIN`（跨子域才设）可配。覆盖测试见 `TestCookieAuth`。
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
 - access / refresh token 仍存前端 `localStorage`（XSS 风险），建议后续迁 httpOnly Cookie。

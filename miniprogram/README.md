@@ -69,7 +69,7 @@ go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖�
 - **视频号渲染控件 `rich-video`**：抽出的可复用组件，内部渲染 `<channel-video wx:if="{{channelId}}" finder-user-name="{{channelId}}" class="rich-video" />`，外裹 `.rich-video-wrap` 便于统一样式。详情页（`pages/project/detail`、`pages/service/detail`）在富文本分段后，遇到视频号段改用 `<rich-video channelId="{{item.content}}" />` 渲染，不再内联 `<channel-video>`，避免页面各自重复条件判断。
 - **富文本 + 视频号混排**：`utils/richtext.ts` 用鲁棒正则 `/<wx-video\s+[^>]*?channel-id="([^"]+)"[^>]*?\/?>/g` 拆分 `<wx-video channel-id="gh_xxx">`（兼容自闭合与成对、属性顺序无关），视频号段用 `rich-video` 组件、其余用 `rich-text`，保证图文/视频号位置正确（对应需求难点）。PC 富文本编辑器插入视频号时调用 `buildWxVideo(channelId)` 统一输出 `<wx-video channel-id="${channelId}"></wx-video>`，保证前后端片段规则一致。
 - **视频号 ID 语义**：后端 `videoChannelId` 存的是视频号原始 ID（gh_xxx），已映射到 `<channel-video>` 的 `finder-user-name`；若要播放「指定视频」需换成该视频的 `feed-id`（生产对接时补全）。
-- **员工 token**：登录后存 `wx.storage('empToken')`（access，15 分钟）+ `empRefreshToken`（refresh，30 天），`request.ts` 自动注入；`code=401` 先用 refresh 令牌静默换发并重试一次，失败再清 token 引导重新登录。改密 / 被禁用会令旧令牌立即失效。
+- **员工 token**：登录后存 `wx.storage('empToken')`（access，15 分钟）+ `empRefreshToken`（refresh，30 天），`request.ts` 自动注入；`code=401` 先用 refresh 令牌静默换发并重试一次，失败再清 token 引导重新登录。改密 / 被禁用会令旧令牌立即失效。（小程序走 Bearer 头鉴权；PC 管理后台则改用 httpOnly Cookie，见前端 README。）
 - **状态语义**：员工 `status=disabled` 时首页整页提示「已停用」；名片修改走「提交申请 → 超管审核通过后公开生效」。
 
 ## 待补（相对完整产品）

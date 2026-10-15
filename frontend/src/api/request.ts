@@ -13,6 +13,9 @@ import router from '@/router'
  *   { code: 2, msg }               特殊状态（如名片已停用 / 微信凭据未配置）
  * 鉴权失败：后端一律返回 HTTP 200 + { code: 401 | 403, msg }（见 middleware/auth.go），
  * 因此拦截器以 res.code 为准，而非 HTTP 状态码。
+ *
+ * PC 管理后台为 httpOnly Cookie 鉴权：access / refresh 由浏览器随请求自动携带
+ * （withCredentials），JS 全程不接触令牌，防 XSS 窃取。故不再有 Bearer 请求拦截。
  */
 export interface ApiResp {
   code: number
@@ -36,42 +39,28 @@ type ApiHttp = Omit<
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_BASE || '/api',
   timeout: 15000,
+  withCredentials: true, // 携带 httpOnly Cookie（同源部署）
 }) as ApiHttp
 
-// 专用于 /api/refresh 的裸实例：不带下面的 401 自动刷新逻辑，避免刷新请求递归进拦截器
-const refreshHttp = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || '/api',
-  timeout: 15000,
-})
-
 // 并发 401 时的单飞锁：多个请求同时 401 只触发一次刷新，其余复用同一次结果
-let refreshing: Promise<string | null> | null = null
+let refreshing: Promise<boolean> | null = null
 
-// 用 localStorage 里的 refreshToken 换新的 access；成功则写回 localStorage 并返回新令牌。
-async function tryRefresh(): Promise<string | null> {
-  const refreshToken = localStorage.getItem('refreshToken')
-  if (!refreshToken) return null
-  try {
-    const r: any = await refreshHttp.post('/refresh', { refreshToken })
-    if (r?.data?.code === 0 && r.data.token) {
-      const newToken = r.data.token as string
-      localStorage.setItem('token', newToken)
-      return newToken
-    }
-  } catch {
-    // 网络异常 / 刷新失败：按失效处理
-  }
-  return null
+// 清除非敏感的登录态标记（令牌在 httpOnly Cookie 中，JS 无需/无法清理）
+function clearSession() {
+  localStorage.removeItem('admin_user')
+  localStorage.removeItem('admin_loggedin')
 }
 
-// 请求拦截：自动注入 Bearer token（与 UploadField.vue 约定 localStorage.key='token' 一致）
-http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = 'Bearer ' + token
+// 用 refresh Cookie 换发新 access（服务端轮换下发新 Cookie）。__skipRefresh 防止刷新请求
+// 自身再触发 401 刷新逻辑（避免递归）。
+async function tryRefresh(): Promise<boolean> {
+  try {
+    const r: any = await http.post('/refresh', {}, { __skipRefresh: true } as AxiosRequestConfig)
+    return !!(r && r.code === 0)
+  } catch {
+    return false
   }
-  return config
-})
+}
 
 // 响应拦截：统一处理 401/403/业务失败，并回传整包（api 函数按需取字段）
 http.interceptors.response.use(
@@ -81,26 +70,23 @@ http.interceptors.response.use(
       return data as unknown as AxiosResponse
     }
 
-    // 401：access 过期 / 登录失效 → 先用 refreshToken 静默换发并重试原请求；
-    //      无 refreshToken 或刷新失败再清 token 跳登录。已重试过一次（__retried）不再刷新，防死循环。
+    // 401：access 过期 / 登录失效 → 先用 refresh Cookie 静默换发并重试原请求一次；
+    //      刷新失败再清登录态跳登录。已重试过（__retried）或刷新请求自身（__skipRefresh）不再刷新。
     if (data.code === 401) {
       const cfg = resp.config as any
-      if (cfg && !cfg.__retried) {
+      if (cfg && !cfg.__skipRefresh && !cfg.__retried) {
         if (!refreshing) {
           refreshing = tryRefresh().finally(() => {
             refreshing = null
           })
         }
-        const newToken = await refreshing
-        if (newToken) {
+        const ok = await refreshing
+        if (ok) {
           cfg.__retried = true
-          cfg.headers = { ...cfg.headers, Authorization: 'Bearer ' + newToken }
           return http.request(cfg)
         }
       }
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('admin_user')
+      clearSession()
       ElMessage.error(data.msg || '登录失效，请重新登录')
       if (router.currentRoute.value.path !== '/login') {
         router.replace('/login')
@@ -117,7 +103,7 @@ http.interceptors.response.use(
       ElMessage.error(data.msg || '请求失败')
       return Promise.reject(new Error(data.msg || '业务失败'))
     }
-    // 成功：回传响应体，由各 api 函数提取 token / data / staffId 等
+    // 成功：回传响应体，由各 api 函数提取 data / staffId 等
     return data as unknown as AxiosResponse
   },
   (error) => {
