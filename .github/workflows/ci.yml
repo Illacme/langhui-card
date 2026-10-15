@@ -32,8 +32,10 @@ jobs:
           --health-timeout=5s
           --health-retries=10
     env:
-      # 设置后，TestAPIFlowMySQL 会连真实 MySQL、应用 migrations 并跑与 SQLite 相同的断言
-      TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true"
+      # 设置后，TestAPIFlowMySQL 会连真实 MySQL、应用 migrations 并跑与 SQLite 相同的断言。
+      # allowPublicKeyRetrieval=true：MySQL 8 默认 caching_sha2_password，
+      # Go 驱动在非 TLS 连接下必须显式允许取回服务端公钥，否则认证失败。
+      TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true&allowPublicKeyRetrieval=true"
     steps:
       - uses: actions/checkout@v4
 
@@ -60,9 +62,14 @@ jobs:
         working-directory: backend
         run: go vet ./...
 
-      - name: 测试（含 SQLite 默认用例 + MySQL parity）
+      - name: 测试（SQLite 默认用例 + 存储增强）
         working-directory: backend
-        run: go test ./... -v
+        run: go test ./... -run 'TestAPIFlow$|TestStorageEnhanceSuccess' -v
+
+      # 单独跑 MySQL parity，便于与上方 SQLite 用例区分失败归属
+      - name: 测试（MySQL parity）
+        working-directory: backend
+        run: go test ./... -run TestAPIFlowMySQL -v
 
   # ───────── 前端：Vue 生产构建 + 单元测试 ─────────
   frontend:
