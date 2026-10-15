@@ -14,28 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ───────── 后端：Go 构建 / 静态检查 / 测试（SQLite 默认 + MySQL parity） ─────────
+  # ───────── 后端：Go 构建 / 静态检查 / 测试（SQLite，零外部依赖） ─────────
+  # 说明：默认只跑 SQLite。MySQL 相关用例（TestMySQLMigrations / TestAPIFlowMySQL）
+  # 在未设置 TEST_MYSQL_DSN 时会自动 Skip，因此本 job 不需要任何数据库账号。
   backend:
-    name: 后端 (Go)
+    name: 后端 (Go / SQLite)
     runs-on: ubuntu-latest
-    services:
-      mysql:
-        image: mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: root
-          MYSQL_DATABASE: langhui_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    env:
-      # 设置后，TestAPIFlowMySQL 会连真实 MySQL、应用 migrations 并跑与 SQLite 相同的断言。
-      # allowPublicKeyRetrieval=true：MySQL 8 默认 caching_sha2_password，
-      # Go 驱动在非 TLS 连接下必须显式允许取回服务端公钥，否则认证失败。
-      TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true&allowPublicKeyRetrieval=true"
     steps:
       - uses: actions/checkout@v4
 
@@ -45,15 +29,6 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
-      - name: 等待 MySQL 就绪
-        run: |
-          for i in $(seq 1 30); do
-            if python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1', 3306)); s.close()" 2>/dev/null; then
-              echo "MySQL port is open"; break
-            fi
-            echo "waiting for MySQL ($i)..."; sleep 3
-          done
-
       - name: 构建
         working-directory: backend
         run: go build ./...
@@ -62,12 +37,31 @@ jobs:
         working-directory: backend
         run: go vet ./...
 
-      - name: 测试（SQLite 默认用例 + 存储增强）
+      - name: 测试（SQLite 全流程 + 存储增强）
         working-directory: backend
-        run: go test ./... -run 'TestAPIFlow$|TestStorageEnhanceSuccess' -v
+        run: go test ./... -v
 
-      # 先单独验证「连得上 MySQL + migrations 能建表」，再跑完整 parity，
-      # 便于从步骤级结果区分：连接/建表失败 vs 业务断言在 MySQL 下不等价。
+  # ───────── 后端：MySQL 生产契约 parity（可选，需配置 TEST_MYSQL_DSN） ─────────
+  # 启用方式：在仓库 Settings → Secrets and variables → Actions → Variables
+  # 新增变量 TEST_MYSQL_DSN（如 root:pwd@tcp(host:3306)/langhui_test?charset=utf8mb4&parseTime=true）。
+  # 未配置时该 job 直接跳过，不影响 CI 绿灯。
+  backend-mysql:
+    name: 后端 (Go / MySQL parity)
+    runs-on: ubuntu-latest
+    if: ${{ vars.TEST_MYSQL_DSN != '' }}
+    env:
+      TEST_MYSQL_DSN: ${{ vars.TEST_MYSQL_DSN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      # 先验证「连得上 + migrations 能建表」，再跑完整 parity，
+      # 便于区分：连接/建表失败 vs 业务断言在 MySQL 下不等价。
       - name: 测试（MySQL 连接与建表）
         working-directory: backend
         run: go test ./... -run TestMySQLMigrations -v
