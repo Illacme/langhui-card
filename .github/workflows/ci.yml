@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+# 并发控制：同一 ref 只保留最新的运行
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ───────── 后端：Go 构建 / 静态检查 / 测试（SQLite 默认 + MySQL parity） ─────────
+  backend:
+    name: 后端 (Go)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: langhui_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      # 设置后，TestAPIFlowMySQL 会连真实 MySQL、应用 migrations 并跑与 SQLite 相同的断言
+      TEST_MYSQL_DSN: "root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: 等待 MySQL 就绪
+        run: |
+          for i in $(seq 1 30); do
+            if python3 -c "import socket; s=socket.socket(); s.settimeout(3); s.connect(('127.0.0.1', 3306)); s.close()" 2>/dev/null; then
+              echo "MySQL port is open"; break
+            fi
+            echo "waiting for MySQL ($i)..."; sleep 3
+          done
+
+      - name: 构建
+        working-directory: backend
+        run: go build ./...
+
+      - name: 静态检查
+        working-directory: backend
+        run: go vet ./...
+
+      - name: 测试（含 SQLite 默认用例 + MySQL parity）
+        working-directory: backend
+        run: go test ./... -v
+
+  # ───────── 前端：Vue 生产构建 + 单元测试 ─────────
+  frontend:
+    name: 前端 (Vue)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 生产构建
+        run: npm run build
+
+      - name: 单元测试
+        run: npm run test

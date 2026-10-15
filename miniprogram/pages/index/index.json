@@ -1,0 +1,10 @@
+{
+  "usingComponents": {
+    "employee-card": "/components/employee-card/index",
+    "company-video": "/components/company-video/index",
+    "achievement-grid": "/components/achievement-grid/index",
+    "featured-projects": "/components/featured-projects/index",
+    "service-grid": "/components/service-grid/index",
+    "action-bar": "/components/action-bar/index"
+  }
+}

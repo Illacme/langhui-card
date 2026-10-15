@@ -1,0 +1,5 @@
+<view class="rich-video-wrap">
+  <!-- channelId 为视频号原始 ID(gh_xxx)，映射到 channel-video 的 finder-user-name；
+       若要播放指定视频，生产应换成该视频的 feed-id -->
+  <channel-video wx:if="{{channelId}}" finder-user-name="{{channelId}}" class="rich-video" />
+</view>

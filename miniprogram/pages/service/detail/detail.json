@@ -1,0 +1,5 @@
+{
+  "usingComponents": {
+    "rich-video": "/components/rich-video/index"
+  }
+}

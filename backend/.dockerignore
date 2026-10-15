@@ -1,0 +1,4 @@
+uploads/
+.git/
+*.log
+tmp/

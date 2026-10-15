@@ -1,0 +1,16 @@
+{
+  "description": "朗汇机电电子名片小程序（原生 + TS）",
+  "miniprogramRoot": "./",
+  "projectname": "langhui-card",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "latest",
+  "appid": "touristappid",
+  "condition": {}
+}

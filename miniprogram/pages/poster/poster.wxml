@@ -1,0 +1,6 @@
+<view class="poster-page">
+  <canvas type="2d" id="poster" class="poster-canvas"></canvas>
+  <view class="actions">
+    <button class="save-btn" bindtap="save">保存到相册</button>
+  </view>
+</view>
