@@ -15,6 +15,11 @@ import (
 func New(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
+	// 健康检查：容器编排 / 负载均衡探活用
+	r.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
 	// 聚合名片（员工 + 企业 + 简介）
 	r.GET("/api/card", func(c *gin.Context) {
 		staffID, _ := strconv.ParseInt(c.Query("staffId"), 10, 64)

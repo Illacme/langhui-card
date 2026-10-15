@@ -62,6 +62,13 @@ services:
       - "8080"
     ports:
       - "8090:8080" # 后端直连调试端口（绕过 nginx）
+    healthcheck:
+      # 依赖 /healthz 端点（见 handler.New）
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     build:
@@ -70,7 +77,8 @@ services:
     container_name: langhui-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "8080:80" # PC 管理后台入口；nginx 反代 /api 与 /uploads 到 backend:8080
 

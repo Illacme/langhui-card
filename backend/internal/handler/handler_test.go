@@ -14,8 +14,9 @@
 //     本地驱动不支持预签名/签名的「回退分支 code:1」在 runAPIFlow 中覆盖。
 //
 // 运行：
-//   cd backend && go test ./internal/handler/ -v
-//   TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true' go test ./internal/handler/ -run TestAPIFlowMySQL -v
+//
+//	cd backend && go test ./internal/handler/ -v
+//	TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true' go test ./internal/handler/ -run TestAPIFlowMySQL -v
 package handler
 
 import (
@@ -36,8 +37,8 @@ import (
 	"langhui/internal/model"
 	"langhui/internal/storage"
 
-	"github.com/glebarez/sqlite"
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -373,7 +374,8 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		mw := multipart.NewWriter(&buf)
 		part, err := mw.CreateFormFile("file", "a.png")
 		require.NoError(t, err)
-		_, _ = part.Write([]byte("fake-png-bytes"))
+		// 写入合法 PNG 文件头（魔法字节），满足上传内容嗅探校验
+		_, _ = part.Write([]byte("\x89PNG\r\n\x1a\n"))
 		require.NoError(t, mw.Close())
 
 		req := httptest.NewRequest("POST", "/api/admin/upload", &buf)
@@ -495,7 +497,7 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	require.True(t, ok, "runtime.Caller failed")
 	migrationsDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "migrations")
-	for _, f := range []string{"0001_init.sql", "0002_apply.sql"} {
+	for _, f := range []string{"0001_init.sql", "0002_apply.sql", "0003_soft_delete.sql"} {
 		raw, err := os.ReadFile(filepath.Join(migrationsDir, f))
 		require.NoError(t, err)
 		for _, stmt := range strings.Split(string(raw), ";") {
@@ -505,11 +507,15 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 			}
 			err := db.Exec(s).Error
 			if err != nil {
-				// 幂等：migrations 里的建表用 IF NOT EXISTS，但 0001 的分类种子是
-				// 固定主键 INSERT，重复执行会撞 duplicate entry。这里忽略「已存在」类
-				// 错误，使 parity 用例可重复跑（CI 中会被多个用例依次应用）。
+				// 幂等：建表用 IF NOT EXISTS，但 0001 的分类种子是固定主键 INSERT，
+				// 重复执行会撞 duplicate entry；0003 的 ALTER 在列已存在时报
+				// "Duplicate column" / 1060。这里忽略「已存在」类错误，使 parity
+				// 用例可重复跑（CI 中会被多个用例依次应用）。
 				msg := err.Error()
-				if strings.Contains(msg, "Duplicate entry") || strings.Contains(msg, "already exists") {
+				if strings.Contains(msg, "Duplicate entry") ||
+					strings.Contains(msg, "already exists") ||
+					strings.Contains(msg, "Duplicate column") ||
+					strings.Contains(msg, "1060") {
 					continue
 				}
 				require.NoError(t, err)
@@ -523,8 +529,8 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 // fakeUploader 同时实现 Uploader + Presigner + Signer，用于验证成功路径。
 type fakeUploader struct{}
 
-func (fakeUploader) Save(*multipart.FileHeader) (string, error)             { return "http://up/x.png", nil }
-func (fakeUploader) SaveBytes(string, []byte, string) (string, error)       { return "http://up/x.png", nil }
+func (fakeUploader) Save(*multipart.FileHeader) (string, error)       { return "http://up/x.png", nil }
+func (fakeUploader) SaveBytes(string, []byte, string) (string, error) { return "http://up/x.png", nil }
 func (fakeUploader) PresignPut(key, _ string, _ time.Duration) (string, string, error) {
 	return "http://put/" + key, "http://final/" + key, nil
 }

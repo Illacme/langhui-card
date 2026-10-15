@@ -1,6 +1,10 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // Employee 员工即名片主体；staff_id 为对外唯一编号
 type Employee struct {
@@ -35,35 +39,38 @@ type CompanyProfile struct {
 
 // AchievementCategory 经典业绩分类（种子 7 类）
 type AchievementCategory struct {
-	ID       int64  `gorm:"primaryKey;column:id" json:"id"`
-	Name     string `gorm:"column:name" json:"name"`
-	Icon     string `gorm:"column:icon" json:"icon"`
-	Sort     int    `gorm:"column:sort" json:"sort"`
-	IsLocked bool   `gorm:"column:is_locked;default:false" json:"isLocked"`
+	ID        int64          `gorm:"primaryKey;column:id" json:"id"`
+	Name      string         `gorm:"column:name" json:"name"`
+	Icon      string         `gorm:"column:icon" json:"icon"`
+	Sort      int            `gorm:"column:sort" json:"sort"`
+	IsLocked  bool           `gorm:"column:is_locked;default:false" json:"isLocked"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
 // ProjectCase 项目案例
 type ProjectCase struct {
-	ID             int64     `gorm:"primaryKey;column:id" json:"id"`
-	CategoryID     int64     `gorm:"column:category_id;index" json:"categoryId"`
-	Name           string    `gorm:"column:name" json:"name"`
-	Summary        string    `gorm:"column:summary" json:"summary"`
-	Detail         string    `gorm:"column:detail;type:text" json:"detail"`
-	Cover          string    `gorm:"column:cover" json:"cover"`
-	Album          string    `gorm:"column:album;type:json" json:"-"` // 存 JSON 数组字符串
-	IsHomeFeatured bool      `gorm:"column:is_home_featured;default:false" json:"isHomeFeatured"`
-	Enabled        bool      `gorm:"column:enabled;default:true" json:"enabled"`
-	Sort           int       `gorm:"column:sort" json:"sort"`
-	CreatedAt      time.Time `gorm:"column:created_at" json:"createdAt"`
+	ID             int64          `gorm:"primaryKey;column:id" json:"id"`
+	CategoryID     int64          `gorm:"column:category_id;index" json:"categoryId"`
+	Name           string         `gorm:"column:name" json:"name"`
+	Summary        string         `gorm:"column:summary" json:"summary"`
+	Detail         string         `gorm:"column:detail;type:text" json:"detail"`
+	Cover          string         `gorm:"column:cover" json:"cover"`
+	Album          string         `gorm:"column:album;type:json" json:"-"` // 存 JSON 数组字符串
+	IsHomeFeatured bool           `gorm:"column:is_home_featured;default:false" json:"isHomeFeatured"`
+	Enabled        bool           `gorm:"column:enabled;default:true" json:"enabled"`
+	Sort           int            `gorm:"column:sort" json:"sort"`
+	CreatedAt      time.Time      `gorm:"column:created_at" json:"createdAt"`
+	DeletedAt      gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
 // BizService 业务服务（富文本含视频号块）
 type BizService struct {
-	ID        int64     `gorm:"primaryKey;column:id" json:"id"`
-	Title     string    `gorm:"column:title" json:"title"`
-	Content   string    `gorm:"column:content;type:text" json:"content"`
-	Sort      int       `gorm:"column:sort" json:"sort"`
-	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
+	ID        int64          `gorm:"primaryKey;column:id" json:"id"`
+	Title     string         `gorm:"column:title" json:"title"`
+	Content   string         `gorm:"column:content;type:text" json:"content"`
+	Sort      int            `gorm:"column:sort" json:"sort"`
+	CreatedAt time.Time      `gorm:"column:created_at" json:"createdAt"`
+	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
 // HomeLayout 首页板块顺序（JSON 数组）

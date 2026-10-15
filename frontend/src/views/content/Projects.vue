@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, defineAsyncComponent } from 'vue'
 import { Refresh, Plus, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
@@ -116,7 +116,8 @@ import {
   listCategories,
 } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
-import RichEditor from '@/components/RichEditor.vue'
+// 富文本编辑器体积较大（~800KB），按页面懒加载，避免拖累首屏
+const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 import { useTable } from '@/composables/useTable'
 
 const rows = ref<any[]>([])

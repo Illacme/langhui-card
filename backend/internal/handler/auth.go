@@ -2,18 +2,23 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"langhui/internal/auth"
+	"langhui/internal/middleware"
 	"langhui/internal/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-// RegisterAuth 注册登录接口（员工 + 超管，账号密码，JWT 签发）
+// RegisterAuth 注册登录接口（员工 + 超管，账号密码，JWT 签发）。
+// 两个登录接口均叠加登录限流中间件（按客户端 IP 固定窗口计数，防爆破）。
 func RegisterAuth(r *gin.Engine, db *gorm.DB) {
+	loginLimiter := middleware.NewLoginRateLimiter(10, time.Minute) // 每 IP 每分钟最多 10 次登录尝试
+
 	// 员工登录（按手机号）
-	r.POST("/api/employee/login", func(c *gin.Context) {
+	r.POST("/api/employee/login", loginLimiter.Handler(), func(c *gin.Context) {
 		var req struct {
 			Phone    string `json:"phone"`
 			Password string `json:"password"`
@@ -40,7 +45,7 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 超管登录（按用户名）
-	r.POST("/api/admin/login", func(c *gin.Context) {
+	r.POST("/api/admin/login", loginLimiter.Handler(), func(c *gin.Context) {
 		var req struct {
 			Username string `json:"username"`
 			Password string `json:"password"`
