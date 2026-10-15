@@ -220,7 +220,15 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 鉴权约定：中间件返回的是 **HTTP 200 + `{code:401|403}`**（非 HTTP 状态），测试统一断言 `body["code"]`。
 - 测试 DB：默认无需外部 MySQL。通过 `handler.New(db)` 注入一个**临时文件的 SQLite 库**（纯 Go 驱动 `github.com/glebarez/sqlite`，免 cgo），用 GORM `AutoMigrate` 按模型建表，并 `SeedAdmin` 初始超管后把完整路由跑起来。SQLite 把模型里的 `JSON` 列按 `TEXT` 存储，与 MySQL `JSON` 列在字符串读写语义上等价，足以验证 handler 业务正确性。MySQL parity 用例通过 `runtime.Caller` 定位源码目录、回溯读取 `migrations/`，不依赖测试进程 CWD。
 - 依赖影响：新增依赖 `github.com/glebarez/sqlite`（测试用，纯 Go）与 `github.com/stretchr/testify`（断言，已转 direct）**仅作用于 `_test.go`**，生产二进制（`go build ./...`）不引入它们，也不连任何外部服务。
-- CI：见仓库根 `.github/workflows/ci.yml`——`backend` job 用 MySQL 8.0 service 容器提供 `TEST_MYSQL_DSN`，一次 `go test ./...` 同时跑 SQLite 默认用例与 MySQL parity；`frontend` job 跑 `npm ci` + `npm run build` + `npm run test`。
+- CI：见仓库根 `.github/workflows/ci.yml`，共三个 job：
+  - `backend`（**默认必跑，零外部依赖**）：`go build` + `go vet` + `go test ./...`。
+    未设置 `TEST_MYSQL_DSN` 时，两个 MySQL 用例（`TestAPIFlowMySQL` / `TestMySQLMigrations`）自动 `t.Skip`，
+    因此本 job **不需要任何数据库账号**，靠 SQLite 覆盖全部业务流程。
+  - `backend-mysql`（**可选**）：仅当仓库配置了变量 `TEST_MYSQL_DSN` 时才运行，
+    先跑「连接 + 建表」再跑完整 parity，用于校验生产 MySQL 契约。
+    配置路径：仓库 Settings → Secrets and variables → Actions → Variables 新增 `TEST_MYSQL_DSN`
+    （例：`root:pwd@tcp(host:3306)/langhui_test?charset=utf8mb4&parseTime=true`）。
+  - `frontend`：`npm ci` + `npm run build` + `npm run test`。
 
 ## 待补全（下一步，均为可选增强）
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）
