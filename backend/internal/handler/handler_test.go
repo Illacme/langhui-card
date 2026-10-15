@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -45,12 +46,33 @@ import (
 )
 
 // testClient 对引擎发起一次 HTTP 调用并解析 JSON 响应体。
+// 带 cookie jar：累积服务端 Set-Cookie（浏览器式），并记录最近一次响应的 Set-Cookie 供断言。
 type testClient struct {
-	r *gin.Engine
-	t *testing.T
+	r              *gin.Engine
+	t              *testing.T
+	cookies        map[string]string // cookie jar
+	lastSetCookies []*http.Cookie    // 最近一次响应的 Set-Cookie
 }
 
+func newTestClient(r *gin.Engine, t *testing.T) *testClient {
+	return &testClient{r: r, t: t, cookies: map[string]string{}}
+}
+
+// do  Bearer 头鉴权调用（token 为空则不带头，也不带 cookie）。
 func (c *testClient) do(method, path string, body interface{}, token string) (int, map[string]interface{}) {
+	return c.doRaw(method, path, body, token, "")
+}
+
+// doWithCookie 携带 jar 中的 cookie（模拟浏览器自动携带），不发送 Bearer——用于验证 Cookie 鉴权路径。
+func (c *testClient) doWithCookie(method, path string, body interface{}) (int, map[string]interface{}) {
+	var pairs []string
+	for k, v := range c.cookies {
+		pairs = append(pairs, k+"="+v)
+	}
+	return c.doRaw(method, path, body, "", strings.Join(pairs, "; "))
+}
+
+func (c *testClient) doRaw(method, path string, body interface{}, token, cookieHeader string) (int, map[string]interface{}) {
 	var reader io.Reader
 	if body != nil {
 		b, err := json.Marshal(body)
@@ -64,8 +86,21 @@ func (c *testClient) do(method, path string, body interface{}, token string) (in
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
+	if cookieHeader != "" {
+		req.Header.Set("Cookie", cookieHeader)
+	}
 	w := httptest.NewRecorder()
 	c.r.ServeHTTP(w, req)
+
+	// 累积 cookie：MaxAge<0 表示删除（浏览器行为）
+	c.lastSetCookies = w.Result().Cookies()
+	for _, ck := range c.lastSetCookies {
+		if ck.MaxAge < 0 {
+			delete(c.cookies, ck.Name)
+		} else {
+			c.cookies[ck.Name] = ck.Value
+		}
+	}
 
 	var m map[string]interface{}
 	if w.Body.Len() > 0 {
@@ -85,7 +120,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	SeedAdmin(db, cfg) // 首启 seed 初始超管
 
 	r := New(db)
-	RegisterAuth(r, db)
+	RegisterAuth(r, db, cfg)
 	RegisterApply(r, db)
 	RegisterContent(r, db)
 
@@ -141,13 +176,14 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 	return buildEngine(t, db, cfg, up, refresher)
 }
 
-// loginAdmin 用 seed 的超管登录并返回 token。
+// loginAdmin 用 seed 的超管登录并返回 access 令牌值。
+// PC 后台改为 Cookie 鉴权后，token 不再出现在响应体，而从 Set-Cookie 的 access_token 取。
 func loginAdmin(t *testing.T, c *testClient) string {
 	_, body := c.do("POST", "/api/admin/login", map[string]interface{}{
 		"username": "admin", "password": "admin123456",
 	}, "")
 	require.EqualValues(t, 0, body["code"])
-	tok, _ := body["token"].(string)
+	tok := c.cookies["access_token"]
 	require.NotEmpty(t, tok)
 	return tok
 }
@@ -189,7 +225,8 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 			"username": "admin", "password": "admin123456",
 		}, "")
 		require.EqualValues(t, 0, body["code"])
-		require.NotEmpty(t, body["token"])
+		require.Empty(t, body["token"])                // token 不再入响应体
+		require.NotEmpty(t, c.cookies["access_token"]) // 改为下发 httpOnly Cookie
 
 		// 错误密码 → code:1
 		_, body = c.do("POST", "/api/admin/login", map[string]interface{}{
@@ -433,7 +470,7 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 // TestAPIFlow 默认用 SQLite 跑完整接口流程（无需外部 MySQL）。
 func TestAPIFlow(t *testing.T) {
 	r := setupSQLiteEngine(t)
-	c := &testClient{r: r, t: t}
+	c := newTestClient(r, t)
 	adminToken := loginAdmin(t, c)
 	runAPIFlow(t, c, adminToken)
 }
@@ -470,7 +507,7 @@ func TestAPIFlowMySQL(t *testing.T) {
 	}
 	var refresher storage.CDNRefresher
 	r := buildEngine(t, db, cfg, up, refresher)
-	c := &testClient{r: r, t: t}
+	c := newTestClient(r, t)
 	adminToken := loginAdmin(t, c)
 	runAPIFlow(t, c, adminToken)
 }
@@ -572,7 +609,7 @@ func TestStorageEnhanceSuccess(t *testing.T) {
 	up := fakeUploader{}
 	ref := &fakeRefresher{}
 	r := buildEngine(t, newSeedDB(t), cfg, up, ref)
-	c := &testClient{r: r, t: t}
+	c := newTestClient(r, t)
 	adminToken := loginAdmin(t, c)
 
 	// 预签名成功：返回 putUrl / url / key
@@ -597,44 +634,19 @@ func TestStorageEnhanceSuccess(t *testing.T) {
 	require.True(t, ref.called)
 }
 
-// TestTokenRefresh 验证 refresh 端点与令牌吊销：
+// TestTokenRefresh 验证 refresh 端点（Body 流，小程序端）与令牌吊销：
 //  1. 用 refresh 令牌换取新 access，且新 access 可用；
 //  2. 垃圾 refresh / 把 access 当 refresh 均被拒绝（类型与签名校验）；
 //  3. 员工改密后旧令牌立即失效（安全戳机制）。
+//
+// 注：PC 超管的 Cookie 流刷新由 TestCookieAuth 覆盖。
 func TestTokenRefresh(t *testing.T) {
 	r := setupSQLiteEngine(t)
-	c := &testClient{r: r, t: t}
+	c := newTestClient(r, t)
 	adminToken := loginAdmin(t, c)
 
-	// 超管登录拿到双令牌
-	_, body := c.do("POST", "/api/admin/login", map[string]interface{}{
-		"username": "admin", "password": "admin123456",
-	}, "")
-	require.EqualValues(t, 0, body["code"])
-	access := body["token"].(string)
-	refresh := body["refreshToken"].(string)
-	require.NotEmpty(t, access)
-	require.NotEmpty(t, refresh)
-	require.EqualValues(t, 900, body["expiresIn"])
-
-	// 用 refresh 换新的 access → 新 access 可访问受保护接口
-	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": refresh}, "")
-	require.EqualValues(t, 0, body["code"])
-	newAccess := body["token"].(string)
-	require.NotEmpty(t, newAccess)
-	_, body = c.do("GET", "/api/admin/employees", nil, newAccess)
-	require.EqualValues(t, 0, body["code"])
-
-	// 垃圾 refresh → 401
-	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": "not-a-token"}, "")
-	require.EqualValues(t, 401, body["code"])
-
-	// 把 access 当 refresh 用（类型不符）→ 401
-	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": access}, "")
-	require.EqualValues(t, 401, body["code"])
-
-	// 员工改密触发吊销：旧令牌失效
-	_, body = c.do("POST", "/api/admin/employees", map[string]interface{}{
+	// 建员工并登录，拿到双令牌（员工端 Body 流：token/refreshToken 在响应体）
+	_, body := c.do("POST", "/api/admin/employees", map[string]interface{}{
 		"name": "王五", "phone": "13700000003", "email": "w@a.com", "title": "经理",
 	}, adminToken)
 	require.EqualValues(t, 0, body["code"])
@@ -645,18 +657,86 @@ func TestTokenRefresh(t *testing.T) {
 		"phone": "13700000003", "password": initPwd,
 	}, "")
 	require.EqualValues(t, 0, body["code"])
-	empToken := body["token"].(string)
-	require.NotEmpty(t, empToken)
+	access := body["token"].(string)
+	refresh := body["refreshToken"].(string)
+	require.NotEmpty(t, access)
+	require.NotEmpty(t, refresh)
+	require.EqualValues(t, 900, body["expiresIn"])
+
+	// 用 refresh 换新的 access → 新 access 可访问员工接口
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": refresh}, "")
+	require.EqualValues(t, 0, body["code"])
+	newAccess := body["token"].(string)
+	require.NotEmpty(t, newAccess)
+	_, body = c.do("GET", "/api/employee/me", nil, newAccess)
+	require.EqualValues(t, 0, body["code"])
+
+	// 垃圾 refresh → 401
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": "not-a-token"}, "")
+	require.EqualValues(t, 401, body["code"])
+
+	// 把 access 当 refresh 用（类型不符）→ 401
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": access}, "")
+	require.EqualValues(t, 401, body["code"])
 
 	// 员工改密（用初始密码）→ 旧令牌立即失效
 	_, body = c.do("PUT", "/api/employee/password", map[string]interface{}{
 		"old": initPwd, "new": "newpass1",
-	}, empToken)
+	}, access)
 	require.EqualValues(t, 0, body["code"])
-	_, body = c.do("GET", "/api/employee/me", nil, empToken)
+	_, body = c.do("GET", "/api/employee/me", nil, access)
 	require.EqualValues(t, 401, body["code"])
 
 	_ = empID
+}
+
+// TestCookieAuth 验证 PC 后台的 httpOnly Cookie 鉴权路径：
+//  1. 超管登录下发 access/refresh Cookie（HttpOnly + SameSite=Lax），且 body 不含 token；
+//  2. 不带 Bearer、仅带 Cookie 即可访问受保护接口（浏览器自动携带的场景）；
+//  3. /api/refresh 走 Cookie 流轮换新 access Cookie；
+//  4. /api/logout 清除 Cookie，之后同 jar 访问 → 401。
+func TestCookieAuth(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+
+	// 1. 登录：下发 Cookie，body 无 token
+	_, body := c.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "admin", "password": "admin123456",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	require.Empty(t, body["token"])
+	var sawAccess bool
+	for _, ck := range c.lastSetCookies {
+		if ck.Name == "access_token" {
+			sawAccess = true
+			require.True(t, ck.HttpOnly, "access_token 必须 HttpOnly")
+			require.Equal(t, http.SameSiteLaxMode, ck.SameSite, "SameSite=Lax 缓解 CSRF")
+		}
+		if ck.Name == "refresh_token" {
+			require.True(t, ck.HttpOnly, "refresh_token 必须 HttpOnly")
+		}
+	}
+	require.True(t, sawAccess, "应下发 access_token Cookie")
+
+	// 2. 仅带 Cookie（无 Bearer）访问受保护接口 → 成功
+	code, body := c.doWithCookie("GET", "/api/admin/employees", nil)
+	require.Equal(t, 200, code)
+	require.EqualValues(t, 0, body["code"])
+
+	// 3. /api/refresh Cookie 流：轮换出新 access Cookie（不回传 token）
+	_, body = c.doWithCookie("POST", "/api/refresh", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Empty(t, body["token"])
+	_, body = c.doWithCookie("GET", "/api/admin/employees", nil)
+	require.EqualValues(t, 0, body["code"])
+
+	// 4. 登出：清 Cookie，之后同 jar 访问 → 401
+	_, body = c.doWithCookie("POST", "/api/logout", nil)
+	require.EqualValues(t, 0, body["code"])
+	_, ok := c.cookies["access_token"]
+	require.False(t, ok, "登出后 access_token 应从 jar 删除")
+	_, body = c.doWithCookie("GET", "/api/admin/employees", nil)
+	require.EqualValues(t, 401, body["code"])
 }
 
 // newSeedDB 建一个 SQLite 库并 seed 超管，供成功路径测试装配路由。

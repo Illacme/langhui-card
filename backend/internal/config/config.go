@@ -32,6 +32,8 @@ type Config struct {
 	WXAppSecret        string // 小程序 AppSecret（小程序码用）
 	AdminUser          string // 初始超管用户名（首启动 seed 用）
 	AdminPass          string // 初始超管密码（首启动 seed 用，上线务必修改）
+	CookieSecure       bool   // 鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true；本地 http 需 false）
+	CookieDomain       string // 鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）
 	WxacodeTTLHours    int    // 小程序码缓存有效期（小时）
 	WxacodeTTL         time.Duration
 }
@@ -63,6 +65,8 @@ func Load() Config {
 		WXAppSecret:        getEnv("WX_APPSECRET", ""),
 		AdminUser:          getEnv("ADMIN_USER", "admin"),
 		AdminPass:          getEnv("ADMIN_PASS", "admin123456"),
+		CookieSecure:       parseBool(getEnv("COOKIE_SECURE", "false")),
+		CookieDomain:       getEnv("COOKIE_DOMAIN", ""),
 		WxacodeTTLHours:    ttlHours,
 		WxacodeTTL:         time.Duration(ttlHours) * time.Hour,
 	}

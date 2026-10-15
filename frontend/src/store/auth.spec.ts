@@ -2,37 +2,42 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAuthStore } from '@/store/auth'
 
-// 超管登录态：state 来自 localStorage，动作同步写回 localStorage。
-// jsdom 提供 localStorage，每个用例前清空，保证隔离。
+// PC 后台改用 httpOnly Cookie 鉴权后，store 只保存非敏感信息：用户名 + 登录标记。
+// 令牌由浏览器持有、JS 不可读，故不再出现在 store / localStorage。
 describe('useAuthStore 登录态', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
   })
 
-  it('初始态：无 token / 未登录', () => {
+  it('初始态：未登录', () => {
     const s = useAuthStore()
-    expect(s.token).toBe('')
     expect(s.username).toBe('')
+    expect(s.loggedIn).toBe(false)
     expect(s.isLoggedIn).toBe(false)
   })
 
-  it('setAuth：state 与 localStorage 同步写入', () => {
+  it('setAuth：写入非敏感登录态，且不存令牌', () => {
     const s = useAuthStore()
-    s.setAuth('tok-123', 'admin')
-    expect(s.token).toBe('tok-123')
+    s.setAuth('admin')
+    expect(s.username).toBe('admin')
+    expect(s.loggedIn).toBe(true)
     expect(s.isLoggedIn).toBe(true)
-    expect(localStorage.getItem('token')).toBe('tok-123')
     expect(localStorage.getItem('admin_user')).toBe('admin')
+    expect(localStorage.getItem('admin_loggedin')).toBe('1')
+    // 令牌不在 JS 可读存储中（httpOnly Cookie 由浏览器管理）
+    expect(localStorage.getItem('token')).toBeNull()
+    expect(localStorage.getItem('refreshToken')).toBeNull()
   })
 
-  it('logout：state 与 localStorage 同步清空', () => {
+  it('logout：清空登录态', () => {
     const s = useAuthStore()
-    s.setAuth('tok-123', 'admin')
+    s.setAuth('admin')
     s.logout()
-    expect(s.token).toBe('')
+    expect(s.username).toBe('')
+    expect(s.loggedIn).toBe(false)
     expect(s.isLoggedIn).toBe(false)
-    expect(localStorage.getItem('token')).toBeNull()
     expect(localStorage.getItem('admin_user')).toBeNull()
+    expect(localStorage.getItem('admin_loggedin')).toBeNull()
   })
 })

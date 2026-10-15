@@ -60,6 +60,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UserFilled, Key, SwitchButton, Document, Van } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
+import { adminLogout } from '@/api/auth'
 import ChangePasswordDialog from '@/components/ChangePasswordDialog.vue'
 
 const auth = useAuthStore()
@@ -95,7 +96,12 @@ const menuGroups = [
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => (route.meta?.title as string) || '朗汇机电管理后台')
 
-function onLogout() {
+async function onLogout() {
+  try {
+    await adminLogout()
+  } catch {
+    // 忽略网络异常，本地照常登出
+  }
   auth.logout()
   router.replace('/login')
 }

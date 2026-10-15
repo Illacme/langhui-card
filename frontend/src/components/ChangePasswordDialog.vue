@@ -20,10 +20,14 @@
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { changeAdminPassword } from '@/api/auth'
+import { changeAdminPassword, adminLogout } from '@/api/auth'
+import { useAuthStore } from '@/store/auth'
 
 const visible = defineModel<boolean>({ default: false })
+const router = useRouter()
+const auth = useAuthStore()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
@@ -46,8 +50,16 @@ function submit() {
     loading.value = true
     try {
       await changeAdminPassword(form.old, form.new)
-      ElMessage.success('密码已修改，请牢记新密码')
+      // 改密后服务端 token_version 自增，旧会话立即失效 → 清 Cookie 并回登录页重新登录
+      try {
+        await adminLogout()
+      } catch {
+        // 忽略：本地照常登出
+      }
+      auth.logout()
+      ElMessage.success('密码已修改，请重新登录')
       visible.value = false
+      router.replace('/login')
     } catch {
       // 拦截器已提示（如「原密码错误」）
     } finally {

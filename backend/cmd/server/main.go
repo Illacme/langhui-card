@@ -27,9 +27,9 @@ func main() {
 	handler.SeedAdmin(db, cfg) // 首启动若 admin 表为空则创建初始超管
 
 	r := handler.New(db)
-	handler.RegisterAuth(r, db)    // 员工/超管登录（账号密码，JWT 签发）
-	handler.RegisterApply(r, db)   // 开通申请 / 名片修改审核 / 员工管理 / 统计
-	handler.RegisterContent(r, db) // 企业内容管理（公司信息/简介/分类/项目/服务/布局，超管）
+	handler.RegisterAuth(r, db, cfg) // 员工/超管登录（JWT 签发）+ 刷新 + 登出
+	handler.RegisterApply(r, db)     // 开通申请 / 名片修改审核 / 员工管理 / 统计
+	handler.RegisterContent(r, db)   // 企业内容管理（公司信息/简介/分类/项目/服务/布局，超管）
 
 	// 文件上传：存储驱动可配（local 默认 / minio / oss），业务代码不变
 	up, err := newUploader(cfg)

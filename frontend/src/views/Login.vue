@@ -61,8 +61,8 @@ async function onSubmit() {
   if (!ok) return
   loading.value = true
   try {
-    const { token, refreshToken } = await adminLogin(form.username, form.password)
-    auth.setAuth(token, form.username, refreshToken)
+    await adminLogin(form.username, form.password)
+    auth.setAuth(form.username)
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/apply/open'
     router.replace(redirect)

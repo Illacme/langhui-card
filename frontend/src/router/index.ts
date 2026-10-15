@@ -84,12 +84,13 @@ const router = createRouter({
 })
 
 // 路由守卫：未登录访问非公开页 → /login；已登录访问 /login → 后台首页
+// （令牌在 httpOnly Cookie 中，JS 以非敏感登录标记 loggedIn 判断）
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  if (!to.meta.public && !auth.token) {
+  if (!to.meta.public && !auth.loggedIn) {
     return { path: '/login' }
   }
-  if (to.path === '/login' && auth.token) {
+  if (to.path === '/login' && auth.loggedIn) {
     return { path: '/' }
   }
 })

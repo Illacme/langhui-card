@@ -1,40 +1,28 @@
 import { defineStore } from 'pinia'
 
-// 超管登录态：token / refreshToken 持久化到 localStorage（key 与 UploadField.vue / axios 拦截器保持一致）。
-// refreshToken 用于 access 过期后静默换发新 access，避免频繁重登（见 api/request.ts）。
+// 超管登录态。PC 后台改用 httpOnly Cookie 鉴权后，令牌由浏览器持有、JS 不可读，
+// 故这里只保存非敏感信息：用户名 + 登录标记，用于路由守卫与界面展示。
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
-    refreshToken: localStorage.getItem('refreshToken') || '',
     username: localStorage.getItem('admin_user') || '',
+    loggedIn: localStorage.getItem('admin_loggedin') === '1',
   }),
   getters: {
-    isLoggedIn: (s) => !!s.token,
+    isLoggedIn: (s) => s.loggedIn,
   },
   actions: {
-    // refreshToken 可选：登录成功时一并写入；缺省仅更新 access（如静默刷新场景由 setToken 处理）
-    setAuth(token: string, username: string, refreshToken?: string) {
-      this.token = token
+    // 登录成功（令牌已由服务端写入 httpOnly Cookie）：仅记录非敏感登录态
+    setAuth(username: string) {
       this.username = username
-      localStorage.setItem('token', token)
+      this.loggedIn = true
       localStorage.setItem('admin_user', username)
-      if (refreshToken) {
-        this.refreshToken = refreshToken
-        localStorage.setItem('refreshToken', refreshToken)
-      }
-    },
-    // 静默刷新后仅更新 access 令牌
-    setToken(token: string) {
-      this.token = token
-      localStorage.setItem('token', token)
+      localStorage.setItem('admin_loggedin', '1')
     },
     logout() {
-      this.token = ''
-      this.refreshToken = ''
       this.username = ''
-      localStorage.removeItem('token')
-      localStorage.removeItem('refreshToken')
+      this.loggedIn = false
       localStorage.removeItem('admin_user')
+      localStorage.removeItem('admin_loggedin')
     },
   },
 })

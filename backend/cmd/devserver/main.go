@@ -2,10 +2,13 @@
 //   - 用 SQLite（纯 Go，免 cgo）替代 MySQL，无需任何外部依赖即可 `go run` 起来；
 //   - 复用与生产完全一致的路由装配（handler.New + 全部 Register*），保证联调即验证生产契约；
 //   - 首次启动自动 seed 演示数据（超管 / 公司信息 / 7 分类 / 1 精选项目 / 1 服务 / 首页布局 / 1 演示员工）。
+//
 // 生产部署仍走 cmd/server（MySQL + docker-compose），本文件不参与生产构建路径。
 //
 // 运行：
-//   cd backend && go run ./cmd/devserver
+//
+//	cd backend && go run ./cmd/devserver
+//
 // 然后小程序 app.ts 的 baseUrl 指向 http://<本机IP>:8080 （开发者工具需勾选"不校验合法域名"）。
 package main
 
@@ -67,7 +70,7 @@ func main() {
 	seedDemoData(db)
 
 	r := handler.New(db)
-	handler.RegisterAuth(r, db)
+	handler.RegisterAuth(r, db, cfg)
 	handler.RegisterApply(r, db)
 	handler.RegisterContent(r, db)
 
@@ -84,7 +87,7 @@ func main() {
 	handler.RegisterWechat(r, cfg, up)
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
-	log.Printf("演示账号：超管 admin/admin123456；员工手机 13800000001 / 密码 demo1234", )
+	log.Printf("演示账号：超管 admin/admin123456；员工手机 13800000001 / 密码 demo1234")
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
@@ -128,7 +131,7 @@ func seedDemoData(db *gorm.DB) {
 	db.Where("id = ?", 1).FirstOrCreate(&model.ProjectCase{
 		ID: 1, CategoryID: 2, Name: "某政务中心机电总包", Summary: "空调+给排水+强弱电一体化交付",
 		Detail: "<p>项目概况与交付亮点。</p><wx-video channel-id=\"gh_demo\"></wx-video><p>更多图文说明。</p>",
-		Cover: "https://placehold.co/640x360?text=project", Album: `["https://placehold.co/300x200?text=1"]`,
+		Cover:  "https://placehold.co/640x360?text=project", Album: `["https://placehold.co/300x200?text=1"]`,
 		IsHomeFeatured: true, Enabled: true, Sort: 1,
 	})
 
