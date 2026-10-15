@@ -3,7 +3,7 @@
 本仓库为 monorepo（`backend/` + `frontend/` + `miniprogram/` + `docs/`），CI 见 `.github/workflows/ci.yml`。
 本文给出推荐的 GitHub 分支保护配置，保证 `main` 始终处于「构建通过 + 测试通过 + 类型检查通过」的状态。
 
-## 1. CI 门禁（三个 job）
+## 1. CI 门禁（四个 job）
 
 | Job | 内容 | 是否阻塞合并 |
 |---|---|---|
@@ -22,7 +22,7 @@
    - 勾选 **Dismiss stale pull request approvals when new commits are pushed**
 3. 勾选 **Require status checks to pass before merging**：
    - 勾选 **Require branches to be up to date before merging**
-   - 在列表中添加上述三个 required job（首次开启时若列表为空，先任意推送一次让 CI 跑出 job 名，再回来勾选）
+   - 在列表中添加上述三个必跑 job（首次开启时若列表为空，先任意推送一次让 CI 跑出 job 名，再回来勾选）
 4. 勾选 **Require conversation resolution before merging**（评审意见必须处理完）
 5. 建议勾选 **Do not allow bypassing the above settings**（管理员也走流程；紧急修复可用 `gh` 临时豁免，事后补记录）
 6. 保存
@@ -46,7 +46,7 @@ gh pr create --fill
 
 - **不直接 push `main`**（分支保护会拒绝；本地也别 `--no-verify` 绕过）。
 - PR 尽量小且单一职责；描述里写清「改了什么 / 为什么 / 怎么验证的」。
-- 合并前确认 CI 三个 job 全绿；`backend-mysql` 是可选增强，红了不阻塞（未配置 DSN 时自动跳过）。
+- 合并前确认 CI 三个必跑 job 全绿；`后端 (Go / MySQL parity)` 是可选增强，未配 `TEST_MYSQL_DSN` 时自动跳过，不阻塞合并。
 - 安全类改动（鉴权 / 权限 / 数据脱敏）请在 PR 描述里显式标注 `security`，评审时按安全清单过一遍。
 
 ## 4. 紧急热修复

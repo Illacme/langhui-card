@@ -233,7 +233,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
 - 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
-- 已有访问日志 / 指标端点 / 备份脚本，但**告警规则本体**（如何消费 `[ACCESS-5XX]` 日志与 `/metrics`）与 PITR（binlog 时间点恢复）需在运维侧落地；生产需 HTTPS 与反向代理。
+- **最小告警已落地**：仓库根 `scripts/alert_check.sh` 消费 `[ACCESS-5XX]` 访问日志与 `/healthz`（healthz 探活 / 5xx / 备份新鲜度三条规则，零依赖，配 crontab 即可运行，配置见《部署与联调》「最小告警配置」）；待运维侧按需扩展完整监控栈（Prometheus + Alertmanager）、外部拨测与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
 
 ## 自动化接口测试
 接口层（`/api/*`）已配套 `httptest` 集成测试，覆盖读接口、登录鉴权、审核流、员工管理、分类/项目强校验、业务服务、企业内容、文件上传与存储增强、小程序码等全部主路径，并对「本地驱动不支持预签名→code:1」「CDN 未配置→code:1」「分类下有项目/锁定→删除拦截 code=1」等回退分支做了断言。
@@ -282,7 +282,7 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 - 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
 - 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
 - 可观测性已落地：RequestID / AccessLog / Metrics + 黑名单过期清理 + 备份脚本（见「安全加固」与仓库根 `scripts/backup.sh`）
-- 后续可按需补充：更多 CDN 厂商、上传进度/断点续传、多实例会话共享（Redis）、监控告警规则本体、PITR（binlog）等
+- 后续可按需补充：更多 CDN 厂商、上传进度/断点续传、多实例会话共享（Redis）、完整监控栈（Prometheus + Alertmanager）、PITR（binlog）等
 
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。
