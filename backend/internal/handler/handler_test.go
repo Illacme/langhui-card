@@ -465,6 +465,29 @@ func TestAPIFlowMySQL(t *testing.T) {
 	runAPIFlow(t, c, adminToken)
 }
 
+// TestMySQLMigrations 只验证「连得上 MySQL + migrations 能建表」，不跑业务断言。
+// 用于在 CI 中把「连接 / 建表失败」与「业务逻辑在 MySQL 下不等价」区分开。
+func TestMySQLMigrations(t *testing.T) {
+	dsn := os.Getenv("TEST_MYSQL_DSN")
+	if dsn == "" {
+		t.Skip("set TEST_MYSQL_DSN to run MySQL migrations check")
+	}
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.Exec("SELECT 1").Error)
+
+	applyMigrations(t, db)
+
+	// 校验 migrations 确实建出了关键表
+	for _, tbl := range []string{"employee", "achievement_category", "home_layout", "project_case", "admin", "open_apply", "card_modify_apply"} {
+		var cnt int64
+		require.NoError(t, db.Raw(
+			"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?", tbl,
+		).Scan(&cnt).Error)
+		require.EqualValues(t, 1, cnt, "table %s should exist after migrations", tbl)
+	}
+}
+
 // applyMigrations 读取并顺序执行 migrations 下的建表 SQL（按 ";" 切分，逐条 Exec）。
 // 用 runtime.Caller 定位本测试文件所在目录，再回溯到 migrations/，
 // 避免依赖 go test 的 CWD（不同调用方式下 CWD 可能不同）。
@@ -480,7 +503,17 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 			if s == "" {
 				continue
 			}
-			require.NoError(t, db.Exec(s).Error)
+			err := db.Exec(s).Error
+			if err != nil {
+				// 幂等：migrations 里的建表用 IF NOT EXISTS，但 0001 的分类种子是
+				// 固定主键 INSERT，重复执行会撞 duplicate entry。这里忽略「已存在」类
+				// 错误，使 parity 用例可重复跑（CI 中会被多个用例依次应用）。
+				msg := err.Error()
+				if strings.Contains(msg, "Duplicate entry") || strings.Contains(msg, "already exists") {
+					continue
+				}
+				require.NoError(t, err)
+			}
 		}
 	}
 }

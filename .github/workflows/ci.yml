@@ -66,7 +66,12 @@ jobs:
         working-directory: backend
         run: go test ./... -run 'TestAPIFlow$|TestStorageEnhanceSuccess' -v
 
-      # 单独跑 MySQL parity，便于与上方 SQLite 用例区分失败归属
+      # 先单独验证「连得上 MySQL + migrations 能建表」，再跑完整 parity，
+      # 便于从步骤级结果区分：连接/建表失败 vs 业务断言在 MySQL 下不等价。
+      - name: 测试（MySQL 连接与建表）
+        working-directory: backend
+        run: go test ./... -run TestMySQLMigrations -v
+
       - name: 测试（MySQL parity）
         working-directory: backend
         run: go test ./... -run TestAPIFlowMySQL -v
