@@ -12,7 +12,9 @@
 | `backend/` | Go + Gin + GORM 后端服务（API / 鉴权 / 存储 / 小程序码 / 审核流） |
 | `frontend/` | Vue 3 + Element Plus 的 PC 管理后台（超管使用） |
 | `miniprogram/` | 原生微信小程序前端（员工 / 访客侧） |
-| `backend/migrations/` | MySQL 建表与种子 SQL（含软删除迁移 `0003`） |
+| `backend/migrations/` | MySQL 建表与种子 SQL（含软删除迁移 `0003` 等） |
+| `docs/` | OpenAPI 3 接口规范（`openapi.yaml`）· 分支保护协作规范（`branch-protection.md`） |
+| `scripts/` | 运维脚本（`backup.sh`：MySQL 逻辑备份 + 轮转） |
 | `*.md`（根目录） | 需求 / 架构 / 接口字段映射等中文文档 |
 
 ## 技术栈
@@ -49,13 +51,14 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 ## 测试与 CI
 
-CI 见 `.github/workflows/ci.yml`，三个 job：
+CI 见 `.github/workflows/ci.yml`，四个 job：
 
-- **后端 (Go / SQLite)**：`go build` + `go vet` + `go test ./...`，**默认零外部依赖**，用 SQLite 跑完整接口流程与上传内容嗅探。
+- **后端 (Go / SQLite)**：`go build` + `go vet` + `go test ./...`，**默认零外部依赖**，用 SQLite 跑完整接口流程、上传内容嗅探与 MinIO/OSS 驱动的 httptest 假服务测试。
 - **后端 (Go / MySQL parity)**：可选 job，仅当仓库配置了 `TEST_MYSQL_DSN` 变量时运行，校验生产 MySQL 契约。
-- **前端 (Vue)**：`npm ci` + `npm run build` + `npm test`（Vitest）。
+- **前端 (Vue)**：`npm ci` + `npm run build` + `npm test`（Vitest；含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
+- **前端类型检查 (vue-tsc)**：`vue-tsc --noEmit`，历史 4 个 `@wangeditor/*` 类型错误已修复，**现为阻塞门禁**。
 
-> 前端另有一个 **非阻塞** 的 `frontend-typecheck` job 跑 `vue-tsc --noEmit`，用于暴露类型问题（目前受限于 `@wangeditor/*` 在 `moduleResolution: bundler` 下的类型声明，仍报若干错误，不影响 `vite build` 转译，故未设为硬性门禁）。
+> 分支保护与协作规范见 `docs/branch-protection.md`；接口契约见 `docs/openapi.yaml`（OpenAPI 3.0.3，47 paths）。
 
 ## 安全与已知限制
 
@@ -66,18 +69,22 @@ CI 见 `.github/workflows/ci.yml`，三个 job：
 - 内容模型（分类 / 项目 / 服务）支持 **软删除**（GORM `DeletedAt`）。
 - JWT **双令牌 + 两级即时吊销**：access 15 分钟 / refresh 30 天，`POST /api/refresh` 静默续期；账号级走 `token_version` 安全戳（改密 / 禁用即时失效），会话级走 `revoked_sessions` 黑名单（**单设备精确吊销**，登出只失效当前设备）。
 - PC 管理后台 **httpOnly Cookie 鉴权**（`HttpOnly; SameSite=Lax`），token 不下发到 JS，防 XSS 窃取；小程序端走 Bearer 头。
+- **可观测性**：`X-Request-Id` 贯穿请求（响应头带回，便于报障定位）；每请求一行访问日志（方法/路径/状态/耗时/IP，5xx 单独 `[ACCESS-5XX]` 前缀供告警匹配）；`METRICS_ENABLED=1` 可选开启 `/metrics`（Prometheus 文本格式）。
+- **运维脚本**：`scripts/backup.sh` 做 MySQL 逻辑备份（mysqldump → gzip → 按保留天数轮转，可入 crontab）。
+- **测试覆盖**：后端 httptest 集成（SQLite 零外部依赖 + 可选 MySQL parity）+ MinIO/OSS 假服务单测；前端含视图层组件测试；小程序纯逻辑测试经前端 Vitest 运行。
 
 当前版本**已知边界**（需基建/流程配合，尚未在本仓库落地）：
 - 小程序码 / access_token 等内存缓存在多实例下不共享，水平扩展需引入 Redis。
-- 缺监控 / 日志告警 / 数据库备份策略；生产需 HTTPS 与反向代理。
-- MinIO / OSS 真实驱动未含端到端单测；小程序端无自动化单测（需微信 CLI）。
+- 已有访问日志 / 指标端点 / 备份脚本，但**监控告警规则本体**（如何消费日志与指标）与 PITR（binlog 时间点恢复）需在运维侧落地；生产需 HTTPS 与反向代理。
 - 列表接口未分页（运营型小数据量，详见 `frontend/README.md`）。
 
 ## 文档导航
 
 - 需求与架构：《朗汇机电小程序V1.3_开发内容与工作量确认》《朗汇机电小程序V1.3_自建技术架构方案》
 - 接口 / 字段映射：《首页组件》《跳转页组件》《PC 后台组件与接口字段映射》《三端联调与接口总表》
-- 部署：《部署与联调》
+- 接口规范：`docs/openapi.yaml`（OpenAPI 3.0.3）
+- 部署与运维：《部署与联调》（含日志 / 指标 / 备份 / 黑名单维护）· `scripts/backup.sh`
+- 协作规范：`docs/branch-protection.md`（分支保护 / CI 门禁 / 评审流）
 - 子工程说明：`backend/README.md` · `frontend/README.md` · `miniprogram/README.md`
 
 ## 许可证

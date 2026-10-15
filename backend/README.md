@@ -5,34 +5,42 @@
 ## 目录结构
 ```
 backend/
-├── cmd/server/main.go           # 入口：连 DB、注册路由、启动
+├── cmd/server/main.go           # 入口：连 DB、注册路由、启动（含 purge 启动清理 / 可观测中间件）
+├── cmd/devserver/main.go        # 开发态入口：SQLite（免 cgo）+ 自动 seed 演示数据
 ├── internal/
-│   ├── config/config.go         # 环境变量注入（DB_DSN / PORT / JWT_KEY / 上传 / 小程序码 / 超管 / TTL）
-│   ├── model/models.go          # GORM 模型（员工/企业/分类/项目/服务/布局/统计/超管/两类申请）
+│   ├── config/config.go         # 环境变量注入（DB_DSN / PORT / JWT_KEY / 上传 / 小程序码 / 超管 / TTL / METRICS_ENABLED）
+│   ├── model/models.go          # GORM 模型（员工/企业/分类/项目/服务/布局/统计/超管/两类申请/吊销会话）
 │   ├── repository/repository.go # 数据访问层
-│   ├── auth/jwt.go              # JWT 双令牌签发 / 解析（access 15m + refresh 30d）
+│   ├── repository/session.go    # 会话黑名单读写 + 过期清理（revoked_sessions）
+│   ├── auth/jwt.go              # JWT 双令牌签发 / 解析（access 15m + refresh 30d，sid 会话维度）
 │   ├── auth/password.go         # bcrypt 哈希 / 校验
 │   ├── handler/handler.go       # 首页相关 HTTP 接口（读）
-│   ├── handler/auth.go          # 员工/超管登录，签发 JWT
+│   ├── handler/auth.go          # 员工/超管登录，签发 JWT + 刷新 + 登出
 │   ├── handler/apply.go         # 开通申请 / 名片修改审核 / 员工管理 / 统计（写 + 审核流）
 │   ├── handler/content.go       # 企业内容管理（分类/项目/服务/简介…）含分类删除强校验
+│   ├── handler/cookie.go        # httpOnly Cookie 读写（PC 后台鉴权）
 │   ├── handler/seed.go          # 首次启动自动创建初始超管（SeedAdmin）
 │   ├── handler/wechat.go        # 小程序码生成 + 缓存（写入当前存储驱动）
 │   ├── storage/storage.go        # Uploader 接口 + LocalUploader（默认）
 │   ├── storage/minio.go          # MinIO / S3 兼容实现
 │   ├── storage/oss.go            # 阿里云 OSS 实现
-│   └── middleware/auth.go       # JWT 鉴权 + 角色守卫
+│   └── middleware/
+│       ├── auth.go              # JWT 鉴权 + 角色守卫 + 会话黑名单校验
+│       ├── ratelimit.go         # 登录 IP 限流
+│       └── observability.go     # 可观测三件套：RequestID / AccessLog / Metrics（/metrics）
 ├── migrations/0001_init.sql      # 建表 + 经典业绩 7 分类种子
 ├── migrations/0002_apply.sql    # 审核流表 + employee.staff_id 自增
+├── migrations/0003_soft_delete.sql   # 软删除列
+├── migrations/0004_token_version.sql # token_version 安全戳（账号级吊销）
+├── migrations/0005_revoked_sessions.sql # 会话黑名单表（单设备精确吊销）
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
 
 ## 本地运行
 ```bash
-# 1. 建库并导入迁移（含 7 分类种子 + 审核流表）
-mysql -u root -p langhui < migrations/0001_init.sql
-mysql -u root -p langhui < migrations/0002_apply.sql
+# 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单）
+for f in migrations/000*.sql; do mysql -u root -p langhui < "$f"; done
 
 # 2. 配置环境变量（JWT_KEY 必填，用于 token 签名）
 export DB_DSN="root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true"
@@ -216,11 +224,16 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
 - **PC 管理后台 httpOnly Cookie 鉴权**：`/api/admin/login` 将 access/refresh 写入 `HttpOnly; SameSite=Lax` 的 Cookie（`access_token` / `refresh_token`，见 `handler/cookie.go`），响应体不再回传令牌；`AuthMiddleware` 支持「Authorization 头 或 `access_token` Cookie」两种来源（小程序走 Bearer，PC 走 Cookie）；`POST /api/logout` 清除 Cookie。`COOKIE_SECURE`（生产 HTTPS 置 true）/ `COOKIE_DOMAIN`（跨子域才设）可配。覆盖测试见 `TestCookieAuth`。
 - **单设备精确吊销（会话黑名单）**：`Claims.SID` 为会话 ID——一次登录生成一个，access/refresh 共享，**刷新不换 sid**（`auth.IssueTokensWithSID`）。`POST /api/logout` 从 Bearer / Cookie 解析当前会话，把 sid 写入黑名单表 `revoked_sessions`（迁移 `migrations/0005_revoked_sessions.sql`，读写见 `repository/session.go`）；`AuthMiddleware` 与 `/api/refresh` 均校验 sid 不在黑名单内，**登出后该设备的所有令牌立即失效，且不能靠刷新绕过**。与 `token_version`（账号级）互补：登出只失效当前设备，同一账号的其他登录不受影响。覆盖测试见 `TestSingleDeviceRevocation`。
+- **黑名单过期清理**：`repository.PurgeExpiredSessions(db)` 按 `expires_at` 删除已过期的吊销记录（这些行的令牌自身也已过期，留着无意义）；`cmd/server` 与 `cmd/devserver` 启动时机会性执行一次并打印日志，生产可另配定时 SQL（`DELETE FROM revoked_sessions WHERE expires_at < NOW();`）。
+- **可观测性三件套**（`middleware/observability.go`，零第三方依赖）：
+  - `RequestID`：注入 / 透传 `X-Request-Id` 响应头，报障时可引用，串联日志排障；
+  - `AccessLog`：每请求一行（方法 / 路径 / 状态 / 耗时 / IP），5xx 以 `[ACCESS-5XX]` 前缀标出，便于日志告警规则直接匹配；panic 抛穿本中间件，由链上 `gin.Recovery`（`handler.New` 已用 `gin.New()+Recovery` 替代 `gin.Default()`）记录含栈日志；
+  - `Metrics`：内存计数器 + Prometheus 文本格式 `/metrics`（**默认关闭**，`METRICS_ENABLED=1` 显式开启，避免公网暴露流量规模；生产建议仅内网 / 反代白名单可达）。
+- **数据库备份**：仓库根 `scripts/backup.sh` 做 MySQL 逻辑备份（`docker exec mysqldump --single-transaction` → gzip → 按 `KEEP_DAYS` 轮转），可入 crontab；逻辑备份不含 binlog，需 PITR 时另行开启。
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
 - 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
-- 缺监控 / 日志告警 / 数据库备份策略；生产需 HTTPS 与反向代理。
-- 黑名单表 `revoked_sessions` 暂无自动清理任务，可后续加定时 SQL（按 `expires_at` 删除过期行）。
+- 已有访问日志 / 指标端点 / 备份脚本，但**告警规则本体**（如何消费 `[ACCESS-5XX]` 日志与 `/metrics`）与 PITR（binlog 时间点恢复）需在运维侧落地；生产需 HTTPS 与反向代理。
 
 ## 自动化接口测试
 接口层（`/api/*`）已配套 `httptest` 集成测试，覆盖读接口、登录鉴权、审核流、员工管理、分类/项目强校验、业务服务、企业内容、文件上传与存储增强、小程序码等全部主路径，并对「本地驱动不支持预签名→code:1」「CDN 未配置→code:1」「分类下有项目/锁定→删除拦截 code=1」等回退分支做了断言。
@@ -241,7 +254,19 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 鉴权约定：中间件返回的是 **HTTP 200 + `{code:401|403}`**（非 HTTP 状态），测试统一断言 `body["code"]`。
 - 测试 DB：默认无需外部 MySQL。通过 `handler.New(db)` 注入一个**临时文件的 SQLite 库**（纯 Go 驱动 `github.com/glebarez/sqlite`，免 cgo），用 GORM `AutoMigrate` 按模型建表，并 `SeedAdmin` 初始超管后把完整路由跑起来。SQLite 把模型里的 `JSON` 列按 `TEXT` 存储，与 MySQL `JSON` 列在字符串读写语义上等价，足以验证 handler 业务正确性。MySQL parity 用例通过 `runtime.Caller` 定位源码目录、回溯读取 `migrations/`，不依赖测试进程 CWD。
 - 依赖影响：新增依赖 `github.com/glebarez/sqlite`（测试用，纯 Go）与 `github.com/stretchr/testify`（断言，已转 direct）**仅作用于 `_test.go`**，生产二进制（`go build ./...`）不引入它们，也不连任何外部服务。
-- CI：见仓库根 `.github/workflows/ci.yml`，共三个 job：
+
+## 其它测试（按包）
+
+除 handler 集成测试外，各内部包均有针对性单测（全部零外部依赖，`go test ./...` 一并运行）：
+
+- `internal/storage/minio_test.go`：用 `httptest` 起**假 S3 服务**跑 MinIO 驱动真实 SDK 调用链（SaveBytes / Presign / SignGetURL / Delete）。要点：minio-go 需显式 `credentials.NewStaticV4`（否则触发 IAM 凭据链查询）与固定 `Region`（否则会打 `GET /bucket?location` 区域探测）。
+- `internal/storage/oss_test.go`：用 `httptest` 起假 OSS 服务（`oss.ForcePathStyle(true)` 才能打 IP:PORT 端点），覆盖上传 / 预签名 / 签名 / 删除与构造期 fail-fast（空 endpoint/bucket 直接报错，不拖到上传才失败）。
+- `internal/storage/storage_test.go`：`checkFile` 扩展名白名单 + 文件头魔法字节嗅探的各类型合法 / 伪造场景。
+- `internal/middleware/observability_test.go`：RequestID 透传 / 生成、AccessLog 前缀（5xx 走 `[ACCESS-5XX]`）、Metrics 计数与 Prometheus 文本格式。
+- `internal/middleware/ratelimit_test.go`：登录限流计数与 IP 隔离。
+- `internal/repository/session.go`（黑名单读写 / 清理）无独立单测，由 handler 集成测试 `TestSingleDeviceRevocation` 覆盖其完整链路。
+
+CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
   - `backend`（**默认必跑，零外部依赖**）：`go build` + `go vet` + `go test ./...`。
     未设置 `TEST_MYSQL_DSN` 时，两个 MySQL 用例（`TestAPIFlowMySQL` / `TestMySQLMigrations`）自动 `t.Skip`，
     因此本 job **不需要任何数据库账号**，靠 SQLite 覆盖全部业务流程。
@@ -249,13 +274,15 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
     先跑「连接 + 建表」再跑完整 parity，用于校验生产 MySQL 契约。
     配置路径：仓库 Settings → Secrets and variables → Actions → Variables 新增 `TEST_MYSQL_DSN`
     （例：`root:pwd@tcp(host:3306)/langhui_test?charset=utf8mb4&parseTime=true`）。
-  - `frontend`：`npm ci` + `npm run build` + `npm run test`。
+  - `frontend`：`npm ci` + `npm run build` + `npm run test`（Vitest，含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
+  - `frontend-typecheck`（**阻塞门禁**）：`vue-tsc --noEmit`。历史 4 个 `@wangeditor/*` 类型错误已通过 tsconfig `paths` 指向真实 d.ts + 精准断言修复，当前 0 错误。
 
 ## 待补全（下一步，均为可选增强）
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）
 - 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
 - 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
-- 后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传、`revoked_sessions` 定时清理、多实例会话共享（Redis）等
+- 可观测性已落地：RequestID / AccessLog / Metrics + 黑名单过期清理 + 备份脚本（见「安全加固」与仓库根 `scripts/backup.sh`）
+- 后续可按需补充：更多 CDN 厂商、上传进度/断点续传、多实例会话共享（Redis）、监控告警规则本体、PITR（binlog）等
 
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。

@@ -16,12 +16,13 @@ miniprogram/
 │   ├── employee-card / company-video / achievement-grid
 │   ├── featured-projects / service-grid / action-bar
 │   └── rich-video       # 视频号渲染控件：封装 <channel-video finder-user-name="{{channelId}}">
-└── pages/
-    ├── index/          # 名片首页（员工卡 + 公司简介视频 + 业绩 + 服务 + 底部栏）
-    ├── project/list/   # 项目列表（按分类）
-    ├── project/detail/ # 项目详情（富文本+视频号拆分+相册）
-    ├── service/detail/ # 服务详情（富文本+视频号拆分）
-    └── employee/       # 员工登录 login + 名片修改 edit（提交审核）
+├── pages/
+│   ├── index/          # 名片首页（员工卡 + 公司简介视频 + 业绩 + 服务 + 底部栏）
+│   ├── project/list/   # 项目列表（按分类）
+│   ├── project/detail/ # 项目详情（富文本+视频号拆分+相册）
+│   ├── service/detail/ # 服务详情（富文本+视频号拆分）
+│   └── employee/       # 员工登录 login + 名片修改 edit（提交审核）
+└── tests/              # 纯逻辑单元测试（richtext 拆分 / request 刷新重试）
 ```
 
 ## 与后端接口对应
@@ -67,10 +68,23 @@ go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖�
 
 ## 技术要点
 - **视频号渲染控件 `rich-video`**：抽出的可复用组件，内部渲染 `<channel-video wx:if="{{channelId}}" finder-user-name="{{channelId}}" class="rich-video" />`，外裹 `.rich-video-wrap` 便于统一样式。详情页（`pages/project/detail`、`pages/service/detail`）在富文本分段后，遇到视频号段改用 `<rich-video channelId="{{item.content}}" />` 渲染，不再内联 `<channel-video>`，避免页面各自重复条件判断。
-- **富文本 + 视频号混排**：`utils/richtext.ts` 用鲁棒正则 `/<wx-video\s+[^>]*?channel-id="([^"]+)"[^>]*?\/?>/g` 拆分 `<wx-video channel-id="gh_xxx">`（兼容自闭合与成对、属性顺序无关），视频号段用 `rich-video` 组件、其余用 `rich-text`，保证图文/视频号位置正确（对应需求难点）。PC 富文本编辑器插入视频号时调用 `buildWxVideo(channelId)` 统一输出 `<wx-video channel-id="${channelId}"></wx-video>`，保证前后端片段规则一致。
+- **富文本 + 视频号混排**：`utils/richtext.ts` 用鲁棒正则 `/<wx-video\s+[^>]*?channel-id="([^"]+)"[^>]*?\/?>(\s*<\/wx-video>)?/g` 拆分 `<wx-video channel-id="gh_xxx">`（兼容自闭合与成对、属性顺序无关，**成对写法时闭合标签一并消费**，不会漏进后续 html 片段），视频号段用 `rich-video` 组件、其余用 `rich-text`，保证图文/视频号位置正确（对应需求难点）。PC 富文本编辑器插入视频号时调用 `buildWxVideo(channelId)` 统一输出 `<wx-video channel-id="${channelId}"></wx-video>`，保证前后端片段规则一致。
 - **视频号 ID 语义**：后端 `videoChannelId` 存的是视频号原始 ID（gh_xxx），已映射到 `<channel-video>` 的 `finder-user-name`；若要播放「指定视频」需换成该视频的 `feed-id`（生产对接时补全）。
 - **员工 token**：登录后存 `wx.storage('empToken')`（access，15 分钟）+ `empRefreshToken`（refresh，30 天），`request.ts` 自动注入；`code=401` 先用 refresh 令牌静默换发并重试一次，失败再清 token 引导重新登录。改密 / 被禁用会令旧令牌立即失效。（小程序走 Bearer 头鉴权；PC 管理后台则改用 httpOnly Cookie，见前端 README。）
 - **状态语义**：员工 `status=disabled` 时首页整页提示「已停用」；名片修改走「提交申请 → 超管审核通过后公开生效」。
+
+## 单元测试（经前端 Vitest 运行）
+
+`tests/` 收录小程序**纯逻辑**单测（不依赖微信开发者工具 / 真机）。小程序侧没有独立测试工具链，统一由前端工程的 Vitest 纳管（`frontend/vitest.config.ts` 通过 `server.fs.allow` 放行仓库根外路径 + `vi.resetModules()` + 动态 import），并对 `getApp` / `wx` 全局做桩：
+
+- `tests/richtext.spec.ts`：富文本与视频号拆分——自闭合 `<wx-video ... />`、成对 `<wx-video ...></wx-video>`（闭合标签必须一并消费，不能漏进后续 html 片段）、属性顺序无关、无视频号时整体作为一段 html、含 `channel-id` 缺失时不误判等。
+- `tests/request.spec.ts`：`wx.request` 封装——自动注入 `Authorization: Bearer`、`code=0` 直接 resolve、`code=401` 先用 refresh 令牌静默换发并重试一次（成功则放行）、刷新失败清 token 并 reject、`code!=0` 业务错误直接 reject 等。采用「同步挂起 + `respond(i, v)` 显式应答」模式驱动 Promise 链，不依赖真实计时器。
+
+```bash
+cd frontend && npm test        # 前端 + 小程序 spec 一并运行
+```
+
+> 视图层 / 页面渲染不在覆盖范围（需微信 CLI 或真机自动化），由联调步骤保证。
 
 ## 待补（相对完整产品）
 - 真实视频号 feed-id 映射、图片懒加载/失败占位细化、下拉刷新等体验项。
