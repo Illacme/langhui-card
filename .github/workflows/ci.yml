@@ -21,7 +21,7 @@ jobs:
     name: 后端 (Go / SQLite)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 设置 Go
         uses: actions/setup-go@v5
@@ -52,7 +52,7 @@ jobs:
     env:
       TEST_MYSQL_DSN: ${{ vars.TEST_MYSQL_DSN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 设置 Go
         uses: actions/setup-go@v5
@@ -78,7 +78,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 设置 Node
         uses: actions/setup-node@v4
@@ -107,7 +107,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: 设置 Node
         uses: actions/setup-node@v4
