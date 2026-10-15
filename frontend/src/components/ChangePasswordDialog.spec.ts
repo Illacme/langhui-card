@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { nextTick, defineComponent } from 'vue'
+import { createPinia, setActivePinia } from 'pinia'
+import { createRouter, createMemoryHistory } from 'vue-router'
 import ChangePasswordDialog from './ChangePasswordDialog.vue'
+
+// 组件 setup 内使用了 useAuthStore() 与 useRouter()（改密成功后登出回登录），
+// 故挂载前需提供 Pinia 与一个内存 Router。
+const router = createRouter({ history: createMemoryHistory(), routes: [] })
 
 // 轻量 stub：仅渲染插槽，避免引入完整 Element Plus（jsdom 下过重易 OOM）。
 const ElDialog = defineComponent({ name: 'ElDialog', template: `<div class="el-dialog"><slot /><slot name="footer" /></div>` })
@@ -16,6 +22,7 @@ const ElButton = defineComponent({ name: 'ElButton', template: `<button class="e
 
 const mountOpts = {
   global: {
+    plugins: [router],
     stubs: {
       'el-dialog': ElDialog,
       'el-form': ElForm,
@@ -27,6 +34,8 @@ const mountOpts = {
 }
 
 describe('ChangePasswordDialog', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
   it('modelValue=true 时显示三个密码输入框', async () => {
     const w = mount(ChangePasswordDialog, { props: { modelValue: true }, ...mountOpts })
     await nextTick()
