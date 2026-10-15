@@ -34,6 +34,7 @@ type Config struct {
 	AdminPass          string // 初始超管密码（首启动 seed 用，上线务必修改）
 	CookieSecure       bool   // 鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true；本地 http 需 false）
 	CookieDomain       string // 鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）
+	MetricsEnabled     bool   // 是否开放 GET /metrics（Prometheus 文本格式；默认关，避免公网暴露流量规模）
 	WxacodeTTLHours    int    // 小程序码缓存有效期（小时）
 	WxacodeTTL         time.Duration
 }
@@ -67,6 +68,7 @@ func Load() Config {
 		AdminPass:          getEnv("ADMIN_PASS", "admin123456"),
 		CookieSecure:       parseBool(getEnv("COOKIE_SECURE", "false")),
 		CookieDomain:       getEnv("COOKIE_DOMAIN", ""),
+		MetricsEnabled:     parseBool(getEnv("METRICS_ENABLED", "false")),
 		WxacodeTTLHours:    ttlHours,
 		WxacodeTTL:         time.Duration(ttlHours) * time.Hour,
 	}

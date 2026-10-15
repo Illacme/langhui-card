@@ -50,3 +50,16 @@ func RevokeSession(db *gorm.DB, sid, userType string, userID int64, expiresAt ti
 	}
 	return db.Create(&rs).Error
 }
+
+// PurgeExpiredSessions 清理已过期的黑名单记录（expires_at 早于当前时间），
+// 返回删除行数。吊销判定不看时间：行存在即视为已吊销。而 expires_at 是
+// 该会话 refresh 令牌的过期时间——过了这个时点，会话自身的全部令牌都已因
+// JWT exp 自然失效（access 15 分钟 / refresh 30 天，均早于或等于该时点），
+// 黑名单行不再有存在价值，删除不会削弱任何吊销语义，只是防止表无限增长。
+// 触发方式：服务启动时机会性执行一次（main.go），生产可另配定时任务：
+//
+//	DELETE FROM revoked_sessions WHERE expires_at < NOW();
+func PurgeExpiredSessions(db *gorm.DB) (int64, error) {
+	res := db.Where("expires_at < ?", time.Now()).Delete(&model.RevokedSession{})
+	return res.RowsAffected, res.Error
+}

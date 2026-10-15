@@ -11,9 +11,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// New 构建 Gin 引擎并注册首页相关路由
+// New 构建 Gin 引擎并注册首页相关路由。
+// 注意：用 gin.New() + 显式 Recovery，而非 gin.Default()——Default 自带的 Logger
+// 会与 middleware.AccessLog 重复输出；访问日志统一由调用方（main / devserver）
+// 挂 RequestID + AccessLog 中间件，格式见 middleware/observability.go。
 func New(db *gorm.DB) *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	// 健康检查：容器编排 / 负载均衡探活用
 	r.GET("/healthz", func(c *gin.Context) {
