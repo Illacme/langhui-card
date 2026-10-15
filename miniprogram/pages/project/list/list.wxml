@@ -1,0 +1,10 @@
+<view class="list">
+  <view class="item" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap">
+    <image class="cover" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}" />
+    <view class="meta">
+      <view class="name">{{item.name}}</view>
+      <view class="summary">{{item.summary}}</view>
+    </view>
+  </view>
+  <view class="empty" wx:if="{{list.length === 0}}">暂无项目案例</view>
+</view>

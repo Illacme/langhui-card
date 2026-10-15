@@ -1,0 +1,10 @@
+<view class="detail" wx:if="{{!loading && service}}">
+  <view class="title">{{service.title}}</view>
+  <view class="rich">
+    <block wx:for="{{segments}}" wx:key="index">
+      <rich-text wx:if="{{item.type === 'html'}}" nodes="{{item.content}}" />
+      <rich-video wx:else channelId="{{item.content}}" />
+    </block>
+  </view>
+</view>
+<view wx:else class="loading">加载中…</view>

@@ -1,0 +1,85 @@
+/* 全局样式（组件已开启 addGlobalClass，可直接使用这里的类） */
+page { background: #f5f5f5; font-size: 28rpx; color: #333; }
+.loading { padding: 80rpx; text-align: center; color: #999; }
+.disabled-tip { padding: 120rpx 40rpx; text-align: center; color: #999; font-size: 30rpx; }
+.section { background: #fff; margin: 16rpx 0; padding: 24rpx; }
+.sec-title { font-size: 32rpx; font-weight: 600; margin-bottom: 16rpx; }
+
+/* 员工名片区 */
+.emp-card { background: #fff; padding: 24rpx; }
+.emp-card .top { display: flex; align-items: center; }
+.emp-card .avatar { width: 96rpx; height: 96rpx; border-radius: 50%; background: #eee; }
+.emp-card .info { flex: 1; margin-left: 20rpx; }
+.emp-card .name { font-size: 34rpx; font-weight: 600; }
+.emp-card .title { color: #888; margin-top: 6rpx; }
+.emp-card .save-btn { font-size: 24rpx; color: #1aad19; border: 1rpx solid #1aad19; padding: 6rpx 16rpx; border-radius: 24rpx; }
+.emp-card .company { display: flex; align-items: center; margin-top: 20rpx; }
+.emp-card .logo { width: 48rpx; height: 48rpx; margin-right: 12rpx; }
+.emp-card .cname { font-weight: 600; }
+.emp-card .rows { margin-top: 16rpx; }
+.emp-card .row { display: flex; padding: 6rpx 0; }
+.emp-card .label { width: 100rpx; color: #999; }
+
+/* 公司视频 */
+.company-video .cv { width: 100%; height: 360rpx; background: #000; border-radius: 12rpx; }
+.intro { display: block; margin-top: 16rpx; color: #666; line-height: 1.6; }
+
+/* 业绩分类网格 */
+.cat-grid { display: flex; flex-wrap: wrap; }
+.cat-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 16rpx 0; }
+.cat-icon { width: 80rpx; height: 80rpx; }
+.cat-placeholder { width: 80rpx; height: 80rpx; border-radius: 12rpx; background: #eee; display: flex; align-items: center; justify-content: center; color: #aaa; }
+.cat-name { margin-top: 8rpx; font-size: 24rpx; text-align: center; }
+
+/* 精选项目 */
+.featured { display: flex; flex-wrap: wrap; margin-top: 16rpx; }
+.feat-item { width: 50%; padding: 8rpx; box-sizing: border-box; }
+.feat-cover { width: 100%; height: 180rpx; border-radius: 8rpx; background: #eee; }
+.feat-name { font-size: 24rpx; margin-top: 6rpx; }
+
+/* 服务网格 */
+.svc-grid { display: flex; flex-wrap: wrap; }
+.svc-item { width: 50%; padding: 16rpx; box-sizing: border-box; }
+.svc-title { background: #f0f0f0; border-radius: 8rpx; padding: 24rpx; text-align: center; }
+
+/* 底部操作栏 */
+.action-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #fff; border-top: 1rpx solid #eee; padding: 16rpx 24rpx; padding-bottom: calc(16rpx + env(safe-area-inset-bottom)); }
+.ab-btn { flex: 1; margin: 0 12rpx; border-radius: 40rpx; font-size: 30rpx; }
+.ab-btn.call { background: #1aad19; color: #fff; }
+.ab-btn.save { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; }
+
+/* 列表/详情通用 */
+.list { padding: 16rpx; }
+.item { display: flex; background: #fff; border-radius: 12rpx; padding: 16rpx; margin-bottom: 16rpx; }
+.item .cover { width: 160rpx; height: 120rpx; border-radius: 8rpx; background: #eee; margin-right: 16rpx; }
+.item .name { font-weight: 600; }
+.item .summary { color: #888; margin-top: 8rpx; font-size: 24rpx; }
+.empty { text-align: center; color: #999; padding: 80rpx; }
+.detail .banner { width: 100%; height: 360rpx; background: #eee; }
+.detail .title { font-size: 36rpx; font-weight: 600; padding: 24rpx; }
+.detail .summary { color: #888; padding: 0 24rpx 24rpx; }
+.rich { padding: 0 24rpx; line-height: 1.7; }
+.rich-video { width: 100%; height: 360rpx; margin: 16rpx 0; background: #000; }
+.album { display: flex; flex-wrap: wrap; padding: 24rpx; }
+.album-img { width: 31%; height: 180rpx; margin: 1%; border-radius: 8rpx; background: #eee; }
+
+/* 表单 */
+.form { padding: 24rpx; background: #fff; }
+.form-item { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid #eee; }
+.form-item .label { width: 160rpx; color: #666; }
+.form-item input { flex: 1; }
+.submit-btn { margin-top: 40rpx; background: #1aad19; color: #fff; border-radius: 40rpx; }
+
+/* 海报入口 + 海报页 */
+.poster-entry { padding: 24rpx; }
+.poster-btn { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 40rpx; font-size: 28rpx; }
+.poster-page { padding: 24rpx; }
+.poster-canvas { width: 320px; height: 460px; background: #fff; border-radius: 12rpx; }
+.actions { margin-top: 24rpx; }
+.save-btn { background: #1aad19; color: #fff; border-radius: 40rpx; }
+
+/* 员工头像上传 */
+.form-item.avatar-row { align-items: center; }
+.avatar-preview { width: 96rpx; height: 96rpx; border-radius: 50%; background: #eee; margin-right: 16rpx; }
+.avatar-ph { width: 96rpx; height: 96rpx; border-radius: 50%; background: #eee; margin-right: 16rpx; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 20rpx; }
+.picker-btn { margin-left: auto; }

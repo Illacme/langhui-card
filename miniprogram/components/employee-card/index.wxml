@@ -1,0 +1,21 @@
+<view class="emp-card">
+  <view class="top">
+    <image class="avatar" src="{{employee.avatar}}" mode="aspectFill" wx:if="{{employee.avatar}}" />
+    <view class="avatar" wx:else />
+    <view class="info">
+      <view class="name">{{employee.name}}</view>
+      <view class="title">{{employee.title}}</view>
+    </view>
+    <view class="save-btn" bindtap="onSave">保存名片</view>
+  </view>
+  <view class="company">
+    <image class="logo" src="{{company.logo}}" mode="aspectFit" wx:if="{{company.logo}}" />
+    <view class="cname">{{company.fullName}}</view>
+  </view>
+  <view class="rows">
+    <view class="row"><text class="label">地址</text><text>{{company.address}}</text></view>
+    <view class="row"><text class="label">手机</text><text>{{employee.phone}}</text></view>
+    <view class="row"><text class="label">座机</text><text>{{company.tel}}</text></view>
+    <view class="row"><text class="label">邮箱</text><text>{{employee.email}}</text></view>
+  </view>
+</view>

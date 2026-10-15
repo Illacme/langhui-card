@@ -1,0 +1,79 @@
+# 朗汇机电电子名片 · 三端联调（前端 + 后端 + MySQL）
+#
+# 用法：
+#   docker compose up -d --build        # 构建并启动
+#   docker compose logs -f backend      # 看后端日志（含 seed 超管）
+#   http://localhost:8080               # PC 管理后台（nginx 反代 /api 与 /uploads）
+#   docker compose down                 # 停止（保留数据卷）
+#   docker compose down -v              # 停止并清空 mysql / uploads 数据卷
+#
+# 密码等敏感变量通过 .env 注入（见 .env.example）。未提供 .env 时使用下方默认值。
+# 注意：DB_DSN 中的主机名是 mysql 服务名，UPLOAD_BASE_URL 用宿主机访问地址（与 nginx 发布端口一致）。
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: langhui-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-langhui123}
+      MYSQL_DATABASE: langhui
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_general_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # 首次启动自动执行建表（0001_init.sql / 0002_apply.sql）
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "3306:3306"
+    healthcheck:
+      # CMD-SHELL 形式让容器内 shell 展开 $MYSQL_ROOT_PASSWORD
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: langhui-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_DSN: "root:${MYSQL_ROOT_PASSWORD:-langhui123}@tcp(mysql:3306)/langhui?charset=utf8mb4&parseTime=true"
+      PORT: "8080"
+      JWT_KEY: ${JWT_KEY:-change-me}
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS: ${ADMIN_PASS:-admin123456}
+      STORAGE_DRIVER: local
+      STORAGE_PUBLIC: "true"
+      UPLOAD_DIR: /app/uploads
+      # 与下方 nginx 发布端口一致（宿主机访问地址）
+      UPLOAD_BASE_URL: http://localhost:8080/uploads
+      WXACODE_TTL_HOURS: "720"
+      # 可选：WX_APPID / WX_APPSECRET / MINIO_* / OSS_* / CDN_*
+    volumes:
+      - uploads_data:/app/uploads
+    expose:
+      - "8080"
+    ports:
+      - "8090:8080" # 后端直连调试端口（绕过 nginx）
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: langhui-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80" # PC 管理后台入口；nginx 反代 /api 与 /uploads 到 backend:8080
+
+volumes:
+  mysql_data:
+  uploads_data:

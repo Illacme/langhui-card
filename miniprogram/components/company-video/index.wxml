@@ -1,0 +1,7 @@
+<view class="company-video">
+  <!-- channelId 存的是视频号原始ID(gh_xxx)，对应 channel-video 的 finder-user-name；
+       若要播放指定视频，生产环境应换成该视频的 feed-id -->
+  <channel-video wx:if="{{channelId}}" finder-user-name="{{channelId}}" class="cv" />
+  <video wx:elif="{{backupMp4Url}}" src="{{backupMp4Url}}" class="cv" controls />
+  <image wx:else src="{{cover}}" class="cv" mode="aspectFill" />
+</view>

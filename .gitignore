@@ -1,0 +1,31 @@
+# ── OS / 编辑器 ──
+.DS_Store
+Thumbs.db
+*.swp
+
+# ── 依赖 ──
+node_modules/
+**/node_modules/
+**/miniprogram_npm/
+
+# ── 构建产物 ──
+dist/
+**/dist/
+
+# ── 运行时数据 / 上传目录 ──
+uploads/
+**/uploads/
+*.log
+
+# ── 环境变量（保留 .example）──
+.env
+**/.env
+!.env.example
+
+# ── WorkBuddy 内部数据（非源码）──
+.workbuddy/
+
+# ── Go 构建产物 ──
+*.exe
+backend/cmd/server/server
+backend/cmd/devserver/devserver

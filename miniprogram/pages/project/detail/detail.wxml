@@ -1,0 +1,15 @@
+<view class="detail" wx:if="{{!loading && project}}">
+  <image class="banner" src="{{project.cover}}" mode="aspectFill" wx:if="{{project.cover}}" />
+  <view class="title">{{project.name}}</view>
+  <view class="summary">{{project.summary}}</view>
+  <view class="rich">
+    <block wx:for="{{segments}}" wx:key="index">
+      <rich-text wx:if="{{item.type === 'html'}}" nodes="{{item.content}}" />
+      <rich-video wx:else channelId="{{item.content}}" />
+    </block>
+  </view>
+  <view class="album" wx:if="{{project.album.length}}">
+    <image wx:for="{{project.album}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="album-img" data-url="{{item}}" bindtap="preview" />
+  </view>
+</view>
+<view wx:else class="loading">加载中…</view>

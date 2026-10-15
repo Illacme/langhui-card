@@ -1,0 +1,11 @@
+<view class="form">
+  <view class="form-item">
+    <text class="label">手机号</text>
+    <input data-field="phone" value="{{phone}}" bindinput="onInput" placeholder="请输入手机号" />
+  </view>
+  <view class="form-item">
+    <text class="label">密码</text>
+    <input data-field="password" value="{{password}}" bindinput="onInput" password placeholder="请输入密码" />
+  </view>
+  <button class="submit-btn" bindtap="onSubmit">登录</button>
+</view>

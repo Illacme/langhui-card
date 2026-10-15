@@ -1,0 +1,26 @@
+<view class="form" wx:if="{{!loading}}">
+  <view class="form-item avatar-row">
+    <text class="label">头像</text>
+    <image class="avatar-preview" src="{{form.avatar}}" mode="aspectFill" wx:if="{{form.avatar}}" />
+    <view class="avatar-ph" wx:else>未设置</view>
+    <button class="picker-btn" size="mini" bindtap="chooseAvatar">选择图片</button>
+  </view>
+  <view class="form-item">
+    <text class="label">姓名</text>
+    <input data-field="name" value="{{form.name}}" bindinput="onInput" />
+  </view>
+  <view class="form-item">
+    <text class="label">岗位</text>
+    <input data-field="title" value="{{form.title}}" bindinput="onInput" />
+  </view>
+  <view class="form-item">
+    <text class="label">手机</text>
+    <input data-field="phone" value="{{form.phone}}" bindinput="onInput" />
+  </view>
+  <view class="form-item">
+    <text class="label">邮箱</text>
+    <input data-field="email" value="{{form.email}}" bindinput="onInput" />
+  </view>
+  <button class="submit-btn" bindtap="onSubmit">提交修改（待审）</button>
+</view>
+<view wx:else class="loading">加载中…</view>
