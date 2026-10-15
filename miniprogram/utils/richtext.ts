@@ -5,8 +5,9 @@ export interface RichSegment {
   content: string // html 片段 或 channel-id(视频号 username)
 }
 
-// 兼容自闭合 <wx-video channel-id="gh_x" /> 与成对 <wx-video ...></wx-video>，且属性顺序无关
-const VIDEO_RE = /<wx-video\s+[^>]*?channel-id="([^"]+)"[^>]*?\/?>/g
+// 兼容自闭合 <wx-video channel-id="gh_x" /> 与成对 <wx-video ...></wx-video>，且属性顺序无关。
+// 成对写法时闭合标签一并消费掉，避免 </wx-video> 漏进后续 html 片段被 rich-text 渲染。
+const VIDEO_RE = /<wx-video\s+[^>]*?channel-id="([^"]+)"[^>]*?\/?>(\s*<\/wx-video>)?/g
 
 export function parseRich(html: string): RichSegment[] {
   const segs: RichSegment[] = []
