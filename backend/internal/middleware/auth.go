@@ -6,6 +6,7 @@ import (
 
 	"langhui/internal/auth"
 	"langhui/internal/model"
+	"langhui/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -18,15 +19,17 @@ import (
 //   - Authorization: Bearer <token>（小程序端，token 由 JS 显式携带）；
 //   - httpOnly Cookie access_token（PC 管理后台，浏览器自动携带，JS 不可读，防 XSS 窃取）。
 //
-// 除签名 / 过期外，还做两层校验：
+// 除签名 / 过期外，还做三层校验：
 //  1. claims.Typ 必须为 "access"（refresh 令牌只能用于 /api/refresh，不能当访问令牌用）；
 //  2. claims.VID 必须与用户当前 token_version 一致——改密 / 账号禁用会使 token_version 自增，
-//     从而让所有已签发的旧令牌立即失效（即时吊销，无需黑名单表）。
+//     从而让所有已签发的旧令牌立即失效（账号级即时吊销，无需黑名单表）；
+//  3. claims.SID 必须不在会话黑名单内——登出只吊销当前设备的会话（单设备精确吊销），
+//     不影响同一账号的其他登录（见 repository.IsSessionRevoked）。
 //
-// 代价：每个鉴权请求多一次按主键的用户查询（小数据量运营场景可接受）。
+// 代价：每个鉴权请求多两次按主键的查询（用户 + 黑名单 sid），小数据量运营场景可接受。
 func AuthMiddleware(db *gorm.DB, requiredRole string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		raw := extractToken(c)
+		raw := ExtractToken(c)
 		if raw == "" {
 			c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": 401, "msg": "未登录"})
 			return
@@ -46,6 +49,11 @@ func AuthMiddleware(db *gorm.DB, requiredRole string) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": 401, "msg": "登录已失效，请重新登录"})
 			return
 		}
+		// 校验会话黑名单：登出 / 踢下线写入的 sid 立即失效（单设备精确吊销）
+		if revoked, err := repository.IsSessionRevoked(db, claims.SID); err != nil || revoked {
+			c.AbortWithStatusJSON(http.StatusOK, gin.H{"code": 401, "msg": "登录已失效，请重新登录"})
+			return
+		}
 		c.Set("staffId", claims.StaffID)
 		c.Set("role", claims.Role)
 		if requiredRole != "" && claims.Role != requiredRole {
@@ -56,8 +64,10 @@ func AuthMiddleware(db *gorm.DB, requiredRole string) gin.HandlerFunc {
 	}
 }
 
-// extractToken 优先取 Authorization 头，其次取 access_token Cookie。
-func extractToken(c *gin.Context) string {
+// ExtractToken 从请求中取出裸 JWT：优先 Authorization 头，其次 access_token Cookie。
+// 导出供 handler 层（如 /api/logout 吊销当前会话）复用同一套取token逻辑。
+// 注：Cookie 名与 handler/cookie.go 的 accessCookieName 保持一致（两包不可互相引用，避免环）。
+func ExtractToken(c *gin.Context) string {
 	if h := c.GetHeader("Authorization"); strings.HasPrefix(h, "Bearer ") {
 		return strings.TrimPrefix(h, "Bearer ")
 	}

@@ -98,6 +98,21 @@ type Admin struct {
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
+// RevokedSession 已吊销会话黑名单（单设备精确吊销）。
+// 一次登录对应一个 sid（见 auth.Claims.SID，access/refresh 共享）；登出时把 sid 写入本表，
+// 之后该会话签发的所有令牌立即失效。与 token_version 互补：
+//   - token_version：账号级，改密/禁用后该用户所有设备全部失效；
+//   - 本表：会话级，只失效指定设备，同一账号的其他登录不受影响。
+//
+// expires_at 仅用于后台按时间清理过期记录，不参与吊销判定（判定只看 sid 是否存在）。
+type RevokedSession struct {
+	SID       string    `gorm:"primaryKey;column:sid" json:"sid"`
+	UserType  string    `gorm:"column:user_type" json:"userType"` // admin / employee
+	UserID    int64     `gorm:"column:user_id" json:"userId"`     // admin.id 或 employee.staff_id
+	ExpiresAt time.Time `gorm:"column:expires_at;index" json:"expiresAt"`
+	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
+}
+
 // OpenApply 员工自助开通申请（审核流）
 type OpenApply struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`

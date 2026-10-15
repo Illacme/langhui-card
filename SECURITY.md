@@ -24,17 +24,18 @@
 - **PC 管理后台：httpOnly Cookie 鉴权**——access/refresh 写入 `HttpOnly; SameSite=Lax` 的 Cookie（`access_token` / `refresh_token`），
   由浏览器自动携带、JS 不可读，规避 XSS 窃取令牌；`SameSite=Lax` 阻止跨站写操作携带 Cookie，缓解 CSRF。`POST /api/logout` 清除 Cookie。
 - **小程序端：Bearer 头鉴权**——token 由 JS 显式携带（微信沙箱内代码受审核，无 DOM XSS 面，风险可接受）。
-- 即时吊销：用户模型含 `token_version`（安全戳）。改密 / 管理员重置密码 / 禁用启用时自增版本号，
-  鉴权中间件校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表，多实例 / 重启均安全）。
+- 即时吊销（两级）：
+  - **账号级**（`token_version` 安全戳）：改密 / 管理员重置密码 / 禁用启用时自增版本号，鉴权中间件校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（该账号所有设备，无需黑名单表，多实例 / 重启均安全）。
+  - **会话级**（`revoked_sessions` 黑名单）：令牌含 `sid`（会话 ID，一次登录一个，access/refresh 共享，刷新不换）。`POST /api/logout` 把当前会话 sid 写入黑名单，该设备所有令牌立即失效且无法靠刷新绕过；**不影响同一账号的其他设备登录**。
 - 上传：扩展名白名单 + 文件头魔法字节嗅探，单文件 ≤10MB；私有桶支持限时签名访问。
 - 登录限流：按客户端 IP 固定窗口限流，防爆破（刷新接口单独限流）。
 - 软删除：内容模型支持软删除，避免误删。
 
 ## 已知待加固项（尚未落地）
 
-- 吊销粒度为「账号级」：改密 / 禁用会令该账号所有会话失效；单设备精确吊销需引入 refresh 令牌的 jti 黑名单（后续）。
 - Cookie 为 `SameSite=Lax`（同源部署已足够缓解 CSRF）；若未来跨域部署或需更强保证，可加 double-submit CSRF Token。
 - 生产须设 `COOKIE_SECURE=true`（HTTPS）并前置反向代理；跨子域共享登录态才需设 `COOKIE_DOMAIN`。
+- 黑名单表 `revoked_sessions` 暂无自动清理任务，可后续加定时 SQL（按 `expires_at` 删除过期行）。
 - 无集中式密钥管理 / 审计日志 / 监控告警；生产需 HTTPS 与反向代理。
 - 多实例部署下，小程序码 / access_token 等内存缓存不共享，需引入 Redis。
 

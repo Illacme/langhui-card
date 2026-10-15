@@ -11,8 +11,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// 令牌时效：access 短时效（降低泄露风险），refresh 长时效（避免频繁重登）。
-// 吊销不依赖令牌自身过期，而是靠 Claims.VID 与用户 token_version 的比对（见 middleware/auth.go）。
+// 吊销分两层，互补使用：
+//   - 账号级（token_version）：改密 / 禁用使用户所有设备的所有令牌立即失效（见 middleware/auth.go）；
+//   - 会话级（sid 黑名单）：登出只失效当前设备的会话，不影响同一账号的其他登录（见 repository/session.go）。
 const (
 	AccessTokenTTL  = 15 * time.Minute
 	RefreshTokenTTL = 30 * 24 * time.Hour
@@ -22,21 +23,34 @@ const (
 type Claims struct {
 	StaffID int64  `json:"staffId"` // 员工 staff_id 或超管 admin.id
 	Role    string `json:"role"`    // employee / admin
-	JTI     string `json:"jti"`     // 唯一标识，便于审计 / 未来做 jti 黑名单
+	JTI     string `json:"jti"`     // 单令牌唯一标识，便于审计
+	SID     string `json:"sid"`     // 会话 ID：一次登录生成一个，access/refresh 共享；登出写入黑名单实现单设备精确吊销
 	Typ     string `json:"typ"`     // "access" | "refresh"
 	VID     int    `json:"vid"`     // 签发时的 token_version（安全戳）；改密/禁用时自增即令旧令牌失效
 	jwt.RegisteredClaims
 }
 
-// IssueTokens 同时签发 access + refresh 令牌。
+// IssueTokens 新会话签发 access + refresh 令牌（生成新 sid）。
 // version 为用户当前的 token_version；任何密码变更 / 账号禁用都会使其自增，
-// 从而让本次签发的令牌立即失效（吊销）。
+// 从而让本次签发的令牌立即失效（账号级吊销）。
 func IssueTokens(staffID int64, role string, version int) (access, refresh string, expiresIn int, err error) {
+	return issueTokens(staffID, role, version, mustSessionID())
+}
+
+// IssueTokensWithSID 复用已有会话 ID 重新签发双令牌（/api/refresh 用）。
+// 刷新不换 sid：一次登录始终对应同一个会话，登出吊销该 sid 即终结整条令牌链
+// （含此前轮换掉的旧 refresh 令牌）。
+func IssueTokensWithSID(staffID int64, role string, version int, sid string) (access, refresh string, expiresIn int, err error) {
+	return issueTokens(staffID, role, version, sid)
+}
+
+func issueTokens(staffID int64, role string, version int, sid string) (access, refresh string, expiresIn int, err error) {
 	now := time.Now()
 	accessClaims := Claims{
 		StaffID: staffID,
 		Role:    role,
 		JTI:     mustJTI(),
+		SID:     sid,
 		Typ:     "access",
 		VID:     version,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -48,6 +62,7 @@ func IssueTokens(staffID int64, role string, version int) (access, refresh strin
 		StaffID: staffID,
 		Role:    role,
 		JTI:     mustJTI(),
+		SID:     sid,
 		Typ:     "refresh",
 		VID:     version,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -97,4 +112,15 @@ func mustJTI() string {
 		return time.Now().Format("20060102150405.000000000")
 	}
 	return jti
+}
+
+// mustSessionID 生成会话 ID（与 JTI 同规格随机串）。
+// 一次登录调用一次，生成的 sid 同时写入 access 与 refresh，
+// 作为「一次登录 = 一个会话」的身份标识（登出吊销的最小粒度）。
+func mustSessionID() string {
+	sid, err := RandomJTI()
+	if err != nil {
+		return "sid-" + time.Now().Format("20060102150405.000000000")
+	}
+	return sid
 }

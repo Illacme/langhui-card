@@ -147,7 +147,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token + refreshToken（小程序 Bearer） |
 | POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 写 httpOnly Cookie，响应体仅 expiresIn |
 | POST | /api/refresh | 否 | 换发新 access（PC 读 refresh Cookie；小程序 body 传 refreshToken） |
-| POST | /api/logout | 否 | 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
+| POST | /api/logout | 否 | 吊销当前会话 sid（单设备精确吊销）+ 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
 | POST | /api/apply/open | 否 | 员工自助提交开通申请（pending） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息） |
@@ -215,24 +215,25 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
 - **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
 - **PC 管理后台 httpOnly Cookie 鉴权**：`/api/admin/login` 将 access/refresh 写入 `HttpOnly; SameSite=Lax` 的 Cookie（`access_token` / `refresh_token`，见 `handler/cookie.go`），响应体不再回传令牌；`AuthMiddleware` 支持「Authorization 头 或 `access_token` Cookie」两种来源（小程序走 Bearer，PC 走 Cookie）；`POST /api/logout` 清除 Cookie。`COOKIE_SECURE`（生产 HTTPS 置 true）/ `COOKIE_DOMAIN`（跨子域才设）可配。覆盖测试见 `TestCookieAuth`。
+- **单设备精确吊销（会话黑名单）**：`Claims.SID` 为会话 ID——一次登录生成一个，access/refresh 共享，**刷新不换 sid**（`auth.IssueTokensWithSID`）。`POST /api/logout` 从 Bearer / Cookie 解析当前会话，把 sid 写入黑名单表 `revoked_sessions`（迁移 `migrations/0005_revoked_sessions.sql`，读写见 `repository/session.go`）；`AuthMiddleware` 与 `/api/refresh` 均校验 sid 不在黑名单内，**登出后该设备的所有令牌立即失效，且不能靠刷新绕过**。与 `token_version`（账号级）互补：登出只失效当前设备，同一账号的其他登录不受影响。覆盖测试见 `TestSingleDeviceRevocation`。
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
-- access / refresh token 仍存前端 `localStorage`（XSS 风险），建议后续迁 httpOnly Cookie。
-- 吊销粒度为账号级；单设备精确吊销需 refresh 令牌 jti 黑名单（后续）。
 - 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
 - 缺监控 / 日志告警 / 数据库备份策略；生产需 HTTPS 与反向代理。
+- 黑名单表 `revoked_sessions` 暂无自动清理任务，可后续加定时 SQL（按 `expires_at` 删除过期行）。
 
 ## 自动化接口测试
 接口层（`/api/*`）已配套 `httptest` 集成测试，覆盖读接口、登录鉴权、审核流、员工管理、分类/项目强校验、业务服务、企业内容、文件上传与存储增强、小程序码等全部主路径，并对「本地驱动不支持预签名→code:1」「CDN 未配置→code:1」「分类下有项目/锁定→删除拦截 code=1」等回退分支做了断言。
 
-- 测试文件：`internal/handler/handler_test.go`。三个入口：
+- 测试文件：`internal/handler/handler_test.go`。入口：
   - `TestAPIFlow`（默认）：SQLite 跑完整流程，按「公开接口 → 超管登录 → 审核流 → 员工管理 → 强校验 → 服务 → 内容 → 上传存储 → 改密」分段执行。
   - `TestStorageEnhanceSuccess`：用 fake `Presigner`/`Signer`/`CDNRefresher` 覆盖存储增强**成功分支**（预签名返回 `putUrl/url/key`、私有签名返回 `signed` 映射、CDN 刷新被调用）。
+  - `TestTokenRefresh` / `TestCookieAuth` / `TestSingleDeviceRevocation`：分别覆盖 refresh 换发与账号级吊销、PC 端 httpOnly Cookie 鉴权与登出、单设备精确吊销（会话黑名单）。
   - `TestAPIFlowMySQL`（生产契约 parity）：设置 `TEST_MYSQL_DSN` 后，连真实 MySQL、应用 `migrations/*.sql`，再跑与 SQLite **完全相同的断言**，用以校验 AutoMigrate 与生产建表 SQL 行为一致。
 - 运行：
   ```bash
   cd backend
-  go test ./internal/handler/ -run 'TestAPIFlow|TestStorageEnhanceSuccess' -v
+  go test ./internal/handler/ -v
   # 生产契约校验（需可用 MySQL）：
   TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true' \
     go test ./internal/handler/ -run TestAPIFlowMySQL -v
@@ -254,7 +255,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）
 - 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
 - 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
-- 后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传、httpOnly Cookie 鉴权、refresh 令牌 jti 黑名单（单设备吊销）等
+- 后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传、`revoked_sessions` 定时清理、多实例会话共享（Redis）等
 
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。
