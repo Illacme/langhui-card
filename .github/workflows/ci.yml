@@ -95,3 +95,31 @@ jobs:
 
       - name: 单元测试
         run: npm run test
+
+  # ───────── 前端：严格类型检查（非阻塞，仅暴露问题） ─────────
+  # 说明：vue-tsc 在 moduleResolution: bundler 下，因 @wangeditor/* 的类型声明
+  # （editor-for-vue 的 exports 未暴露 types、自定义节点模块 registerNodeType 的
+  # 类型签名）会报若干错误；生产构建走 vite/esbuild 转译不受影响。
+  # 设为 continue-on-error，使其作为「预警」而非「门禁」，逐步收敛。
+  frontend-typecheck:
+    name: 前端类型检查 (vue-tsc, 非阻塞)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查（vue-tsc --noEmit）
+        run: npm run type-check

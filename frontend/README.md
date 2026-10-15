@@ -93,7 +93,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 | 首页布局 | `GET/PUT /api/admin/home-layout` | order 数组控制板块顺序 |
 | CDN 刷新 | `POST /api/admin/cdn/refresh` | 需 `CDN_ENABLED=1` |
 
-> 富文本编辑器当前为「源码模式」`<el-input type=textarea>` + 「插入视频号块」按钮（插入 `<wx-video channel-id="gh_"></wx-video>`）。如需可视化编辑，可后续接入 wangEditor / Tiptap 并保留该自定义块节点。
+> 富文本编辑器（项目案例.详情 / 业务服务.内容）已接入 wangEditor v5 可视化编辑，并注册「视频号块」自定义节点；详见下方「富文本编辑器（wangEditor）」。
 
 ## 列表分页 / 搜索
 
@@ -133,8 +133,9 @@ npm run test:watch  # 监听模式
 ```
 
 > 说明：CI 中 `frontend` job 执行 `npm ci` + `npm run build` + `npm test`。
-> 严格类型检查（`npm run type-check` / `vue-tsc --noEmit`）当前因 `@wangeditor/*` 在 `moduleResolution: bundler` 下的类型声明问题会报若干错误，尚未纳入 CI；
-> 生产构建（`vite build`）走 esbuild 转译、不做类型检查，故不受影响。待 wangEditor 类型声明修正后可再加入类型检查门禁。
+> 严格类型检查（`npm run type-check` / `vue-tsc --noEmit`）因 `@wangeditor/*` 在 `moduleResolution: bundler` 下的类型声明问题（editor-for-vue 的 `exports` 未暴露 types、自定义节点模块 `registerNodeType` 的类型签名）仍会报若干错误；
+> 生产构建（`vite build`）走 esbuild 转译、不做类型检查，故不受影响。CI 已新增独立的 `frontend-typecheck` job（`continue-on-error`），作为「预警」持续暴露这些类型问题，待 wangEditor 类型声明修正后可升级为硬性门禁。
+> 已知类型问题集中在 `src/components/RichEditor.vue` 与 `src/editor/wxVideoModule.ts` 两处（运行时行为正常）。
 
 ## 已知边界（与后端一致）
 

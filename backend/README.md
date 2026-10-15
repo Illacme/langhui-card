@@ -202,6 +202,21 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 > 小程序码缓存 TTL：生成的图片通过当前存储驱动的 `SaveBytes` 写入（local → `uploads/wxacode/<staffId>.jpg`；minio/oss → 对应对象）。返回策略：公开桶/本地直接返回公开 URL；**私有桶**（`STORAGE_PUBLIC=false` 且存储支持签名）返回**每次重新签发的 1 小时限时签名 URL**。二维码内容按 `WXACODE_TTL_HOURS`（默认 720h=30 天）做内存 TTL 缓存，过期才重新调微信生成，既避免反复消耗微信配额，也支持变更样式/落地页后自然刷新。`access_token` 服务端内存缓存并在 40001/42001 时自动刷新重试。
 > 鉴权方式：请求头 `Authorization: Bearer <token>`（admin 接口）。小程序码接口为公开（分享用），未配置 `WX_APPID/WX_APPSECRET` 时返回明确错误。
 
+## 安全加固
+
+本骨架已落地以下安全基线（详见对应源码）：
+
+- **上传内容嗅探**：`storage.checkFile` 在校验扩展名白名单后，进一步按文件头（魔法字节）校验真实类型（PNG / JPG / GIF / WEBP / MP4），防止把可执行文件改名图片上传。`backend/internal/storage/storage_test.go` 覆盖各类型的合法/伪造场景。
+- **登录限流**：`middleware.NewLoginRateLimiter` 按客户端 IP 做固定窗口限流（默认每 IP 每分钟 10 次登录尝试），防爆破；超限返回 `{code:429}`（与现有鉴权约定一致）。`backend/internal/middleware/ratelimit_test.go` 覆盖计数与隔离逻辑。
+- **启动自检告警**：`config.InsecureWarnings()` 在 `JWT_KEY` 为默认值或长度不足 16、或初始超管口令仍为 `admin123456` 时，由 `cmd/server/main.go` 打印 `[SECURITY]` 告警，提醒上线前修改。
+- **健康检查**：`GET /healthz` 返回 `{status:"ok"}`，供容器编排 / 负载均衡探活；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。
+- **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
+
+### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
+- JWT 无主动吊销 / 刷新；token 存前端 `localStorage`（XSS 风险），建议后续迁 httpOnly Cookie。
+- 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
+- 缺监控 / 日志告警 / 数据库备份策略；生产需 HTTPS 与反向代理。
+
 ## 自动化接口测试
 接口层（`/api/*`）已配套 `httptest` 集成测试，覆盖读接口、登录鉴权、审核流、员工管理、分类/项目强校验、业务服务、企业内容、文件上传与存储增强、小程序码等全部主路径，并对「本地驱动不支持预签名→code:1」「CDN 未配置→code:1」「分类下有项目/锁定→删除拦截 code=1」等回退分支做了断言。
 
@@ -232,7 +247,9 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ## 待补全（下一步，均为可选增强）
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）
-- 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）；后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传等
+- 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
+- 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
+- 后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传、JWT 吊销/刷新、httpOnly Cookie 鉴权等
 
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。

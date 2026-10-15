@@ -24,5 +24,17 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        // 拆分体积较大的第三方依赖，提升缓存命中率与首屏加载速度：
+        //   - wangeditor 富文本编辑器（约 800KB）单独成块，仅在编辑页按需加载
+        //   - element-plus / vue 生态各自成块
+        manualChunks(id) {
+          if (id.includes('@wangeditor')) return 'wangeditor'
+          if (id.includes('element-plus')) return 'element-plus'
+          if (id.includes('node_modules')) return 'vendor'
+        },
+      },
+    },
   },
 })
