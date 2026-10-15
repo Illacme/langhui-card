@@ -21,6 +21,7 @@ import (
 	"langhui/internal/auth"
 	"langhui/internal/config"
 	"langhui/internal/handler"
+	"langhui/internal/middleware"
 	"langhui/internal/model"
 	"langhui/internal/storage"
 
@@ -70,6 +71,8 @@ func main() {
 	seedDemoData(db)
 
 	r := handler.New(db)
+	// 与生产一致的可观测性中间件（请求 ID + 访问日志）
+	r.Use(middleware.RequestID(), middleware.AccessLog())
 	handler.RegisterAuth(r, db, cfg)
 	handler.RegisterApply(r, db)
 	handler.RegisterContent(r, db)

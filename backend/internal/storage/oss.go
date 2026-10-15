@@ -22,8 +22,16 @@ type OssUploader struct {
 	AllowExt map[string]bool
 }
 
-// NewOssUploader 构造 OSS 客户端（endpoint 形如 "oss-cn-hangzhou.aliyuncs.com"）
+// NewOssUploader 构造 OSS 客户端（endpoint 形如 "oss-cn-hangzhou.aliyuncs.com"）。
+// endpoint / bucket 为空时直接报错：SDK 对空 endpoint 不校验，会拖到首次上传
+// 才以难以定位的方式失败，这里在装配期 fail-fast。
 func NewOssUploader(endpoint, accessKeyID, accessKeySecret, bucket, baseURL string, maxBytes int64, allow map[string]bool) (*OssUploader, error) {
+	if endpoint == "" {
+		return nil, fmt.Errorf("oss endpoint is required")
+	}
+	if bucket == "" {
+		return nil, fmt.Errorf("oss bucket is required")
+	}
 	client, err := oss.New(endpoint, accessKeyID, accessKeySecret)
 	if err != nil {
 		return nil, fmt.Errorf("oss new client: %w", err)
