@@ -8,16 +8,17 @@ import (
 	"langhui/internal/storage"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // RegisterUpload 注册文件上传接口：超管(/api/admin/upload) 与 员工(/api/employee/upload)
 // 返回可访问 URL，填回封面/相册/头像/LOGO/员工头像等。
 // 存储实现通过 storage.Uploader 注入：本地磁盘（默认）/ MinIO / OSS 可互换，业务代码不变。
 // refresher 可选：上传后 best-effort 触发 CDN 刷新（覆盖写使边缘旧缓存失效）。
-func RegisterUpload(r *gin.Engine, up storage.Uploader, refresher storage.CDNRefresher) {
+func RegisterUpload(r *gin.Engine, db *gorm.DB, up storage.Uploader, refresher storage.CDNRefresher) {
 	h := uploadHandler(up, refresher)
-	r.POST("/api/admin/upload", middleware.AuthMiddleware("admin"), h)
-	r.POST("/api/employee/upload", middleware.AuthMiddleware("employee"), h)
+	r.POST("/api/admin/upload", middleware.AuthMiddleware(db, "admin"), h)
+	r.POST("/api/employee/upload", middleware.AuthMiddleware(db, "employee"), h)
 }
 
 func uploadHandler(up storage.Uploader, refresher storage.CDNRefresher) gin.HandlerFunc {

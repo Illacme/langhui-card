@@ -33,7 +33,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 员工本人名片信息（需登录）
-	r.GET("/api/employee/me", middleware.AuthMiddleware("employee"), func(c *gin.Context) {
+	r.GET("/api/employee/me", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
 		var e model.Employee
 		if err := db.First(&e, "staff_id = ?", staffID).Error; err != nil {
@@ -44,7 +44,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 员工提交名片修改（待审，对外仍显示旧信息）
-	r.PUT("/api/employee/me", middleware.AuthMiddleware("employee"), func(c *gin.Context) {
+	r.PUT("/api/employee/me", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
 		var patch struct {
 			Avatar string `json:"avatar"`
@@ -67,7 +67,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 员工本人统计
-	r.GET("/api/employee/me/stat", middleware.AuthMiddleware("employee"), func(c *gin.Context) {
+	r.GET("/api/employee/me/stat", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
 		var visit, call, save int64
 		db.Model(&model.StatEvent{}).Where("staff_id = ? AND event_type = ?", staffID, "visit").Count(&visit)
@@ -77,7 +77,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 员工修改本人密码
-	r.PUT("/api/employee/password", middleware.AuthMiddleware("employee"), func(c *gin.Context) {
+	r.PUT("/api/employee/password", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
 		var req struct {
 			Old string `json:"old"`
@@ -94,21 +94,22 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			return
 		}
 		h, _ := auth.HashPassword(req.New)
-		db.Model(&e).Update("password_hash", h)
+		// 改密同时自增安全戳 → 旧令牌立即失效，需重新登录
+		db.Model(&e).Updates(map[string]interface{}{"password_hash": h, "token_version": e.TokenVersion + 1})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
 	// ===== 超管端 =====
 
 	// 开通申请列表
-	r.GET("/api/admin/apply/open", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/apply/open", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.OpenApply
 		db.Order("created_at desc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
 
 	// 开通申请通过 → 自动建员工账号
-	r.POST("/api/admin/apply/open/:id/approve", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/apply/open/:id/approve", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var a model.OpenApply
 		if db.First(&a, "id = ?", id).Error != nil {
@@ -129,7 +130,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 开通申请驳回
-	r.POST("/api/admin/apply/open/:id/reject", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/apply/open/:id/reject", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var body struct {
 			Reason string `json:"reason"`
@@ -144,14 +145,14 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 名片修改申请列表
-	r.GET("/api/admin/apply/modify", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/apply/modify", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.CardModifyApply
 		db.Order("created_at desc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
 
 	// 名片修改通过 → 应用快照到员工
-	r.POST("/api/admin/apply/modify/:id/approve", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/apply/modify/:id/approve", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var a model.CardModifyApply
 		if db.First(&a, "id = ?", id).Error != nil {
@@ -189,7 +190,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 名片修改驳回
-	r.POST("/api/admin/apply/modify/:id/reject", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/apply/modify/:id/reject", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var body struct {
 			Reason string `json:"reason"`
@@ -204,7 +205,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 超管手动新增员工（自动生成账号 + 初始密码）
-	r.POST("/api/admin/employees", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/employees", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req model.Employee
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -218,30 +219,34 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 员工列表（超管）
-	r.GET("/api/admin/employees", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/employees", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.Employee
 		db.Order("staff_id asc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
 
-	// 启用 / 禁用
-	r.POST("/api/admin/employees/:id/disable", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	// 启用 / 禁用（禁用同时自增安全戳 → 该员工在线会话立即失效）
+	r.POST("/api/admin/employees/:id/disable", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		db.Model(&model.Employee{}).Where("staff_id = ?", id).Update("status", "disabled")
+		db.Model(&model.Employee{}).Where("staff_id = ?", id).
+			Updates(map[string]interface{}{"status": "disabled", "token_version": gorm.Expr("token_version + 1")})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
-	r.POST("/api/admin/employees/:id/enable", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/employees/:id/enable", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		db.Model(&model.Employee{}).Where("staff_id = ?", id).Update("status", "enabled")
+		db.Model(&model.Employee{}).Where("staff_id = ?", id).
+			Updates(map[string]interface{}{"status": "enabled", "token_version": gorm.Expr("token_version + 1")})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
 	// 重置密码（返回新初始密码）
-	r.POST("/api/admin/employees/:id/reset-password", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/employees/:id/reset-password", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		if db.Model(&model.Employee{}).Where("staff_id = ?", id).Update("password_hash", hash).RowsAffected == 0 {
+		// 重置密码同时自增安全戳 → 该员工所有旧会话立即失效
+		if db.Model(&model.Employee{}).Where("staff_id = ?", id).
+			Updates(map[string]interface{}{"password_hash": hash, "token_version": gorm.Expr("token_version + 1")}).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
 			return
 		}
@@ -249,7 +254,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 超管修改自己密码
-	r.PUT("/api/admin/password", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/password", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		adminID := c.GetInt64("staffId")
 		var req struct {
 			Old string `json:"old"`
@@ -266,7 +271,8 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			return
 		}
 		h, _ := auth.HashPassword(req.New)
-		db.Model(&a).Update("password_hash", h)
+		// 改密同时自增安全戳 → 旧令牌立即失效，需重新登录
+		db.Model(&a).Updates(map[string]interface{}{"password_hash": h, "token_version": a.TokenVersion + 1})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 }

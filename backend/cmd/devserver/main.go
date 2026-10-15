@@ -79,8 +79,8 @@ func main() {
 	}
 	var refresher storage.CDNRefresher // 开发态不接 CDN
 	r.Static("/uploads", cfg.UploadDir)
-	handler.RegisterUpload(r, up, refresher)
-	handler.RegisterStorage(r, up, refresher, cfg)
+	handler.RegisterUpload(r, db, up, refresher)
+	handler.RegisterStorage(r, db, up, refresher, cfg)
 	handler.RegisterWechat(r, cfg, up)
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)

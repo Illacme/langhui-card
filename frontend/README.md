@@ -66,8 +66,10 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 ## 登录与鉴权
 
 - 超管账号来自后端 `ADMIN_USER/ADMIN_PASS`（默认 `admin/admin123456`，**上线必改**），首启动由后端 seed。
-- 登录后 token 存入 `localStorage.token`，axios 拦截器统一注入 `Authorization: Bearer <token>`。
-- 后端鉴权失败一律返回 HTTP 200 + `{ code: 401 | 403, msg }`（见 `backend/internal/middleware/auth.go`），因此前端以 `res.code` 为准：401 自动清 token 跳登录，403 提示无权限。
+- 登录返回 access + refresh 双令牌：`localStorage.token`（access，15 分钟）+ `localStorage.refreshToken`（refresh，30 天）；axios 请求拦截统一注入 `Authorization: Bearer <access>`。
+- 后端鉴权失败一律返回 HTTP 200 + `{ code: 401 | 403, msg }`（见 `backend/internal/middleware/auth.go`），因此前端以 `res.code` 为准。
+- **静默刷新**：遇到 `401` 时，响应拦截先用 `refreshToken` 调 `/api/refresh` 换发新 access 并自动重试原请求一次（并发 401 用单飞锁合并）；无 refreshToken 或刷新失败才清 token 跳登录。403 提示无权限。
+- **即时吊销**：改密 / 管理员重置密码 / 禁用会使后端 `token_version` 自增，旧令牌立即失效，401 后刷新也会失败 → 重新登录。
 - 路由守卫：未登录访问后台页 → 跳 `/login`；已登录访问 `/login` → 跳后台首页。
 
 ## 上传组件 UploadField

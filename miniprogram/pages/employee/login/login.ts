@@ -17,6 +17,7 @@ Page({
     const r = await request('POST', '/api/employee/login', { phone, password })
     if (r.code === 0 && r.token) {
       wx.setStorageSync('empToken', r.token)
+      if (r.refreshToken) wx.setStorageSync('empRefreshToken', r.refreshToken)
       wx.redirectTo({ url: '/pages/employee/edit/edit' })
     } else {
       wx.showToast({ title: r.msg || '登录失败', icon: 'none' })

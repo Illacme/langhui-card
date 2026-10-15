@@ -10,7 +10,7 @@ backend/
 │   ├── config/config.go         # 环境变量注入（DB_DSN / PORT / JWT_KEY / 上传 / 小程序码 / 超管 / TTL）
 │   ├── model/models.go          # GORM 模型（员工/企业/分类/项目/服务/布局/统计/超管/两类申请）
 │   ├── repository/repository.go # 数据访问层
-│   ├── auth/jwt.go              # JWT 签发 / 解析（7 天有效期）
+│   ├── auth/jwt.go              # JWT 双令牌签发 / 解析（access 15m + refresh 30d）
 │   ├── auth/password.go         # bcrypt 哈希 / 校验
 │   ├── handler/handler.go       # 首页相关 HTTP 接口（读）
 │   ├── handler/auth.go          # 员工/超管登录，签发 JWT
@@ -144,8 +144,9 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ### 写 + 审核流（员工 / 超管，账号密码，JWT）
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token |
-| POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 返回 token |
+| POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token + refreshToken |
+| POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 返回 token + refreshToken |
+| POST | /api/refresh | 否（凭 refreshToken） | 用 refresh 令牌换发新 access（body: refreshToken） |
 | POST | /api/apply/open | 否 | 员工自助提交开通申请（pending） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息） |
@@ -211,9 +212,11 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - **启动自检告警**：`config.InsecureWarnings()` 在 `JWT_KEY` 为默认值或长度不足 16、或初始超管口令仍为 `admin123456` 时，由 `cmd/server/main.go` 打印 `[SECURITY]` 告警，提醒上线前修改。
 - **健康检查**：`GET /healthz` 返回 `{status:"ok"}`，供容器编排 / 负载均衡探活；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。
 - **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
+- **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
-- JWT 无主动吊销 / 刷新；token 存前端 `localStorage`（XSS 风险），建议后续迁 httpOnly Cookie。
+- access / refresh token 仍存前端 `localStorage`（XSS 风险），建议后续迁 httpOnly Cookie。
+- 吊销粒度为账号级；单设备精确吊销需 refresh 令牌 jti 黑名单（后续）。
 - 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
 - 缺监控 / 日志告警 / 数据库备份策略；生产需 HTTPS 与反向代理。
 
@@ -249,7 +252,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）
 - 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
 - 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
-- 后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传、JWT 吊销/刷新、httpOnly Cookie 鉴权等
+- 后续可按需补充：私有桶下小程序码签名通道、更多 CDN 厂商、上传进度/断点续传、httpOnly Cookie 鉴权、refresh 令牌 jti 黑名单（单设备吊销）等
 
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。

@@ -16,7 +16,7 @@ import (
 // 公司信息 / 公司简介 / 业绩分类 / 项目案例 / 业务服务 / 首页布局
 func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	// ===== 公司基础信息（固定展示） =====
-	r.GET("/api/admin/company-info", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/company-info", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var ci model.CompanyInfo
 		if db.First(&ci, "id = ?", 1).Error != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 0, "data": model.CompanyInfo{ID: 1}})
@@ -24,7 +24,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": ci})
 	})
-	r.PUT("/api/admin/company-info", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/company-info", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req struct {
 			FullName string `json:"fullName"`
 			Address  string `json:"address"`
@@ -46,7 +46,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// ===== 公司简介 + 视频号 =====
-	r.GET("/api/admin/company-profile", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/company-profile", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var cp model.CompanyProfile
 		if db.First(&cp, "id = ?", 1).Error != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 0, "data": model.CompanyProfile{ID: 1}})
@@ -54,7 +54,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": cp})
 	})
-	r.PUT("/api/admin/company-profile", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/company-profile", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req struct {
 			IntroText      string `json:"introText"`
 			VideoChannelID string `json:"videoChannelId"`
@@ -76,12 +76,12 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// ===== 业绩分类 =====
-	r.GET("/api/admin/categories", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/categories", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.AchievementCategory
 		db.Order("sort asc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
-	r.POST("/api/admin/categories", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/categories", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req model.AchievementCategory
 		if c.ShouldBindJSON(&req) != nil || req.Name == "" {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -90,7 +90,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&req)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": req})
 	})
-	r.PUT("/api/admin/categories/:id", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/categories/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
 			Name     string `json:"name"`
@@ -106,7 +106,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 			Updates(map[string]interface{}{"name": req.Name, "icon": req.Icon, "sort": req.Sort, "is_locked": req.IsLocked})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
-	r.DELETE("/api/admin/categories/:id", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.DELETE("/api/admin/categories/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var cat model.AchievementCategory
 		if db.First(&cat, "id = ?", id).Error != nil {
@@ -129,7 +129,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// ===== 项目案例 =====
-	r.GET("/api/admin/projects", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/projects", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		cid, _ := strconv.ParseInt(c.Query("categoryId"), 10, 64)
 		q := db.Order("sort asc")
 		if cid > 0 {
@@ -143,7 +143,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": data})
 	})
-	r.POST("/api/admin/projects", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/projects", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		in, ok := bindProject(c)
 		if !ok {
 			return
@@ -157,7 +157,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&p)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": projectToMap(p)})
 	})
-	r.PUT("/api/admin/projects/:id", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/projects/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		in, ok := bindProject(c)
 		if !ok {
@@ -177,7 +177,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.First(&p, "id = ?", id)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": projectToMap(p)})
 	})
-	r.DELETE("/api/admin/projects/:id", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.DELETE("/api/admin/projects/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		if db.Delete(&model.ProjectCase{}, "id = ?", id).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
@@ -187,12 +187,12 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// ===== 业务服务 =====
-	r.GET("/api/admin/services", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/services", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.BizService
 		db.Order("sort asc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
-	r.POST("/api/admin/services", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.POST("/api/admin/services", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req struct {
 			Title   string `json:"title"`
 			Content string `json:"content"`
@@ -206,7 +206,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&s)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
-	r.PUT("/api/admin/services/:id", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/services/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
 			Title   string `json:"title"`
@@ -221,7 +221,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 			Updates(map[string]interface{}{"title": req.Title, "content": req.Content, "sort": req.Sort})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
-	r.DELETE("/api/admin/services/:id", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.DELETE("/api/admin/services/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		if db.Delete(&model.BizService{}, "id = ?", id).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
@@ -231,7 +231,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// ===== 首页布局（板块顺序） =====
-	r.GET("/api/admin/home-layout", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.GET("/api/admin/home-layout", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var hl model.HomeLayout
 		order := []string{}
 		if db.First(&hl, "id = ?", 1).Error == nil && hl.Order != "" {
@@ -239,7 +239,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"order": order}})
 	})
-	r.PUT("/api/admin/home-layout", middleware.AuthMiddleware("admin"), func(c *gin.Context) {
+	r.PUT("/api/admin/home-layout", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req struct {
 			Order []string `json:"order"`
 		}

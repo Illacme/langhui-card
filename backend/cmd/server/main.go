@@ -45,9 +45,9 @@ func main() {
 	// /uploads 静态托管：local 驱动下用户文件与小程序码均落本地并由本路由托管；
 	// minio/oss 驱动下用户文件/小程序码走对象存储，此路由仅作空目录兜底，无副作用。
 	r.Static("/uploads", cfg.UploadDir)
-	handler.RegisterUpload(r, up, refresher)       // POST /api/admin/upload + /api/employee/upload
-	handler.RegisterStorage(r, up, refresher, cfg) // 直传预签名 / 私有桶签名 / CDN 刷新 / 本地私有文件流
-	handler.RegisterWechat(r, cfg, up)             // GET /api/wechat/wxacode（小程序码，按 staffId）
+	handler.RegisterUpload(r, db, up, refresher)       // POST /api/admin/upload + /api/employee/upload
+	handler.RegisterStorage(r, db, up, refresher, cfg) // 直传预签名 / 私有桶签名 / CDN 刷新 / 本地私有文件流
+	handler.RegisterWechat(r, cfg, up)                 // GET /api/wechat/wxacode（小程序码，按 staffId）
 
 	log.Printf("listen :%s (storage driver=%s)", cfg.Port, cfg.StorageDriver)
 	if err := r.Run(":" + cfg.Port); err != nil {
