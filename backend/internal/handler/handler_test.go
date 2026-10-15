@@ -92,8 +92,8 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	// 静态托管需要目录存在
 	require.NoError(t, os.MkdirAll(cfg.UploadDir, 0755))
 	r.Static("/uploads", cfg.UploadDir)
-	RegisterUpload(r, up, refresher)
-	RegisterStorage(r, up, refresher, cfg)
+	RegisterUpload(r, db, up, refresher)
+	RegisterStorage(r, db, up, refresher, cfg)
 	RegisterWechat(r, cfg, up)
 
 	return r
@@ -407,14 +407,22 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		require.EqualValues(t, 1, body["code"])
 	})
 
-	// ===== 9. 超管修改自身密码 =====
-	t.Run("超管改密", func(t *testing.T) {
+	// ===== 9. 超管修改自身密码（同时验证令牌吊销） =====
+	t.Run("超管改密与令牌吊销", func(t *testing.T) {
+		oldToken := adminToken
 		_, body := c.do("PUT", "/api/admin/password", map[string]interface{}{
 			"old": "admin123456", "new": "admin123456",
 		}, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
-		// 原密码错误 → code:1
+		// 改密后旧令牌立即失效（安全戳自增）→ 401
+		_, body = c.do("GET", "/api/admin/employees", nil, oldToken)
+		require.EqualValues(t, 401, body["code"])
+
+		// 重新登录拿到新令牌（密码未变）
+		adminToken = loginAdmin(t, c)
+
+		// 原密码错误 → code:1（用新令牌才能走到密码校验逻辑）
 		_, body = c.do("PUT", "/api/admin/password", map[string]interface{}{
 			"old": "wrong", "new": "admin123456",
 		}, adminToken)
@@ -497,7 +505,7 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	require.True(t, ok, "runtime.Caller failed")
 	migrationsDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "migrations")
-	for _, f := range []string{"0001_init.sql", "0002_apply.sql", "0003_soft_delete.sql"} {
+	for _, f := range []string{"0001_init.sql", "0002_apply.sql", "0003_soft_delete.sql", "0004_token_version.sql"} {
 		raw, err := os.ReadFile(filepath.Join(migrationsDir, f))
 		require.NoError(t, err)
 		for _, stmt := range strings.Split(string(raw), ";") {
@@ -587,6 +595,68 @@ func TestStorageEnhanceSuccess(t *testing.T) {
 		map[string]interface{}{"urls": []string{"http://final/a.jpg"}}, adminToken)
 	require.EqualValues(t, 0, body["code"])
 	require.True(t, ref.called)
+}
+
+// TestTokenRefresh 验证 refresh 端点与令牌吊销：
+//  1. 用 refresh 令牌换取新 access，且新 access 可用；
+//  2. 垃圾 refresh / 把 access 当 refresh 均被拒绝（类型与签名校验）；
+//  3. 员工改密后旧令牌立即失效（安全戳机制）。
+func TestTokenRefresh(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := &testClient{r: r, t: t}
+	adminToken := loginAdmin(t, c)
+
+	// 超管登录拿到双令牌
+	_, body := c.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "admin", "password": "admin123456",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	access := body["token"].(string)
+	refresh := body["refreshToken"].(string)
+	require.NotEmpty(t, access)
+	require.NotEmpty(t, refresh)
+	require.EqualValues(t, 900, body["expiresIn"])
+
+	// 用 refresh 换新的 access → 新 access 可访问受保护接口
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": refresh}, "")
+	require.EqualValues(t, 0, body["code"])
+	newAccess := body["token"].(string)
+	require.NotEmpty(t, newAccess)
+	_, body = c.do("GET", "/api/admin/employees", nil, newAccess)
+	require.EqualValues(t, 0, body["code"])
+
+	// 垃圾 refresh → 401
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": "not-a-token"}, "")
+	require.EqualValues(t, 401, body["code"])
+
+	// 把 access 当 refresh 用（类型不符）→ 401
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": access}, "")
+	require.EqualValues(t, 401, body["code"])
+
+	// 员工改密触发吊销：旧令牌失效
+	_, body = c.do("POST", "/api/admin/employees", map[string]interface{}{
+		"name": "王五", "phone": "13700000003", "email": "w@a.com", "title": "经理",
+	}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	empID := int64(body["staffId"].(float64))
+	initPwd := body["initialPassword"].(string)
+
+	_, body = c.do("POST", "/api/employee/login", map[string]interface{}{
+		"phone": "13700000003", "password": initPwd,
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	empToken := body["token"].(string)
+	require.NotEmpty(t, empToken)
+
+	// 员工改密（用初始密码）→ 旧令牌立即失效
+	_, body = c.do("PUT", "/api/employee/password", map[string]interface{}{
+		"old": initPwd, "new": "newpass1",
+	}, empToken)
+	require.EqualValues(t, 0, body["code"])
+	_, body = c.do("GET", "/api/employee/me", nil, empToken)
+	require.EqualValues(t, 401, body["code"])
+
+	_ = empID
 }
 
 // newSeedDB 建一个 SQLite 库并 seed 超管，供成功路径测试装配路由。

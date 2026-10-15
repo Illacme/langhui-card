@@ -16,6 +16,7 @@ type Employee struct {
 	Email        string    `gorm:"column:email" json:"email"`
 	PasswordHash string    `gorm:"column:password_hash" json:"-"`
 	Status       string    `gorm:"column:status;default:enabled" json:"status"` // enabled / disabled
+	TokenVersion int       `gorm:"column:token_version;default:0" json:"-"`     // 安全戳：改密/禁用自增，令旧令牌失效
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
@@ -93,6 +94,7 @@ type Admin struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	Username     string    `gorm:"column:username" json:"username"`
 	PasswordHash string    `gorm:"column:password_hash" json:"-"`
+	TokenVersion int       `gorm:"column:token_version;default:0" json:"-"` // 安全戳：改密自增，令旧令牌失效
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 

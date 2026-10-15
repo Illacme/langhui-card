@@ -11,22 +11,23 @@ import (
 	"langhui/internal/storage"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 // RegisterStorage 注册存储增强接口：直传预签名 / 私有桶限时签名 / CDN 刷新 / 本地私有文件流
-func RegisterStorage(r *gin.Engine, up storage.Uploader, refresher storage.CDNRefresher, cfg config.Config) {
+func RegisterStorage(r *gin.Engine, db *gorm.DB, up storage.Uploader, refresher storage.CDNRefresher, cfg config.Config) {
 	// 直传预签名（超管 / 员工）：客户端拿 putUrl 后直接 PUT 到对象存储
-	r.GET("/api/admin/upload/presign", middleware.AuthMiddleware("admin"), presignHandler(up))
-	r.GET("/api/employee/upload/presign", middleware.AuthMiddleware("employee"), presignHandler(up))
+	r.GET("/api/admin/upload/presign", middleware.AuthMiddleware(db, "admin"), presignHandler(up))
+	r.GET("/api/employee/upload/presign", middleware.AuthMiddleware(db, "employee"), presignHandler(up))
 	// 私有桶：已存 URL → 限时签名 URL（超管 / 员工）
-	r.POST("/api/admin/storage/sign", middleware.AuthMiddleware("admin"), signHandler(up, cfg))
-	r.POST("/api/employee/storage/sign", middleware.AuthMiddleware("employee"), signHandler(up, cfg))
+	r.POST("/api/admin/storage/sign", middleware.AuthMiddleware(db, "admin"), signHandler(up, cfg))
+	r.POST("/api/employee/storage/sign", middleware.AuthMiddleware(db, "employee"), signHandler(up, cfg))
 	// CDN 刷新（超管）
-	r.POST("/api/admin/cdn/refresh", middleware.AuthMiddleware("admin"), cdnRefreshHandler(refresher))
+	r.POST("/api/admin/cdn/refresh", middleware.AuthMiddleware(db, "admin"), cdnRefreshHandler(refresher))
 	// 本地私有文件流（仅本地驱动 + 私有模式：文件不通过 /uploads 静态公开，需鉴权后读取）
 	if local, ok := up.(*storage.LocalUploader); ok && !cfg.StoragePublic {
-		r.GET("/api/storage/file", middleware.AuthMiddleware("admin"), localFileHandler(local))
-		r.GET("/api/employee/storage/file", middleware.AuthMiddleware("employee"), localFileHandler(local))
+		r.GET("/api/storage/file", middleware.AuthMiddleware(db, "admin"), localFileHandler(local))
+		r.GET("/api/employee/storage/file", middleware.AuthMiddleware(db, "employee"), localFileHandler(local))
 	}
 }
 
