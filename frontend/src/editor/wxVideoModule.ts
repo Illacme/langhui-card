@@ -14,8 +14,9 @@ export function registerWxVideoModule() {
   if (registered) return
   registered = true
 
-  // 标记为 void（原子块，内部不可编辑）
-  const withWxVideo = (editor: IDomEditor) => {
+  // 标记为 void（原子块，内部不可编辑）。
+  // 泛型 <T extends IDomEditor> 与 Boot 的 PluginType 签名保持一致（否则 TS 推断不收敛）。
+  const withWxVideo = <T extends IDomEditor>(editor: T): T => {
     const { isVoid } = editor
     editor.isVoid = (elem: SlateElement) => {
       const e = elem as any
@@ -25,7 +26,10 @@ export function registerWxVideoModule() {
     return editor
   }
 
-  // 编辑区渲染：显示为一块绿色占位（视频号图标 + channel-id）
+  // 编辑区渲染：显示为一块绿色占位（视频号图标 + channel-id）。
+  // renderElem 返回 DOM 元素（wangEditor 运行时可接受）；上游 IRenderElemConf 的
+  // 类型签名按 snabbdom VNode 声明，且未从 @wangeditor/editor 根导出（内部来自
+  // @wangeditor/core），故这里保持对象字面量原样，装配时统一断言收敛。
   const renderElemConf = {
     type: WX_VIDEO_TYPE,
     renderElem: (elem: any) => {
@@ -62,11 +66,13 @@ export function registerWxVideoModule() {
     },
   }
 
+  // 装配：上游 conf 类型签名（snabbdom VNode）与运行时可接受的 DOM 返回值不一致，
+  // 且未从根包导出，故逐项断言；运行时不变量（DOM 元素 / HTML 字符串 / 节点对象）不变。
   const module: Partial<IModuleConf> = {
     editorPlugin: withWxVideo,
-    renderElems: [renderElemConf],
-    elemsToHtml: [elemToHtmlConf],
-    parseElemsHtml: [parseHtmlConf],
+    renderElems: [renderElemConf as any],
+    elemsToHtml: [elemToHtmlConf as any],
+    parseElemsHtml: [parseHtmlConf as any],
   }
 
   Boot.registerModule(module)

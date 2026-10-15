@@ -76,11 +76,13 @@ function insertWxVideo() {
     if (input !== null) ElMessage.warning('未输入 channel-id')
     return
   }
+  // insertNode 的入参类型声明为 slate Node；自定义视频号块的节点形态
+  // （type/channelId/children）由 editorPlugin + parseElemsHtml 约定，运行时可接受，此处收敛类型
   editor.insertNode({
     type: WX_VIDEO_TYPE,
     channelId,
     children: [{ text: '' }],
-  })
+  } as any)
   editor.focus()
 }
 

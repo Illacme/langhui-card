@@ -96,18 +96,16 @@ jobs:
       - name: 单元测试
         run: npm run test
 
-  # ───────── 前端：严格类型检查（非阻塞，仅暴露问题） ─────────
-  # 说明：vue-tsc 在 moduleResolution: bundler 下，因 @wangeditor/* 的类型声明
-  # （editor-for-vue 的 exports 未暴露 types、自定义节点模块 registerNodeType 的
-  # 类型签名）会报若干错误；生产构建走 vite/esbuild 转译不受影响。
-  # 设为 continue-on-error，使其作为「预警」而非「门禁」，逐步收敛。
+  # ───────── 前端：严格类型检查（门禁） ─────────
+  # 历史遗留：@wangeditor/editor-for-vue 的 package.json exports 未暴露 types，
+  # 且自定义元素 renderElem 的 VNode 类型签名与 DOM 返回值不符，曾报 4 个错误。
+  # 已通过 tsconfig paths 指向其真实 d.ts + 精准断言收敛修复，现为 0 错误，纳入门禁。
   frontend-typecheck:
-    name: 前端类型检查 (vue-tsc, 非阻塞)
+    name: 前端类型检查 (vue-tsc)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
