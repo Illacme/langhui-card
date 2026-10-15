@@ -119,25 +119,30 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 ## 单元测试（Vitest）
 
-前端配套 Vitest 单测，覆盖关键纯逻辑与契约约定（不依赖真实后端 / 浏览器）：
+前端配套 Vitest 单测，覆盖关键纯逻辑与契约约定（不依赖真实后端 / 浏览器）。**同时纳管小程序端的纯逻辑测试**（小程序本身无独立测试工具链，`vitest.config.ts` 通过 `server.fs.allow` 放行仓库根外的 spec 路径）。
 
+前端（`src/`）：
 - `src/composables/useTable.spec.ts`：分页切片、关键字筛选（大小写不敏感）、关键字变化后回到首页等纯逻辑。
 - `src/store/auth.spec.ts`：Pinia 登录态 `setAuth` / `logout` 与 `localStorage` 同步。
 - `src/api/request.spec.ts`：统一响应拦截的**鉴权契约**——`code=0` 透传、`code=401` 清 token + 跳登录并重 reject、`code=403` 警告、`code!=0` 业务失败报错；以及请求拦截注入 `Bearer` 头。
 - `src/editor/wxVideoModule.spec.ts`：`<wx-video channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致）。
+- `src/views/Login.spec.ts`：登录页视图层用例——表单校验提示、登录成功后写 Pinia + 跳转、`code=401` 时展示错误并不写登录态（jsdom + Element Plus 组件挂载）。
+- `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
 
-配置见 `vitest.config.ts`（jsdom 环境 + `@` 别名 + vue 插件）。运行：
+小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：
+- `miniprogram/tests/richtext.spec.ts`：`<wx-video>` 富文本拆分（自闭合 / 成对 / 属性顺序无关）、无视频号时整体走 `rich-text` 等。
+- `miniprogram/tests/request.spec.ts`：`wx.request` 封装的 token 注入、`code=401` 静默 refresh 重试一次、失败清 token 等。
+
+配置见 `vitest.config.ts`（jsdom 环境 + `@` 别名 + vue 插件 + 小程序 spec 纳管）。运行：
 
 ```bash
 cd frontend
-npm test            # 等价于 vitest run，跑全部 *.spec.ts
+npm test            # 等价于 vitest run，跑前端 + 小程序全部 spec
 npm run test:watch  # 监听模式
 ```
 
-> 说明：CI 中 `frontend` job 执行 `npm ci` + `npm run build` + `npm test`。
-> 严格类型检查（`npm run type-check` / `vue-tsc --noEmit`）因 `@wangeditor/*` 在 `moduleResolution: bundler` 下的类型声明问题（editor-for-vue 的 `exports` 未暴露 types、自定义节点模块 `registerNodeType` 的类型签名）仍会报若干错误；
-> 生产构建（`vite build`）走 esbuild 转译、不做类型检查，故不受影响。CI 已新增独立的 `frontend-typecheck` job（`continue-on-error`），作为「预警」持续暴露这些类型问题，待 wangEditor 类型声明修正后可升级为硬性门禁。
-> 已知类型问题集中在 `src/components/RichEditor.vue` 与 `src/editor/wxVideoModule.ts` 两处（运行时行为正常）。
+> 说明：CI 中 `frontend` job 执行 `npm ci` + `npm run build` + `npm test`（前端与小程序单测一并覆盖）。
+> 严格类型检查（`npm run type-check` / `vue-tsc --noEmit`）历史上有 4 个 `@wangeditor/*` 相关错误（editor-for-vue 的 `exports` 未暴露 types、自定义节点 `registerNodeType` 的类型签名），已通过 tsconfig `paths` 指向其真实 d.ts + 精准断言收敛修复，**当前 0 错误**；CI 的 `frontend-typecheck` job 已从「预警（continue-on-error）」升级为**阻塞门禁**，后续不得引入新的类型错误。
 
 ## 已知边界（与后端一致）
 
