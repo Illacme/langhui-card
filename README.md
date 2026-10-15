@@ -64,9 +64,10 @@ CI 见 `.github/workflows/ci.yml`，三个 job：
 - 登录接口按 IP **固定窗口限流**，防爆破。
 - 启动自检：JWT 密钥为默认值或超管口令为默认值时打印 **[SECURITY] 告警**。
 - 内容模型（分类 / 项目 / 服务）支持 **软删除**（GORM `DeletedAt`）。
+- JWT **双令牌 + 两级即时吊销**：access 15 分钟 / refresh 30 天，`POST /api/refresh` 静默续期；账号级走 `token_version` 安全戳（改密 / 禁用即时失效），会话级走 `revoked_sessions` 黑名单（**单设备精确吊销**，登出只失效当前设备）。
+- PC 管理后台 **httpOnly Cookie 鉴权**（`HttpOnly; SameSite=Lax`），token 不下发到 JS，防 XSS 窃取；小程序端走 Bearer 头。
 
 当前版本**已知边界**（需基建/流程配合，尚未在本仓库落地）：
-- JWT 无主动吊销 / 刷新机制，token 存前端 `localStorage`（XSS 风险，建议后续迁 httpOnly Cookie）。
 - 小程序码 / access_token 等内存缓存在多实例下不共享，水平扩展需引入 Redis。
 - 缺监控 / 日志告警 / 数据库备份策略；生产需 HTTPS 与反向代理。
 - MinIO / OSS 真实驱动未含端到端单测；小程序端无自动化单测（需微信 CLI）。

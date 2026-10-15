@@ -150,7 +150,7 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 		&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
-		&model.OpenApply{}, &model.CardModifyApply{},
+		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
 	))
 
 	uploadDir, err := os.MkdirTemp("", "langhui-upload-")
@@ -542,7 +542,7 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	require.True(t, ok, "runtime.Caller failed")
 	migrationsDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "migrations")
-	for _, f := range []string{"0001_init.sql", "0002_apply.sql", "0003_soft_delete.sql", "0004_token_version.sql"} {
+	for _, f := range []string{"0001_init.sql", "0002_apply.sql", "0003_soft_delete.sql", "0004_token_version.sql", "0005_revoked_sessions.sql"} {
 		raw, err := os.ReadFile(filepath.Join(migrationsDir, f))
 		require.NoError(t, err)
 		for _, stmt := range strings.Split(string(raw), ";") {
@@ -739,6 +739,65 @@ func TestCookieAuth(t *testing.T) {
 	require.EqualValues(t, 401, body["code"])
 }
 
+// TestSingleDeviceRevocation 验证单设备精确吊销（会话黑名单，A3）：
+//  1. 同一账号登录两次 = 两个独立会话（sid 不同），两个令牌均可用；
+//  2. 设备 A 登出（携带其 Bearer）→ 只有 A 的 access 失效；
+//  3. A 的 refresh 也失效（登出终结整条令牌链，刷新不换 sid）；
+//  4. 设备 B 完全不受影响（与 token_version 账号级吊销的区别所在）。
+func TestSingleDeviceRevocation(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	// 建员工（超管创建后需用初始密码登录）
+	_, body := c.do("POST", "/api/admin/employees", map[string]interface{}{
+		"name": "赵六", "phone": "13600000004", "email": "z@a.com", "title": "技术",
+	}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	initPwd := body["initialPassword"].(string)
+
+	login := func() (access, refresh string) {
+		_, body := c.do("POST", "/api/employee/login", map[string]interface{}{
+			"phone": "13600000004", "password": initPwd,
+		}, "")
+		require.EqualValues(t, 0, body["code"])
+		return body["token"].(string), body["refreshToken"].(string)
+	}
+
+	// 设备 A / 设备 B 分别登录（两个会话）
+	accessA, refreshA := login()
+	accessB, refreshB := login()
+	require.NotEqual(t, accessA, accessB, "两次登录应签发不同令牌")
+
+	// 1. 两个令牌均可用
+	_, body = c.do("GET", "/api/employee/me", nil, accessA)
+	require.EqualValues(t, 0, body["code"])
+	_, body = c.do("GET", "/api/employee/me", nil, accessB)
+	require.EqualValues(t, 0, body["code"])
+
+	// 2. 设备 A 登出 → 只吊销 A 的会话
+	_, body = c.do("POST", "/api/logout", nil, accessA)
+	require.EqualValues(t, 0, body["code"])
+	_, body = c.do("GET", "/api/employee/me", nil, accessA)
+	require.EqualValues(t, 401, body["code"], "登出设备的 access 应立即失效")
+
+	// 3. A 的 refresh 同样失效（会话已终结，不能靠刷新绕过登出）
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": refreshA}, "")
+	require.EqualValues(t, 401, body["code"], "登出设备的 refresh 应立即失效")
+
+	// 4. 设备 B 不受影响
+	_, body = c.do("GET", "/api/employee/me", nil, accessB)
+	require.EqualValues(t, 0, body["code"])
+
+	// B 的 refresh 仍可正常换发（其 sid 未被吊销），且换出的新 access 可用
+	_, body = c.do("POST", "/api/refresh", map[string]interface{}{"refreshToken": refreshB}, "")
+	require.EqualValues(t, 0, body["code"])
+	newAccessB := body["token"].(string)
+	require.NotEmpty(t, newAccessB)
+	_, body = c.do("GET", "/api/employee/me", nil, newAccessB)
+	require.EqualValues(t, 0, body["code"])
+}
+
 // newSeedDB 建一个 SQLite 库并 seed 超管，供成功路径测试装配路由。
 func newSeedDB(t *testing.T) *gorm.DB {
 	tmpDB, err := os.CreateTemp("", "langhui-test-*.db")
@@ -752,7 +811,7 @@ func newSeedDB(t *testing.T) *gorm.DB {
 		&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
-		&model.OpenApply{}, &model.CardModifyApply{},
+		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
 	))
 	return db
 }
