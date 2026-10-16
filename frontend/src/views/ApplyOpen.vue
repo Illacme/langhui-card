@@ -37,7 +37,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="rejectReason" label="驳回原因" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="createdAt" label="提交时间" width="180" />
+        <el-table-column label="提交时间" width="180">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
             <template v-if="row.status === 'pending'">
@@ -96,6 +98,7 @@ import { Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { listOpenApply, approveOpen, rejectOpen } from '@/api/apply'
 import { useTable } from '@/composables/useTable'
+import { formatDateTime } from '@/utils/datetime'
 
 const rows = ref<any[]>([])
 const { keyword, currentPage, size, total, paged } = useTable(
