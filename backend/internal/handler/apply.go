@@ -47,11 +47,12 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	r.PUT("/api/employee/me", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
 		var patch struct {
-			Avatar string `json:"avatar"`
-			Name   string `json:"name"`
-			Title  string `json:"title"`
-			Phone  string `json:"phone"`
-			Email  string `json:"email"`
+			Avatar   string `json:"avatar"`
+			Name     string `json:"name"`
+			Title    string `json:"title"`
+			Phone    string `json:"phone"`
+			Landline string `json:"landline"`
+			Email    string `json:"email"`
 		}
 		if err := c.ShouldBindJSON(&patch); err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -180,6 +181,9 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		if v, ok := patch["phone"]; ok {
 			updates["phone"] = v
 		}
+		if v, ok := patch["landline"]; ok {
+			updates["landline"] = v
+		}
 		if v, ok := patch["email"]; ok {
 			updates["email"] = v
 		}
@@ -213,9 +217,41 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		emp := model.Employee{Name: req.Name, Phone: req.Phone, Email: req.Email, Title: req.Title, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
+		emp := model.Employee{Name: req.Name, Phone: req.Phone, Email: req.Email, Title: req.Title, Landline: req.Landline, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "staffId": emp.StaffID, "initialPassword": pwd})
+	})
+
+	// 超管编辑员工资料（即时生效，不经过员工端审核流）。
+	// 只开放白名单字段：姓名 / 职位 / 手机 / 座机 / 邮箱 / 头像。
+	// 状态、密码各有专门端点（disable/enable/reset-password），此处不混写，避免绕过安全戳逻辑。
+	r.PUT("/api/admin/employees/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
+		var req struct {
+			Name     string `json:"name"`
+			Title    string `json:"title"`
+			Phone    string `json:"phone"`
+			Landline string `json:"landline"`
+			Email    string `json:"email"`
+			Avatar   string `json:"avatar"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
+			return
+		}
+		if req.Name == "" || req.Phone == "" {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "姓名与手机为必填"})
+			return
+		}
+		if db.Model(&model.Employee{}).Where("staff_id = ?", id).
+			Updates(map[string]interface{}{
+				"name": req.Name, "title": req.Title, "phone": req.Phone,
+				"landline": req.Landline, "email": req.Email, "avatar": req.Avatar,
+			}).RowsAffected == 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
 	// 员工列表（超管）

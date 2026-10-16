@@ -7,12 +7,15 @@ import (
 )
 
 // Employee 员工即名片主体；staff_id 为对外唯一编号
+// Landline（座机）为员工个人办公电话，与 company_info.tel（公司总机）是两个层级：
+// 小程序名片「座机」行优先展示本人的，为空时回退到公司总机。
 type Employee struct {
 	StaffID      int64     `gorm:"primaryKey;autoIncrement;column:staff_id" json:"staffId"`
 	Name         string    `gorm:"column:name" json:"name"`
-	Title        string    `gorm:"column:title" json:"title"`
+	Title        string    `gorm:"column:title" json:"title"` // 职位（对外展示）
 	Avatar       string    `gorm:"column:avatar" json:"avatar"`
-	Phone        string    `gorm:"column:phone" json:"phone"`
+	Phone        string    `gorm:"column:phone" json:"phone"`       // 手机
+	Landline     string    `gorm:"column:landline" json:"landline"` // 座机
 	Email        string    `gorm:"column:email" json:"email"`
 	PasswordHash string    `gorm:"column:password_hash" json:"-"`
 	Status       string    `gorm:"column:status;default:enabled" json:"status"` // enabled / disabled
@@ -130,7 +133,7 @@ type OpenApply struct {
 type CardModifyApply struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	StaffID      int64     `gorm:"column:staff_id;index" json:"staffId"`
-	Snapshot     string    `gorm:"column:snapshot;type:json" json:"snapshot"` // JSON：变更字段 {avatar,name,title,phone,email}
+	Snapshot     string    `gorm:"column:snapshot;type:json" json:"snapshot"` // JSON：变更字段 {avatar,name,title,phone,landline,email}
 	Status       string    `gorm:"column:status;default:pending" json:"status"`
 	RejectReason string    `gorm:"column:reject_reason" json:"rejectReason"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`

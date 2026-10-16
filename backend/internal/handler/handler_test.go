@@ -280,6 +280,39 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
+		// 超管编辑员工资料（即时生效，不经员工端审核流）——含座机字段
+		_, body = c.do("PUT", fmt.Sprintf("/api/admin/employees/%d", empID), map[string]interface{}{
+			"name": "李四四", "title": "高级销售", "phone": "13900000002",
+			"landline": "021-12345678", "email": "l4@a.com", "avatar": "http://x/a.png",
+		}, adminToken)
+		require.EqualValues(t, 0, body["code"])
+
+		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		var found bool
+		for _, it := range body["data"].([]interface{}) {
+			m := it.(map[string]interface{})
+			if int64(m["staffId"].(float64)) != empID {
+				continue
+			}
+			found = true
+			require.Equal(t, "李四四", m["name"])
+			require.Equal(t, "高级销售", m["title"])
+			require.Equal(t, "021-12345678", m["landline"])
+			require.Equal(t, "l4@a.com", m["email"])
+		}
+		require.True(t, found, "编辑后的员工应仍在列表中")
+
+		// 编辑不存在的员工 / 姓名为空 → code:1
+		_, body = c.do("PUT", "/api/admin/employees/999999", map[string]interface{}{
+			"name": "x", "phone": "1",
+		}, adminToken)
+		require.EqualValues(t, 1, body["code"])
+		_, body = c.do("PUT", fmt.Sprintf("/api/admin/employees/%d", empID), map[string]interface{}{
+			"name": "", "phone": "13900000002",
+		}, adminToken)
+		require.EqualValues(t, 1, body["code"])
+
 		// 重置密码 → 返回新初始密码（覆盖创建时的初始密码，登录须用此值）
 		_, body = c.do("POST", fmt.Sprintf("/api/admin/employees/%d/reset-password", empID), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
@@ -305,12 +338,18 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		_, body = c.do("GET", "/api/employee/me/stat", nil, empToken)
 		require.EqualValues(t, 0, body["code"])
 
-		// 权限越界：员工 token 调超管接口 → code:403
+		// 权限越界：员工 token 调超管接口 → code:403（读与写都拦）
 		_, body = c.do("GET", "/api/admin/employees", nil, empToken)
 		require.EqualValues(t, 403, body["code"])
+		_, body = c.do("PUT", fmt.Sprintf("/api/admin/employees/%d", empID), map[string]interface{}{
+			"name": "越权改", "phone": "000",
+		}, empToken)
+		require.EqualValues(t, 403, body["code"])
 
-		// 员工提交名片修改申请
-		_, body = c.do("PUT", "/api/employee/me", map[string]interface{}{"title": "高级销售"}, empToken)
+		// 员工提交名片修改申请（含座机，审核通过后应落到员工资料上）
+		_, body = c.do("PUT", "/api/employee/me", map[string]interface{}{
+			"title": "高级销售", "landline": "021-87654321",
+		}, empToken)
 		require.EqualValues(t, 0, body["code"])
 
 		// 超管审核名片修改
@@ -321,6 +360,18 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		modID := int64(mods[0].(map[string]interface{})["id"].(float64))
 		_, body = c.do("POST", fmt.Sprintf("/api/admin/apply/modify/%d/approve", modID), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
+
+		// 审核通过后快照生效：title 与 landline 都写到员工资料
+		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		for _, it := range body["data"].([]interface{}) {
+			m := it.(map[string]interface{})
+			if int64(m["staffId"].(float64)) != empID {
+				continue
+			}
+			require.Equal(t, "高级销售", m["title"])
+			require.Equal(t, "021-87654321", m["landline"])
+		}
 	})
 
 	// ===== 5. 分类与项目强校验（防止孤立数据 / 锁定保护） =====
