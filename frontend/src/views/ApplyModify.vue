@@ -55,7 +55,7 @@
     </el-card>
 
     <!-- 变更明细：字段级 旧值 → 新值 -->
-    <el-dialog v-model="detailVisible" title="变更明细" width="520px">
+    <el-dialog v-model="detailVisible" title="变更明细" width="520px" class="resp-dialog">
       <el-descriptions :column="1" border v-if="detailRows.length">
         <el-descriptions-item v-for="f in detailRows" :key="f.key" :label="f.label">
           <span class="old">{{ f.old || '（空）' }}</span>
@@ -70,7 +70,7 @@
     </el-dialog>
 
     <!-- 驳回 -->
-    <el-dialog v-model="rejectVisible" title="驳回申请" width="440px">
+    <el-dialog v-model="rejectVisible" title="驳回申请" width="440px" class="resp-dialog">
       <el-input v-model="rejectReason" type="textarea" :rows="3" placeholder="请填写驳回原因（必填）" />
       <template #footer>
         <el-button @click="rejectVisible = false">取消</el-button>

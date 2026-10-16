@@ -1,5 +1,5 @@
 <template>
-  <el-dialog v-model="visible" title="修改密码" width="420px" @closed="onClosed">
+  <el-dialog v-model="visible" title="修改密码" width="420px" class="resp-dialog" @closed="onClosed">
     <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
       <el-form-item label="原密码" prop="old">
         <el-input v-model="form.old" type="password" show-password placeholder="请输入当前密码" />

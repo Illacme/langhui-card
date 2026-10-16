@@ -61,7 +61,7 @@
     </el-card>
 
     <!-- 驳回原因 -->
-    <el-dialog v-model="rejectVisible" title="驳回申请" width="440px">
+    <el-dialog v-model="rejectVisible" title="驳回申请" width="440px" class="resp-dialog">
       <el-input
         v-model="rejectReason"
         type="textarea"
@@ -75,7 +75,7 @@
     </el-dialog>
 
     <!-- 通过结果：一次性初始密码 -->
-    <el-dialog v-model="okVisible" title="开通成功" width="420px">
+    <el-dialog v-model="okVisible" title="开通成功" width="420px" class="resp-dialog">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="员工编号">{{ okResult.staffId }}</el-descriptions-item>
         <el-descriptions-item label="初始密码">

@@ -56,7 +56,13 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑分类' : '新增分类'" width="460px" @closed="resetForm">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editingId ? '编辑分类' : '新增分类'"
+      width="460px"
+      class="resp-dialog"
+      @closed="resetForm"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" />
