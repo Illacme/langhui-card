@@ -6,10 +6,10 @@
         <div class="bar-right">
           <el-input
             v-model="keyword"
-            placeholder="搜索姓名/手机"
+            placeholder="搜索姓名/手机/职位/座机"
             clearable
             :prefix-icon="Search"
-            style="width: 220px"
+            style="width: 240px"
           />
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
           <el-button type="primary" :icon="Plus" @click="openCreate">新增员工</el-button>
@@ -19,8 +19,13 @@
       <el-table :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="编号" width="80" align="center" />
         <el-table-column prop="name" label="姓名" width="110" />
-        <el-table-column prop="title" label="岗位" width="120" />
+        <el-table-column prop="title" label="职位" width="120" />
         <el-table-column prop="phone" label="手机" width="140" />
+        <el-table-column label="座机" width="140">
+          <template #default="{ row }">
+            <span :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip />
         <el-table-column label="头像" width="80" align="center">
           <template #default="{ row }">
@@ -43,8 +48,9 @@
         <el-table-column label="创建时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right" align="center">
+        <el-table-column label="操作" width="280" fixed="right" align="center">
           <template #default="{ row }">
+            <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
             <el-button
               v-if="row.status === 'disabled'"
               type="success"
@@ -72,8 +78,14 @@
       />
     </el-card>
 
-    <!-- 新增员工 -->
-    <el-dialog v-model="createVisible" title="新增员工" width="520px" class="resp-dialog" @closed="resetForm">
+    <!-- 新增 / 编辑员工（同一表单：新增走创建接口并弹初始密码，编辑直接覆盖资料） -->
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editingId ? '编辑员工' : '新增员工'"
+      width="520px"
+      class="resp-dialog"
+      @closed="resetForm"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" placeholder="必填" />
@@ -81,8 +93,11 @@
         <el-form-item label="手机" prop="phone">
           <el-input v-model="form.phone" placeholder="必填" />
         </el-form-item>
-        <el-form-item label="岗位">
+        <el-form-item label="职位">
           <el-input v-model="form.title" />
+        </el-form-item>
+        <el-form-item label="座机">
+          <el-input v-model="form.landline" placeholder="选填，如 021-88888888" />
         </el-form-item>
         <el-form-item label="邮箱">
           <el-input v-model="form.email" />
@@ -92,8 +107,8 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="createVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="submitCreate">保存</el-button>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="submit">保存</el-button>
       </template>
     </el-dialog>
 
@@ -120,6 +135,7 @@ import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'elem
 import {
   listEmployees,
   createEmployee,
+  updateEmployee,
   disableEmployee,
   enableEmployee,
   resetPassword,
@@ -132,15 +148,19 @@ const rows = ref<any[]>([])
 const { keyword, currentPage, size, total, paged } = useTable(
   rows,
   (r, kw) =>
-    (r.name || '').toLowerCase().includes(kw) || (r.phone || '').includes(kw)
+    (r.name || '').toLowerCase().includes(kw) ||
+    (r.phone || '').includes(kw) ||
+    (r.title || '').toLowerCase().includes(kw) ||
+    (r.landline || '').includes(kw)
 )
 const loading = ref(false)
 const actingId = ref<number | null>(null)
 
-const createVisible = ref(false)
+const dialogVisible = ref(false)
+const editingId = ref<number | null>(null)
 const saving = ref(false)
 const formRef = ref<FormInstance>()
-const form = reactive({ name: '', phone: '', title: '', email: '', avatar: '' })
+const form = reactive({ name: '', phone: '', title: '', landline: '', email: '', avatar: '' })
 const rules: FormRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   phone: [{ required: true, message: '请输入手机', trigger: 'blur' }],
@@ -162,29 +182,51 @@ async function load() {
 
 function openCreate() {
   resetForm()
-  createVisible.value = true
+  dialogVisible.value = true
+}
+
+function openEdit(row: any) {
+  editingId.value = row.staffId
+  form.name = row.name
+  form.phone = row.phone
+  form.title = row.title
+  form.landline = row.landline || ''
+  form.email = row.email
+  form.avatar = row.avatar
+  formRef.value?.clearValidate()
+  dialogVisible.value = true
 }
 
 function resetForm() {
   form.name = ''
   form.phone = ''
   form.title = ''
+  form.landline = ''
   form.email = ''
   form.avatar = ''
+  editingId.value = null
   formRef.value?.clearValidate()
 }
 
-async function submitCreate() {
+async function submit() {
   if (!formRef.value) return
   const ok = await formRef.value.validate().catch(() => false)
   if (!ok) return
   saving.value = true
   try {
-    const r = await createEmployee({ ...form })
-    pwdResult.value = { staffId: r.staffId, initialPassword: r.initialPassword }
-    pwdVisible.value = true
-    createVisible.value = false
-    await load()
+    if (editingId.value) {
+      // 超管编辑即时生效，不经过员工端审核流
+      await updateEmployee(editingId.value, { ...form })
+      ElMessage.success('已更新')
+      dialogVisible.value = false
+      await load()
+    } else {
+      const r = await createEmployee({ ...form })
+      pwdResult.value = { staffId: r.staffId, initialPassword: r.initialPassword }
+      pwdVisible.value = true
+      dialogVisible.value = false
+      await load()
+    }
   } catch {
     /* 拦截器已提示 */
   } finally {

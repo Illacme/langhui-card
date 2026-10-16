@@ -19,7 +19,7 @@
         <el-table-column prop="name" label="姓名" width="110" />
         <el-table-column prop="phone" label="手机" width="140" />
         <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="title" label="岗位" width="120" />
+        <el-table-column prop="title" label="职位" width="120" />
         <el-table-column label="头像" width="80" align="center">
           <template #default="{ row }">
             <el-image
