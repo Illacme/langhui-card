@@ -23,6 +23,9 @@
             <span class="muted">{{ stripHtml(row.content) }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="创建时间" width="180" align="center">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="排序" width="120" align="center">
           <template #default="{ row }">
             <div class="sort-cell">
@@ -38,7 +41,6 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
@@ -97,6 +99,7 @@ import {
 } from '@/api/content'
 import { useTable } from '@/composables/useTable'
 import { useSortableRows } from '@/composables/useSortableRows'
+import { formatDateTime } from '@/utils/datetime'
 // 富文本编辑器体积较大（~800KB），按页面懒加载，避免拖累首屏
 const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 
