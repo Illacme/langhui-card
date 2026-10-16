@@ -1,6 +1,6 @@
-<view class="list">
+<view class="list" wx:if="{{!loading && !error}}">
   <view class="item" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap">
-    <image class="cover" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}" />
+    <image class="cover" src="{{item.cover}}" mode="aspectFill" lazy-load wx:if="{{item.cover}}" />
     <view class="meta">
       <view class="name">{{item.name}}</view>
       <view class="summary">{{item.summary}}</view>
@@ -8,3 +8,8 @@
   </view>
   <view class="empty" wx:if="{{list.length === 0}}">暂无项目案例</view>
 </view>
+<view wx:elif="{{error}}" class="error-box">
+  <view class="error-text">网络异常，加载失败</view>
+  <button class="retry-btn" bindtap="load">重新加载</button>
+</view>
+<view wx:else class="loading">加载中…</view>

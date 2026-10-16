@@ -30,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -407,6 +408,23 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		}, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
+		// 公开列表接口回填 categoryName（跳转页文档 §4：免前端二次查询）
+		_, pubBody := c.do("GET", fmt.Sprintf("/api/projects?categoryId=%d", catID), nil, "")
+		require.EqualValues(t, 0, pubBody["code"])
+		pubList := pubBody["data"].([]interface{})
+		require.NotEmpty(t, pubList)
+		pubItem := pubList[0].(map[string]interface{})
+		require.Equal(t, "测试分类", pubItem["categoryName"])
+		pubID := int64(pubItem["id"].(float64))
+
+		// 公开详情接口含 categoryName + updatedAt（跳转页文档 §2.2）
+		_, pubBody = c.do("GET", fmt.Sprintf("/api/projects/%d", pubID), nil, "")
+		require.EqualValues(t, 0, pubBody["code"])
+		pubDetail := pubBody["data"].(map[string]interface{})
+		require.Equal(t, "测试分类", pubDetail["categoryName"])
+		require.Contains(t, pubDetail, "updatedAt")
+		require.NotEmpty(t, pubDetail["updatedAt"])
+
 		// 分类下有项目 → 删除失败 code:1
 		_, body = c.do("DELETE", fmt.Sprintf("/api/admin/categories/%d", catID), nil, adminToken)
 		require.EqualValues(t, 1, body["code"])
@@ -444,6 +462,11 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 			"title": "机电维保2", "content": "<p>x</p>", "sort": 2,
 		}, adminToken)
 		require.EqualValues(t, 0, body["code"])
+
+		// 公开详情含 updatedAt（跳转页文档 §3.2）
+		_, body = c.do("GET", fmt.Sprintf("/api/services/%d", sid), nil, "")
+		require.EqualValues(t, 0, body["code"])
+		require.Contains(t, body["data"].(map[string]interface{}), "updatedAt")
 
 		_, body = c.do("DELETE", fmt.Sprintf("/api/admin/services/%d", sid), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
@@ -607,12 +630,18 @@ func TestMySQLMigrations(t *testing.T) {
 // applyMigrations 读取并顺序执行 migrations 下的建表 SQL（按 ";" 切分，逐条 Exec）。
 // 用 runtime.Caller 定位本测试文件所在目录，再回溯到 migrations/，
 // 避免依赖 go test 的 CWD（不同调用方式下 CWD 可能不同）。
+// 按文件名排序执行全部 *.sql（不再硬编码清单）——新增迁移忘记登记时，
+// MySQL parity 会静默缺列并在业务断言处才炸，难以定位；glob 从机制上杜绝漏登记。
 func applyMigrations(t *testing.T, db *gorm.DB) {
 	_, thisFile, _, ok := runtime.Caller(0)
 	require.True(t, ok, "runtime.Caller failed")
 	migrationsDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "migrations")
-	for _, f := range []string{"0001_init.sql", "0002_apply.sql", "0003_soft_delete.sql", "0004_token_version.sql", "0005_revoked_sessions.sql"} {
-		raw, err := os.ReadFile(filepath.Join(migrationsDir, f))
+	matches, err := filepath.Glob(filepath.Join(migrationsDir, "*.sql"))
+	require.NoError(t, err)
+	require.NotEmpty(t, matches)
+	sort.Strings(matches)
+	for _, path := range matches {
+		raw, err := os.ReadFile(path)
 		require.NoError(t, err)
 		for _, stmt := range strings.Split(string(raw), ";") {
 			s := strings.TrimSpace(stmt)
@@ -622,7 +651,7 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 			err := db.Exec(s).Error
 			if err != nil {
 				// 幂等：建表用 IF NOT EXISTS，但 0001 的分类种子是固定主键 INSERT，
-				// 重复执行会撞 duplicate entry；0003 的 ALTER 在列已存在时报
+				// 重复执行会撞 duplicate entry；ALTER 在列已存在时报
 				// "Duplicate column" / 1060。这里忽略「已存在」类错误，使 parity
 				// 用例可重复跑（CI 中会被多个用例依次应用）。
 				msg := err.Error()

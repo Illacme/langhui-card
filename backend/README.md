@@ -33,7 +33,8 @@ backend/
 ├── migrations/0003_soft_delete.sql   # 软删除列
 ├── migrations/0004_token_version.sql # token_version 安全戳（账号级吊销）
 ├── migrations/0005_revoked_sessions.sql # 会话黑名单表（单设备精确吊销）
-├── migrations/0006_employee_landline.sql # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
+├── migrations/0006_employee_landline.sql
+0007_updated_at.sql # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
@@ -147,10 +148,10 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 |---|---|---|
 | GET  | /api/card?staffId= | 聚合名片（员工+企业+简介），禁用返回 code=2 |
 | GET  | /api/achievements | 分类 + 精选项目 |
-| GET  | /api/projects?categoryId= | 项目列表（enabled=1） |
-| GET  | /api/projects/:id | 项目详情（解析 album JSON） |
+| GET  | /api/projects?categoryId= | 项目列表（enabled=1；列表项含回填的 categoryName） |
+| GET  | /api/projects/:id | 项目详情（解析 album JSON；含 categoryName 与 updatedAt） |
 | GET  | /api/services | 业务服务列表 |
-| GET  | /api/services/:id | 业务服务详情 |
+| GET  | /api/services/:id | 业务服务详情（含 updatedAt） |
 | GET  | /api/home-layout | 首页板块顺序 |
 | POST | /api/stat/track | 埋点上报（staffId + eventType） |
 

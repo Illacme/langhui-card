@@ -1,7 +1,7 @@
 <view class="form" wx:if="{{!loading}}">
   <view class="form-item avatar-row">
     <text class="label">头像</text>
-    <image class="avatar-preview" src="{{form.avatar}}" mode="aspectFill" wx:if="{{form.avatar}}" />
+    <image class="avatar-preview" src="{{form.avatar}}" mode="aspectFill" lazy-load wx:if="{{form.avatar}}" />
     <view class="avatar-ph" wx:else>未设置</view>
     <button class="picker-btn" size="mini" bindtap="chooseAvatar">选择图片</button>
   </view>

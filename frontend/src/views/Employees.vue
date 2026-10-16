@@ -24,15 +24,15 @@
       -->
       <el-table :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="编号" width="62" align="center" />
-        <el-table-column prop="name" label="姓名" min-width="90" />
-        <el-table-column prop="title" label="职位" min-width="90" />
+        <el-table-column prop="name" label="姓名" min-width="80" />
+        <el-table-column prop="title" label="职位" min-width="80" />
         <el-table-column prop="phone" label="手机" width="120" show-overflow-tooltip />
         <el-table-column label="座机" width="120">
           <template #default="{ row }">
             <span :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="email" label="邮箱" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="email" label="邮箱" min-width="120" show-overflow-tooltip />
         <el-table-column label="头像" width="62" align="center">
           <template #default="{ row }">
             <el-image
@@ -54,8 +54,9 @@
         <el-table-column label="创建时间" width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="190" fixed="right" align="center">
+        <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
+            <el-button type="primary" link @click="preview(row)">预览</el-button>
             <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
             <el-button
               v-if="row.status === 'disabled'"
@@ -118,6 +119,40 @@
       </template>
     </el-dialog>
 
+    <!-- 名片预览（C2 要求「预览」）：PC 端打不开小程序，用名片摘要 + 小程序码近似。
+         小程序码拉取失败（典型：本地开发未配 WX_APPID/WX_APPSECRET）时静默降级——
+         api/wechat.ts 走 __silent，这里只把二维码位置换成文字提示，不弹红条。 -->
+    <el-dialog v-model="previewVisible" title="名片预览" width="440px" class="resp-dialog">
+      <div class="preview-card" v-if="previewRow">
+        <div class="preview-head">
+          <el-image v-if="previewRow.avatar" :src="previewRow.avatar" class="preview-avatar" fit="cover" />
+          <div class="preview-avatar ph" v-else>—</div>
+          <div>
+            <div class="preview-name">{{ previewRow.name }}</div>
+            <div class="preview-title">{{ previewRow.title || '未填写职位' }} · 编号 {{ previewRow.staffId }}</div>
+          </div>
+        </div>
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="手机">{{ previewRow.phone }}</el-descriptions-item>
+          <el-descriptions-item label="座机">{{ previewRow.landline || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="邮箱">{{ previewRow.email || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="previewRow.status === 'enabled' ? 'success' : 'info'" effect="light">
+              {{ previewRow.status === 'enabled' ? '正常' : '已停用' }}
+            </el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+        <div class="preview-qr">
+          <el-image v-if="previewQr" :src="previewQr" class="qr-img" fit="contain" />
+          <span v-else class="muted">小程序码暂不可用（需配置微信凭据）</span>
+        </div>
+        <p class="tip">扫码，或在微信小程序首页输入编号 {{ previewRow.staffId }}，可查看访客视角的实际效果。</p>
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="previewVisible = false">知道了</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 重置密码结果 -->
     <el-dialog v-model="pwdVisible" title="重置密码成功" width="420px" class="resp-dialog">
       <el-descriptions :column="1" border>
@@ -146,6 +181,7 @@ import {
   enableEmployee,
   resetPassword,
 } from '@/api/employees'
+import { getWxacode } from '@/api/wechat'
 import UploadField from '@/components/UploadField.vue'
 import { useTable } from '@/composables/useTable'
 import { formatDateTime } from '@/utils/datetime'
@@ -174,6 +210,18 @@ const rules: FormRules = {
 
 const pwdVisible = ref(false)
 const pwdResult = ref({ staffId: 0, initialPassword: '' })
+
+// 名片预览：先开弹窗展示资料（不等二维码），再异步拉小程序码
+const previewVisible = ref(false)
+const previewRow = ref<any>(null)
+const previewQr = ref('')
+
+async function preview(row: any) {
+  previewRow.value = row
+  previewQr.value = ''
+  previewVisible.value = true
+  previewQr.value = await getWxacode(row.staffId)
+}
 
 async function load() {
   loading.value = true
@@ -322,5 +370,43 @@ onMounted(load)
   color: #909399;
   font-size: 12px;
   margin: 12px 0 0;
+}
+
+/* 名片预览弹窗 */
+.preview-card .preview-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.preview-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-right: 14px;
+  flex-shrink: 0;
+}
+.preview-avatar.ph {
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+}
+.preview-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.preview-title {
+  color: #909399;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.preview-qr {
+  margin-top: 16px;
+  text-align: center;
+}
+.qr-img {
+  width: 180px;
+  height: 180px;
 }
 </style>

@@ -37,13 +37,54 @@ func GetAchievements(db *gorm.DB) ([]model.AchievementCategory, []model.ProjectC
 func ListProjects(db *gorm.DB, categoryID int64) ([]model.ProjectCase, error) {
 	var ps []model.ProjectCase
 	err := db.Where("category_id = ? AND enabled = ?", categoryID, true).Order("sort asc").Find(&ps).Error
-	return ps, err
+	if err != nil {
+		return nil, err
+	}
+	fillCategoryNames(db, ps)
+	return ps, nil
 }
 
 func GetProject(db *gorm.DB, id int64) (model.ProjectCase, error) {
 	var p model.ProjectCase
 	err := db.First(&p, "id = ? AND enabled = ?", id, true).Error
-	return p, err
+	if err != nil {
+		return p, err
+	}
+	// 注意：p 是值，直接传切片再回填改的是切片元素——必须把回填后的元素取回，
+	// 否则 handler 里 p.CategoryName 仍是空值（Go 值语义，非指针接收）。
+	ps := []model.ProjectCase{p}
+	fillCategoryNames(db, ps)
+	return ps[0], nil
+}
+
+// fillCategoryNames 批量回填 ProjectCase.CategoryName（非持久化字段）：
+// 一次 IN 查询取全部分类名，避免 N+1；分类被删/查不到时留空，由前端兜底。
+func fillCategoryNames(db *gorm.DB, ps []model.ProjectCase) {
+	if len(ps) == 0 {
+		return
+	}
+	ids := make([]int64, 0, len(ps))
+	seen := map[int64]bool{}
+	for _, p := range ps {
+		if p.CategoryID != 0 && !seen[p.CategoryID] {
+			ids = append(ids, p.CategoryID)
+			seen[p.CategoryID] = true
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	var cats []model.AchievementCategory
+	if err := db.Where("id IN ?", ids).Find(&cats).Error; err != nil {
+		return // 回填失败不阻断主查询：分类名降级为空
+	}
+	nameOf := make(map[int64]string, len(cats))
+	for _, c := range cats {
+		nameOf[c.ID] = c.Name
+	}
+	for i := range ps {
+		ps[i].CategoryName = nameOf[ps[i].CategoryID]
+	}
 }
 
 func ListServices(db *gorm.DB) ([]model.BizService, error) {

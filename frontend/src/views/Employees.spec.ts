@@ -8,6 +8,7 @@ import Employees from './Employees.vue'
 // 注意：vi.mock 工厂会被提升到文件顶部，里面引用的 mock 必须经 vi.hoisted 预先创建，
 // 否则访问 const 会撞 TDZ（Cannot access before initialization）。
 const mocks = vi.hoisted(() => ({
+  getWxacode: vi.fn(),
   listEmployees: vi.fn(async () => [
     { staffId: 1, name: '张三', title: '工程师', phone: '13800000001', landline: '021-11111111', email: 'z@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-01 10:00:00' },
     { staffId: 2, name: '李四', title: '销售', phone: '13900000002', landline: '', email: 'l@a.com', avatar: '', status: 'disabled', createdAt: '2026-01-02 10:00:00' },
@@ -20,7 +21,10 @@ const mocks = vi.hoisted(() => ({
   resetPassword: vi.fn(async () => 'reset123'),
 }))
 const { listEmployees, createEmployee, updateEmployee, disableEmployee, enableEmployee, resetPassword } = mocks
+import { getWxacode } from '@/api/wechat'
+
 vi.mock('@/api/employees', () => mocks)
+vi.mock('@/api/wechat', () => ({ getWxacode: mocks.getWxacode }))
 vi.mock('element-plus', () => ({
   ElMessage: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
   ElMessageBox: { confirm: vi.fn(async () => 'confirm') },
@@ -151,8 +155,30 @@ describe('Employees', () => {
     vi.mocked(disableEmployee).mockClear()
     vi.mocked(enableEmployee).mockClear()
     vi.mocked(resetPassword).mockClear()
+    vi.mocked(getWxacode).mockClear()
+    vi.mocked(getWxacode).mockResolvedValue('') // 默认拉不到小程序码（未配微信凭据的降级路径）
     vi.mocked(ElMessageBox.confirm).mockClear()
     vi.mocked(ElMessageBox.confirm).mockImplementation(async () => 'confirm' as any)
+  })
+
+  it('预览：弹窗展示名片摘要 + 小程序码；二维码拉取失败时静默降级为文字提示', async () => {
+    const w = mountEmployees()
+    await flushLoad(w)
+
+    // 第一行（张三，staffId=1）：getWxacode 返回空 → 弹窗显示降级文案，不抛错
+    const previewBtns = () => w.findAll('button.el-button').filter((b) => b.text() === '预览')
+    await previewBtns()[0].trigger('click')
+    await vi.waitFor(() => expect(vi.mocked(getWxacode)).toHaveBeenCalledWith(1))
+    expect(w.text()).toContain('访客视角的实际效果')
+    expect(w.text()).toContain('小程序码暂不可用')
+
+    // 关掉弹窗，换成有二维码的行（李四，staffId=2）
+    await w.findAll('.el-dialog button.el-button').find((b) => b.text() === '知道了')!.trigger('click')
+    vi.mocked(getWxacode).mockResolvedValue('http://qr/2.jpg')
+    await previewBtns()[1].trigger('click')
+    await vi.waitFor(() => expect(vi.mocked(getWxacode)).toHaveBeenCalledWith(2))
+    expect(w.text()).toContain('编号 2')
+    expect(w.text()).not.toContain('小程序码暂不可用')
   })
 
   it('挂载即加载列表：表格数据 / 分页总数 / 行内容正确', async () => {

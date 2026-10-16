@@ -64,7 +64,12 @@ type ProjectCase struct {
 	Enabled        bool           `gorm:"column:enabled;default:true" json:"enabled"`
 	Sort           int            `gorm:"column:sort" json:"sort"`
 	CreatedAt      time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt      time.Time      `gorm:"column:updated_at" json:"updatedAt"`
 	DeletedAt      gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
+
+	// CategoryName 非持久化：列表/详情接口回填分类名，避免前端二次查询
+	// （见《跳转页组件与接口字段映射》§4）。gorm:"-" 让 GORM 忽略它。
+	CategoryName string `gorm:"-" json:"categoryName,omitempty"`
 }
 
 // BizService 业务服务（富文本含视频号块）
@@ -74,6 +79,7 @@ type BizService struct {
 	Content   string         `gorm:"column:content;type:text" json:"content"`
 	Sort      int            `gorm:"column:sort" json:"sort"`
 	CreatedAt time.Time      `gorm:"column:created_at" json:"createdAt"`
+	UpdatedAt time.Time      `gorm:"column:updated_at" json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 

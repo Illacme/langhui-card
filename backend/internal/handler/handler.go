@@ -73,14 +73,16 @@ func New(db *gorm.DB) *gin.Engine {
 			_ = json.Unmarshal([]byte(p.Album), &album)
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
-			"id":         p.ID,
-			"name":       p.Name,
-			"summary":    p.Summary,
-			"cover":      p.Cover,
-			"detail":     p.Detail,
-			"album":      album,
-			"categoryId": p.CategoryID,
-			"createdAt":  p.CreatedAt,
+			"id":           p.ID,
+			"name":         p.Name,
+			"summary":      p.Summary,
+			"cover":        p.Cover,
+			"detail":       p.Detail,
+			"album":        album,
+			"categoryId":   p.CategoryID,
+			"categoryName": p.CategoryName, // 由 repository 回填，前端免二次查询
+			"createdAt":    p.CreatedAt,
+			"updatedAt":    p.UpdatedAt,
 		}})
 	})
 
