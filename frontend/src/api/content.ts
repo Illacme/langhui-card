@@ -37,6 +37,10 @@ export function updateCategory(
 export function deleteCategory(id: number) {
   return http.delete(`/admin/categories/${id}`)
 }
+// 批量保存排序（拖拽 / 上下箭头调整顺序后一次性提交）
+export function sortCategories(items: { id: number; sort: number }[]) {
+  return http.put('/admin/categories/sort', items)
+}
 
 // ===== 项目案例 =====
 export function listProjects(categoryId?: number) {
@@ -70,6 +74,10 @@ export function updateService(id: number, p: { title: string; content: string; s
 }
 export function deleteService(id: number) {
   return http.delete(`/admin/services/${id}`)
+}
+// 批量保存排序（拖拽 / 上下箭头调整顺序后一次性提交）
+export function sortServices(items: { id: number; sort: number }[]) {
+  return http.put('/admin/services/sort', items)
 }
 
 // ===== 首页布局（板块顺序） =====

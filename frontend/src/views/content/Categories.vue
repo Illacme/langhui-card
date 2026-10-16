@@ -16,7 +16,7 @@
         </div>
       </div>
 
-      <el-table :data="paged" v-loading="loading" border stripe>
+      <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="名称" min-width="140" />
         <el-table-column label="图标" width="90" align="center">
           <template #default="{ row }">
@@ -29,7 +29,21 @@
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序" width="90" align="center" />
+        <el-table-column label="排序" width="120" align="center">
+          <template #default="{ row }">
+            <div class="sort-cell">
+              <span class="drag-handle" draggable="true" title="按住拖拽调整顺序">
+                <el-icon><Rank /></el-icon>
+              </span>
+              <el-button link :disabled="isFirstRow(row)" title="上移" @click="moveUp(row)">
+                <el-icon><ArrowUp /></el-icon>
+              </el-button>
+              <el-button link :disabled="isLastRow(row)" title="下移" @click="moveDown(row)">
+                <el-icon><ArrowDown /></el-icon>
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="锁定" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.isLocked ? 'warning' : 'info'" effect="light">
@@ -88,21 +102,29 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { Refresh, Plus, Search } from '@element-plus/icons-vue'
+import { Refresh, Plus, Search, Rank, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   listCategories,
   createCategory,
   updateCategory,
   deleteCategory,
+  sortCategories,
 } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
 import { useTable } from '@/composables/useTable'
+import { useSortableRows } from '@/composables/useSortableRows'
 
 const rows = ref<any[]>([])
 const { keyword, currentPage, size, total, paged } = useTable(
   rows,
   (r, kw) => (r.name || '').toLowerCase().includes(kw)
+)
+// 列表顺序调整：拖拽 + 上下箭头（与项目案例/业务服务共用同一 composable）
+const { tableRef, isFirstRow, isLastRow, moveUp, moveDown } = useSortableRows(
+  rows,
+  paged,
+  sortCategories
 )
 const loading = ref(false)
 const dialogVisible = ref(false)
