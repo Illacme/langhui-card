@@ -40,7 +40,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="180" />
+        <el-table-column label="创建时间" width="180">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
             <el-button
@@ -124,6 +126,7 @@ import {
 } from '@/api/employees'
 import UploadField from '@/components/UploadField.vue'
 import { useTable } from '@/composables/useTable'
+import { formatDateTime } from '@/utils/datetime'
 
 const rows = ref<any[]>([])
 const { keyword, currentPage, size, total, paged } = useTable(

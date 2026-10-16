@@ -31,7 +31,9 @@
           </template>
         </el-table-column>
         <el-table-column prop="rejectReason" label="驳回原因" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="createdAt" label="提交时间" width="180" />
+        <el-table-column label="提交时间" width="180">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="150" fixed="right" align="center">
           <template #default="{ row }">
             <template v-if="row.status === 'pending'">
@@ -87,6 +89,7 @@ import { ElMessage } from 'element-plus'
 import { listModifyApply, approveModify, rejectModify } from '@/api/apply'
 import { listEmployees } from '@/api/employees'
 import { useTable } from '@/composables/useTable'
+import { formatDateTime } from '@/utils/datetime'
 
 const FIELD_LABELS: Record<string, string> = {
   avatar: '头像',

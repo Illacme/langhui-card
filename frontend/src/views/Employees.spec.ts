@@ -166,6 +166,10 @@ describe('Employees', () => {
     expect(w.text()).toContain('李四')
     expect(w.text()).toContain('已停用') // 李四 status=disabled
     expect(w.text()).toContain('正常') // 张三 / 王五
+    // 「创建时间」列经 formatDateTime 渲染：解析与格式化都走本地时区，
+    // 往返结果恒定，故此断言在任意时区（含 CI 的 UTC）下都成立。
+    expect(w.text()).toContain('2026-01-01 10:00:00')
+    expect(w.text()).not.toContain('T10:00') // 未把原始 RFC3339 串直接透出
   })
 
   it('关键字搜索按姓名 / 手机过滤表格数据', async () => {
