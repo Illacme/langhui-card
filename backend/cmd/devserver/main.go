@@ -10,6 +10,8 @@
 //	cd backend && go run ./cmd/devserver
 //
 // 然后小程序 app.ts 的 baseUrl 指向 http://<本机IP>:8080 （开发者工具需勾选"不校验合法域名"）。
+// 真机 / 局域网联调时设 DEV_UPLOAD_BASE_URL=http://<本机IP>:8080/uploads，
+// 否则返回给端的头像 URL 写死 127.0.0.1，手机取不到图。
 package main
 
 import (
@@ -17,6 +19,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"langhui/internal/auth"
 	"langhui/internal/config"
@@ -59,13 +62,14 @@ func main() {
 
 	cfg := config.Config{
 		UploadDir:     mustDir(filepath.Join(os.TempDir(), "langhui-dev-uploads")),
-		UploadBaseURL: "http://127.0.0.1:" + port + "/uploads",
+		UploadBaseURL: uploadBaseURL(port),
 		StorageDriver: "local",
 		StoragePublic: true,
 		JWTKey:        "dev-jwt-key",
 		AdminUser:     "admin",
 		AdminPass:     "admin123456",
 	}
+	log.Printf("upload base url: %s", cfg.UploadBaseURL)
 	handler.SeedAdmin(db, cfg)
 
 	seedDemoData(db)
@@ -102,6 +106,16 @@ func mustDir(name string) string {
 	}
 	abs, _ := filepath.Abs(name)
 	return abs
+}
+
+// uploadBaseURL 上传基址：默认 http://127.0.0.1:<port>/uploads（同机测试可直接用）；
+// 真机 / 局域网联调时用 DEV_UPLOAD_BASE_URL 指向本机 IP 或域名——
+// 否则后端返回给端的头像 / 相册 URL 写死 127.0.0.1，手机取不到图。
+func uploadBaseURL(port string) string {
+	if v := strings.TrimSpace(os.Getenv("DEV_UPLOAD_BASE_URL")); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return "http://127.0.0.1:" + port + "/uploads"
 }
 
 // seedDemoData 注入一套可联调的演示数据（仅开发态；生产由 migrations SQL + PC 后台录入）
