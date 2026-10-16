@@ -9,16 +9,17 @@ import Employees from './Employees.vue'
 // 否则访问 const 会撞 TDZ（Cannot access before initialization）。
 const mocks = vi.hoisted(() => ({
   listEmployees: vi.fn(async () => [
-    { staffId: 1, name: '张三', title: '工程师', phone: '13800000001', email: 'z@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-01 10:00:00' },
-    { staffId: 2, name: '李四', title: '销售', phone: '13900000002', email: 'l@a.com', avatar: '', status: 'disabled', createdAt: '2026-01-02 10:00:00' },
-    { staffId: 3, name: '王五', title: '经理', phone: '13700000003', email: 'w@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-03 10:00:00' },
+    { staffId: 1, name: '张三', title: '工程师', phone: '13800000001', landline: '021-11111111', email: 'z@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-01 10:00:00' },
+    { staffId: 2, name: '李四', title: '销售', phone: '13900000002', landline: '', email: 'l@a.com', avatar: '', status: 'disabled', createdAt: '2026-01-02 10:00:00' },
+    { staffId: 3, name: '王五', title: '经理', phone: '13700000003', landline: '', email: 'w@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-03 10:00:00' },
   ]),
   createEmployee: vi.fn(async () => ({ staffId: 99, initialPassword: 'init123' })),
+  updateEmployee: vi.fn(async () => ({ code: 0 })),
   disableEmployee: vi.fn(async () => ({ code: 0 })),
   enableEmployee: vi.fn(async () => ({ code: 0 })),
   resetPassword: vi.fn(async () => 'reset123'),
 }))
-const { listEmployees, createEmployee, disableEmployee, enableEmployee, resetPassword } = mocks
+const { listEmployees, createEmployee, updateEmployee, disableEmployee, enableEmployee, resetPassword } = mocks
 vi.mock('@/api/employees', () => mocks)
 vi.mock('element-plus', () => ({
   ElMessage: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
@@ -146,6 +147,7 @@ describe('Employees', () => {
   beforeEach(() => {
     vi.mocked(listEmployees).mockClear()
     vi.mocked(createEmployee).mockClear()
+    vi.mocked(updateEmployee).mockClear()
     vi.mocked(disableEmployee).mockClear()
     vi.mocked(enableEmployee).mockClear()
     vi.mocked(resetPassword).mockClear()
@@ -170,6 +172,12 @@ describe('Employees', () => {
     // 往返结果恒定，故此断言在任意时区（含 CI 的 UTC）下都成立。
     expect(w.text()).toContain('2026-01-01 10:00:00')
     expect(w.text()).not.toContain('T10:00') // 未把原始 RFC3339 串直接透出
+
+    // 列定义：title 由「岗位」改名「职位」，并新增「座机」列（stub 不渲染 label，只能查 props）
+    const labels = w.findAllComponents(ElTableColumn).map((c) => c.props('label'))
+    expect(labels).toContain('职位')
+    expect(labels).toContain('座机')
+    expect(labels).not.toContain('岗位')
   })
 
   it('关键字搜索按姓名 / 手机过滤表格数据', async () => {
@@ -233,6 +241,32 @@ describe('Employees', () => {
     await vi.waitFor(() => expect(vi.mocked(resetPassword)).toHaveBeenCalledWith(1))
     await vi.waitFor(() => expect(w.text()).toContain('reset123'))
     expect(w.text()).toContain('重置密码成功')
+  })
+
+  it('编辑员工：回填表单（含座机）→ 调 updateEmployee 保存并重载', async () => {
+    const w = mountEmployees()
+    await flushLoad(w)
+
+    await w.findAll('button.el-button').find((b) => b.text() === '编辑')!.trigger('click')
+    await nextTick()
+    expect(w.text()).toContain('编辑员工') // 弹窗标题区分编辑 / 新增
+
+    const inputs = w.findAll('.el-dialog input.el-input')
+    // 姓名 / 手机 / 职位 / 座机 依次回填
+    expect((inputs[0].element as HTMLInputElement).value).toBe('张三')
+    expect((inputs[1].element as HTMLInputElement).value).toBe('13800000001')
+    expect((inputs[2].element as HTMLInputElement).value).toBe('工程师')
+    expect((inputs[3].element as HTMLInputElement).value).toBe('021-11111111')
+
+    await inputs[3].setValue('021-99999999')
+    await w.findAll('.el-dialog button.el-button').find((b) => b.text() === '保存')!.trigger('click')
+
+    await vi.waitFor(() => expect(vi.mocked(updateEmployee)).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(updateEmployee)).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ name: '张三', phone: '13800000001', landline: '021-99999999' })
+    )
+    await vi.waitFor(() => expect(vi.mocked(listEmployees)).toHaveBeenCalledTimes(2))
   })
 
   it('新增员工：校验通过后调 createEmployee、弹初始密码并重载', async () => {

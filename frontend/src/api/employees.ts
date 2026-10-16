@@ -5,6 +5,7 @@ export interface EmployeePayload {
   phone: string
   email?: string
   title?: string
+  landline?: string
   avatar?: string
 }
 
@@ -19,6 +20,11 @@ export function createEmployee(payload: EmployeePayload) {
     staffId: r.staffId as number,
     initialPassword: r.initialPassword as string,
   }))
+}
+
+// 超管编辑员工资料（即时生效，不经过员工端审核流）
+export function updateEmployee(id: number, payload: EmployeePayload) {
+  return http.put(`/admin/employees/${id}`, payload)
 }
 
 export function disableEmployee(id: number) {

@@ -94,7 +94,7 @@ import { formatDateTime } from '@/utils/datetime'
 const FIELD_LABELS: Record<string, string> = {
   avatar: '头像',
   name: '姓名',
-  title: '岗位',
+  title: '职位',
   phone: '手机',
   email: '邮箱',
 }
