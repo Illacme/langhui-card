@@ -157,6 +157,40 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&p)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": projectToMap(p)})
 	})
+	// 批量排序：接收 [{id, sort}]，在事务内一次性更新，
+	// 避免前端拖拽/上下箭头调整顺序时出现中间态不一致。
+	// 注意：该静态路由必须注册在 PUT /:id 之前，否则会被 :id 参数路由吞掉。
+	r.PUT("/api/admin/projects/sort", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		var items []struct {
+			ID   int64 `json:"id"`
+			Sort int   `json:"sort"`
+		}
+		if c.ShouldBindJSON(&items) != nil || len(items) == 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
+			return
+		}
+		tx := db.Begin()
+		if tx.Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "数据库错误"})
+			return
+		}
+		for _, it := range items {
+			if it.ID <= 0 {
+				continue
+			}
+			if err := tx.Model(&model.ProjectCase{}).Where("id = ?", it.ID).
+				Update("sort", it.Sort).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "更新失败"})
+				return
+			}
+		}
+		if err := tx.Commit().Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "提交失败"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
+	})
 	r.PUT("/api/admin/projects/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		in, ok := bindProject(c)
