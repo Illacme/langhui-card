@@ -1,4 +1,5 @@
 import { Boot, type IDomEditor, type IModuleConf, type SlateElement } from '@wangeditor/editor'
+import { h } from 'snabbdom'
 
 /**
  * 视频号块自定义元素：让 wangEditor 识别并序列化 <wx-video channel-id="gh_xxx"></wx-video>。
@@ -27,21 +28,27 @@ export function registerWxVideoModule() {
   }
 
   // 编辑区渲染：显示为一块绿色占位（视频号图标 + channel-id）。
-  // renderElem 返回 DOM 元素（wangEditor 运行时可接受）；上游 IRenderElemConf 的
-  // 类型签名按 snabbdom VNode 声明，且未从 @wangeditor/editor 根导出（内部来自
-  // @wangeditor/core），故这里保持对象字面量原样，装配时统一断言收敛。
+  // ⚠️ 关键修复：renderElem 必须返回 snabbdom VNode（与 wangEditor 内部同版本实例），
+  // 此前返回原生 document.createElement 节点会导致视图层把它当 VNode 子节点处理，
+  // 触发 `o2.forEach is not a function` + `Unable to find a host window element`，
+  // 在 Vue dev 模式下被重抛从而冻结整个父组件的响应式更新。
+  // 这里用 wangEditor 已依赖的 snabbdom（^3.1.0，与本项目安装版本一致）的 h 构造 VNode，
+  // 并通过 props / dataset 适配 wangEditor 注册的 snabbdom 模块。
   const renderElemConf = {
     type: WX_VIDEO_TYPE,
     renderElem: (elem: any) => {
       const channelId = elem.channelId || ''
-      const dom = document.createElement('div')
-      dom.setAttribute('data-w-e-type', WX_VIDEO_TYPE)
-      dom.setAttribute('contenteditable', 'false')
-      dom.className = 'wx-video-block'
-      dom.innerHTML = `<span class="wx-video-ic">▶ 视频号</span><span class="wx-video-id">${
-        channelId || '未设置'
-      }</span>`
-      return dom
+      return h(
+        'div',
+        {
+          props: { contentEditable: false, className: 'wx-video-block' },
+          dataset: { wEType: WX_VIDEO_TYPE },
+        },
+        [
+          h('span', { props: { className: 'wx-video-ic' } }, '▶ 视频号'),
+          h('span', { props: { className: 'wx-video-id' } }, channelId || '未设置'),
+        ]
+      )
     },
   }
 
@@ -66,8 +73,8 @@ export function registerWxVideoModule() {
     },
   }
 
-  // 装配：上游 conf 类型签名（snabbdom VNode）与运行时可接受的 DOM 返回值不一致，
-  // 且未从根包导出，故逐项断言；运行时不变量（DOM 元素 / HTML 字符串 / 节点对象）不变。
+  // 装配：上游 conf 类型签名（snabbdom VNode）与运行时可接受的返回值一致；
+  // 仅 renderElem 的入参形态按 wangEditor 约定的对象字面量声明，装配时统一断言收敛。
   const module: Partial<IModuleConf> = {
     editorPlugin: withWxVideo,
     renderElems: [renderElemConf as any],
