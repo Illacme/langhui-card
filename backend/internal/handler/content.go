@@ -90,6 +90,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&req)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": req})
 	})
+	registerSortRoute(r, db, "/api/admin/categories/sort", &model.AchievementCategory{})
 	r.PUT("/api/admin/categories/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
@@ -157,40 +158,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&p)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": projectToMap(p)})
 	})
-	// 批量排序：接收 [{id, sort}]，在事务内一次性更新，
-	// 避免前端拖拽/上下箭头调整顺序时出现中间态不一致。
-	// 注意：该静态路由必须注册在 PUT /:id 之前，否则会被 :id 参数路由吞掉。
-	r.PUT("/api/admin/projects/sort", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
-		var items []struct {
-			ID   int64 `json:"id"`
-			Sort int   `json:"sort"`
-		}
-		if c.ShouldBindJSON(&items) != nil || len(items) == 0 {
-			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
-			return
-		}
-		tx := db.Begin()
-		if tx.Error != nil {
-			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "数据库错误"})
-			return
-		}
-		for _, it := range items {
-			if it.ID <= 0 {
-				continue
-			}
-			if err := tx.Model(&model.ProjectCase{}).Where("id = ?", it.ID).
-				Update("sort", it.Sort).Error; err != nil {
-				tx.Rollback()
-				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "更新失败"})
-				return
-			}
-		}
-		if err := tx.Commit().Error; err != nil {
-			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "提交失败"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
-	})
+	registerSortRoute(r, db, "/api/admin/projects/sort", &model.ProjectCase{})
 	r.PUT("/api/admin/projects/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		in, ok := bindProject(c)
@@ -240,6 +208,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		db.Create(&s)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
+	registerSortRoute(r, db, "/api/admin/services/sort", &model.BizService{})
 	r.PUT("/api/admin/services/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
@@ -287,6 +256,47 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 			db.Create(&model.HomeLayout{ID: 1, Order: string(b)})
 		} else {
 			db.Model(&hl).Update("order_col", string(b))
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
+	})
+}
+
+// registerSortRoute 注册「批量排序」接口，项目案例 / 业绩分类 / 业务服务共用。
+//
+// 请求体为 [{id, sort}]，在单个事务内逐条更新，避免前端拖拽或上下箭头
+// 调整顺序时中途失败留下「部分生效」的中间态。
+//
+// ⚠️ 调用位置有约束：本函数注册的静态 /sort 路由必须排在同资源的
+// PUT /xxx/:id 之前注册，否则 "sort" 会被 :id 参数路由匹配吞掉。
+func registerSortRoute(r *gin.Engine, db *gorm.DB, path string, dest interface{}) {
+	r.PUT(path, middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		var items []struct {
+			ID   int64 `json:"id"`
+			Sort int   `json:"sort"`
+		}
+		if c.ShouldBindJSON(&items) != nil || len(items) == 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
+			return
+		}
+		tx := db.Begin()
+		if tx.Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "数据库错误"})
+			return
+		}
+		for _, it := range items {
+			if it.ID <= 0 {
+				continue
+			}
+			if err := tx.Model(dest).Where("id = ?", it.ID).
+				Update("sort", it.Sort).Error; err != nil {
+				tx.Rollback()
+				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "更新失败"})
+				return
+			}
+		}
+		if err := tx.Commit().Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "提交失败"})
+			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
