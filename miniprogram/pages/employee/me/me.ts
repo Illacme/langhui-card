@@ -5,6 +5,8 @@ import { request } from '../../../utils/request'
 Page({
   data: {
     me: null as any,
+    // 有待审名片修改时为 true：「编辑名片」单元格显示「审核中」
+    pendingModify: false,
     pwdVisible: false,
     pwdSaving: false,
     pwd: { oldPwd: '', newPwd: '', confirmPwd: '' },
@@ -15,7 +17,7 @@ Page({
   async loadMe() {
     const token = wx.getStorageSync('empToken')
     if (!token) {
-      this.setData({ me: null })
+      this.setData({ me: null, pendingModify: false })
       return
     }
     const r = await request('GET', '/api/employee/me')
@@ -23,10 +25,10 @@ Page({
       // 记到 globalData：「我的名片」switchTab 回名片页时按这个编号取数
       const app = getApp() as any
       app.globalData.myStaffId = r.data.staffId
-      this.setData({ me: r.data })
+      this.setData({ me: r.data, pendingModify: !!r.pendingModify })
     } else {
       // token 失效（拦截器已清 storage）：回到未登录态
-      this.setData({ me: null })
+      this.setData({ me: null, pendingModify: false })
     }
   },
   goLogin() {
@@ -38,6 +40,11 @@ Page({
   // tabBar 页之间只能 switchTab，不能带参数 → staffId 走 globalData.myStaffId
   goMyCard() {
     wx.switchTab({ url: '/pages/index/index' })
+  },
+  // 生成海报（B9）：带本人编号进海报页，canvas 合成后存相册
+  goPoster() {
+    if (!this.data.me) return
+    wx.navigateTo({ url: '/pages/poster/poster?staffId=' + this.data.me.staffId })
   },
   goEdit() {
     wx.navigateTo({ url: '/pages/employee/edit/edit' })
@@ -92,7 +99,7 @@ Page({
     app.globalData.myStaffId = 0
     wx.removeStorageSync('empToken')
     wx.removeStorageSync('empRefreshToken')
-    this.setData({ me: null, pwdVisible: false })
+    this.setData({ me: null, pendingModify: false, pwdVisible: false })
     if (!silent) wx.showToast({ title: '已退出登录' })
   },
 })

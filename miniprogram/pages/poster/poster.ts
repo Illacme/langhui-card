@@ -63,10 +63,16 @@ Page({
           ctx.font = '12px sans-serif'
           ctx.fillText(comp.address || '', 20, 126)
         }
+        // 电话（需求 B8：海报含头像/姓名/职位/公司/电话/小程序码）
+        if (emp && emp.phone) {
+          ctx.fillStyle = '#444'
+          ctx.font = '13px sans-serif'
+          ctx.fillText('手机 ' + emp.phone, 20, 148)
+        }
 
         // 头像
         that.loadImage(canvas, emp ? emp.avatar : '', (img: any) => {
-          if (img) ctx.drawImage(img, 20, 150, 90, 90)
+          if (img) ctx.drawImage(img, 20, 165, 90, 90)
           // 小程序码
           that.loadImage(canvas, that.data.qrUrl, (qimg: any) => {
             if (qimg) ctx.drawImage(qimg, 190, 300, 110, 110)

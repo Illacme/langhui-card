@@ -70,6 +70,11 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .form-item input { flex: 1; }
 .submit-btn { margin-top: 40rpx; background: #1aad19; color: #fff; border-radius: 40rpx; }
 
+/* 编辑名片「审核中」提示条（需求 B9） */
+.pending-tip { display: flex; align-items: center; padding: 20rpx 24rpx; margin-bottom: 16rpx; background: #fdf6ec; border-radius: 12rpx; }
+.pending-tag { flex-shrink: 0; padding: 4rpx 16rpx; margin-right: 16rpx; background: #e6a23c; color: #fff; font-size: 22rpx; border-radius: 8rpx; }
+.pending-text { color: #b88230; font-size: 24rpx; }
+
 /* 海报入口 + 海报页 */
 .poster-entry { padding: 24rpx; }
 .poster-btn { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 40rpx; font-size: 28rpx; }
@@ -140,3 +145,8 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .stat-num { font-size: 48rpx; font-weight: 600; color: #1aad19; }
 .stat-label { color: #888; font-size: 26rpx; margin-top: 12rpx; }
 .stat-tip { color: #999; font-size: 24rpx; margin-top: 24rpx; line-height: 1.6; }
+/* 空状态（需求 B11：暂无访问数据） */
+.stat-empty { padding: 120rpx 48rpx; text-align: center; }
+.stat-empty-icon { font-size: 72rpx; }
+.stat-empty-text { margin-top: 16rpx; color: #666; font-size: 30rpx; }
+.stat-empty-hint { margin-top: 12rpx; color: #aaa; font-size: 24rpx; }

@@ -386,6 +386,11 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		}, empToken)
 		require.EqualValues(t, 0, body["code"])
 
+		// 有待审申请时 /api/employee/me 根级返回 pendingModify=true（编辑页「审核中」标签用）
+		_, body = c.do("GET", "/api/employee/me", nil, empToken)
+		require.EqualValues(t, 0, body["code"])
+		require.Equal(t, true, body["pendingModify"])
+
 		// 超管审核名片修改
 		_, body = c.do("GET", "/api/admin/apply/modify", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
@@ -394,6 +399,11 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		modID := int64(mods[0].(map[string]interface{})["id"].(float64))
 		_, body = c.do("POST", fmt.Sprintf("/api/admin/apply/modify/%d/approve", modID), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
+
+		// 审核处理后 pendingModify 回落 false
+		_, body = c.do("GET", "/api/employee/me", nil, empToken)
+		require.EqualValues(t, 0, body["code"])
+		require.Equal(t, false, body["pendingModify"])
 
 		// 审核通过后快照生效：title 与 landline 都写到员工资料
 		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)

@@ -4,6 +4,9 @@ Page({
   data: {
     form: { avatar: '', name: '', title: '', phone: '', landline: '', email: '' },
     loading: true,
+    // 有待审修改申请时为 true：页面展示「审核中」标签（需求 B9）。
+    // 审核期对外仍显示旧信息——后端仅在超管 approve 时写回。
+    pendingModify: false,
   },
   onLoad() {
     this.loadMe()
@@ -15,7 +18,7 @@ Page({
       return
     }
     if (r.data) {
-      this.setData({ form: r.data, loading: false })
+      this.setData({ form: r.data, loading: false, pendingModify: !!r.pendingModify })
     } else {
       this.setData({ loading: false })
     }
@@ -63,6 +66,8 @@ Page({
   async onSubmit() {
     const r = await request('PUT', '/api/employee/me', this.data.form)
     if (r.code === 0) {
+      // 本地立即置位：后端此时只落待审申请，再次进入本页时由 loadMe 回读同样为 true
+      this.setData({ pendingModify: true })
       wx.showToast({ title: '已提交，等待审核' })
     } else {
       wx.showToast({ title: r.msg || '提交失败', icon: 'none' })
