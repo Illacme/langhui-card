@@ -83,3 +83,48 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .avatar-preview { width: 96rpx; height: 96rpx; border-radius: 50%; background: #eee; margin-right: 16rpx; }
 .avatar-ph { width: 96rpx; height: 96rpx; border-radius: 50%; background: #eee; margin-right: 16rpx; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 20rpx; }
 .picker-btn { margin-left: auto; }
+
+/* 通用按钮 */
+.primary-btn { background: #1aad19; color: #fff; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
+.plain-btn { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
+
+/* 「我的」页（员工 tabBar） */
+.me { padding: 24rpx; }
+.guest-tip { color: #888; margin-bottom: 8rpx; }
+.guest-hint { color: #aaa; font-size: 24rpx; margin-top: 16rpx; text-align: center; }
+.profile { display: flex; align-items: center; }
+.profile .avatar { width: 120rpx; height: 120rpx; border-radius: 50%; background: #eee; flex-shrink: 0; }
+.pinfo { margin-left: 24rpx; }
+.pname { font-size: 36rpx; font-weight: 600; }
+.ptitle { color: #888; margin-top: 8rpx; font-size: 26rpx; }
+.cells { padding: 0; overflow: hidden; }
+.cell { display: flex; align-items: center; padding: 28rpx 24rpx; border-bottom: 1rpx solid #f0f0f0; }
+.cell:last-child { border-bottom: none; }
+.cell-hover { background: #f7f7f7; }
+.cell-label { flex: 1; font-size: 30rpx; }
+.cell-label.danger { color: #e64340; }
+.cell-value { color: #aaa; font-size: 24rpx; margin-right: 12rpx; }
+.cell-arrow { color: #ccc; font-size: 32rpx; }
+
+/* 修改密码弹窗 */
+.mask { position: fixed; left: 0; right: 0; top: 0; bottom: 0; background: rgba(0,0,0,.5); z-index: 10; }
+.pwd-dialog { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 600rpx; background: #fff; border-radius: 16rpx; padding: 24rpx; z-index: 11; }
+.pwd-title { font-size: 32rpx; font-weight: 600; text-align: center; padding: 16rpx 0 24rpx; }
+.pwd-dialog .form-item .label { width: 180rpx; }
+.pwd-actions { display: flex; }
+.pwd-actions button { flex: 1; margin: 24rpx 12rpx 0; }
+
+/* 申请开通页 */
+.tip { color: #999; font-size: 24rpx; margin-top: 24rpx; line-height: 1.6; }
+.done { padding: 120rpx 48rpx; text-align: center; }
+.done-icon { width: 120rpx; height: 120rpx; border-radius: 50%; background: #1aad19; color: #fff; font-size: 60rpx; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.done-title { font-size: 36rpx; font-weight: 600; margin-top: 32rpx; }
+.done-tip { color: #888; margin-top: 16rpx; line-height: 1.6; }
+
+/* 员工数据统计页 */
+.stat-page { padding: 24rpx; }
+.stat-cards { display: flex; }
+.stat-card { flex: 1; background: #fff; border-radius: 12rpx; margin: 0 8rpx; padding: 40rpx 0; text-align: center; }
+.stat-num { font-size: 48rpx; font-weight: 600; color: #1aad19; }
+.stat-label { color: #888; font-size: 26rpx; margin-top: 12rpx; }
+.stat-tip { color: #999; font-size: 24rpx; margin-top: 24rpx; line-height: 1.6; }

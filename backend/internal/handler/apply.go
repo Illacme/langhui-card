@@ -311,6 +311,60 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		db.Model(&a).Updates(map[string]interface{}{"password_hash": h, "token_version": a.TokenVersion + 1})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
+
+	// 全局名片统计（超管）：汇总 + 按员工分组。
+	// 与 /api/employee/me/stat（仅本人）互补，供 PC 后台「数据统计」页使用。
+	// 实现要点：
+	//   1. 用 SUM(CASE WHEN ...) 而非 SUM(布尔表达式)——后者是 MySQL 方言，
+	//      SQLite 不认，MySQL parity 与 SQLite 会一边挂一边绿。
+	//   2. 分组结果与员工表合并：零数据的员工也要出现在列表里（补 0），
+	//      否则「有员工但没访问」在后台看不出来。
+	r.GET("/api/admin/stats", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		type statRow struct {
+			StaffID int64 `gorm:"column:staff_id"`
+			Visit   int64 `gorm:"column:visit"`
+			Call    int64 `gorm:"column:call"`
+			Save    int64 `gorm:"column:save"`
+		}
+		var rows []statRow
+		db.Model(&model.StatEvent{}).
+			Select("staff_id, " +
+				"SUM(CASE WHEN event_type = 'visit' THEN 1 ELSE 0 END) AS visit, " +
+				"SUM(CASE WHEN event_type = 'call' THEN 1 ELSE 0 END) AS call, " +
+				"SUM(CASE WHEN event_type = 'save' THEN 1 ELSE 0 END) AS save").
+			Group("staff_id").Scan(&rows)
+		byStaff := map[int64]statRow{}
+		for _, r := range rows {
+			byStaff[r.StaffID] = r
+		}
+
+		var emps []model.Employee
+		db.Order("staff_id asc").Find(&emps)
+		list := make([]gin.H, 0, len(emps))
+		var sumVisit, sumCall, sumSave int64
+		for _, e := range emps {
+			r := byStaff[e.StaffID]
+			sumVisit += r.Visit
+			sumCall += r.Call
+			sumSave += r.Save
+			list = append(list, gin.H{
+				"staffId": e.StaffID,
+				"name":    e.Name,
+				"title":   e.Title,
+				"avatar":  e.Avatar,
+				"visit":   r.Visit,
+				"call":    r.Call,
+				"save":    r.Save,
+			})
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0,
+			"data": gin.H{
+				"summary": gin.H{"visit": sumVisit, "call": sumCall, "save": sumSave},
+				"byStaff": list,
+			},
+		})
+	})
 }
 
 // genPassword 生成 8 位随机密码（字母+数字）

@@ -175,6 +175,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/admin/employees | admin | 员工列表 |
 | POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码） |
 | PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码） |
+| GET  | /api/admin/stats | admin | 全局名片统计（汇总 + 按员工，零数据员工补 0） |
 | POST | /api/admin/employees/:id/disable | admin | 停用账号 |
 | POST | /api/admin/employees/:id/enable | admin | 启用账号 |
 | POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码） |

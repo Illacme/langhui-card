@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/employee/me/me",
+    "pages/employee/stat/stat",
+    "pages/apply/open/open",
     "pages/project/list/list",
     "pages/project/detail/detail",
     "pages/service/detail/detail",
@@ -8,6 +11,15 @@
     "pages/employee/edit/edit",
     "pages/poster/poster"
   ],
+  "tabBar": {
+    "color": "#909399",
+    "selectedColor": "#1aad19",
+    "backgroundColor": "#ffffff",
+    "list": [
+      { "pagePath": "pages/index/index", "text": "名片" },
+      { "pagePath": "pages/employee/me/me", "text": "我的" }
+    ]
+  },
   "window": {
     "navigationBarTitleText": "朗汇机电",
     "navigationBarBackgroundColor": "#ffffff",

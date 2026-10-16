@@ -18,7 +18,9 @@ Page({
     if (r.code === 0 && r.token) {
       wx.setStorageSync('empToken', r.token)
       if (r.refreshToken) wx.setStorageSync('empRefreshToken', r.refreshToken)
-      wx.redirectTo({ url: '/pages/employee/edit/edit' })
+      // 登录后回「我的」tab（由它拉 /api/employee/me 拿资料并记 myStaffId）；
+      // tabBar 页必须用 switchTab，redirectTo 打不开
+      wx.switchTab({ url: '/pages/employee/me/me' })
     } else {
       wx.showToast({ title: r.msg || '登录失败', icon: 'none' })
     }

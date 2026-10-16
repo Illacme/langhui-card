@@ -1,0 +1,67 @@
+<view class="me">
+  <!-- 未登录：登录 / 申请开通 两个入口（B9：员工「我的」页含登录与申请开通表单） -->
+  <view class="section guest" wx:if="{{!me}}">
+    <view class="guest-tip">登录后可管理自己的名片、查看访客数据</view>
+    <button class="primary-btn" bindtap="goLogin">员工登录</button>
+    <button class="plain-btn" bindtap="goApply">申请开通员工账号</button>
+    <view class="guest-hint">暂无账号？提交开通申请，超管审核通过后即可登录</view>
+  </view>
+
+  <!-- 已登录 -->
+  <block wx:else>
+    <view class="section profile">
+      <image class="avatar" src="{{me.avatar}}" mode="aspectFill" wx:if="{{me.avatar}}" />
+      <view class="avatar" wx:else />
+      <view class="pinfo">
+        <view class="pname">{{me.name}}</view>
+        <view class="ptitle">{{me.title || '未填写职位'}} · 编号 {{me.staffId}}</view>
+      </view>
+    </view>
+
+    <view class="section cells">
+      <view class="cell" bindtap="goMyCard" hover-class="cell-hover">
+        <text class="cell-label">我的名片</text>
+        <text class="cell-arrow">›</text>
+      </view>
+      <view class="cell" bindtap="goEdit" hover-class="cell-hover">
+        <text class="cell-label">编辑名片</text>
+        <text class="cell-value">修改需超管审核</text>
+        <text class="cell-arrow">›</text>
+      </view>
+      <view class="cell" bindtap="goStat" hover-class="cell-hover">
+        <text class="cell-label">数据统计</text>
+        <text class="cell-arrow">›</text>
+      </view>
+      <view class="cell" bindtap="openPwd" hover-class="cell-hover">
+        <text class="cell-label">修改密码</text>
+        <text class="cell-arrow">›</text>
+      </view>
+      <view class="cell" bindtap="logout" hover-class="cell-hover">
+        <text class="cell-label danger">退出登录</text>
+        <text class="cell-arrow">›</text>
+      </view>
+    </view>
+  </block>
+
+  <!-- 修改密码弹窗 -->
+  <view class="mask" wx:if="{{pwdVisible}}" bindtap="closePwd"></view>
+  <view class="pwd-dialog" wx:if="{{pwdVisible}}">
+    <view class="pwd-title">修改密码</view>
+    <view class="form-item">
+      <text class="label">原密码</text>
+      <input data-field="oldPwd" value="{{pwd.oldPwd}}" bindinput="onPwdInput" password placeholder="请输入原密码" />
+    </view>
+    <view class="form-item">
+      <text class="label">新密码</text>
+      <input data-field="newPwd" value="{{pwd.newPwd}}" bindinput="onPwdInput" password placeholder="至少 6 位" />
+    </view>
+    <view class="form-item">
+      <text class="label">确认新密码</text>
+      <input data-field="confirmPwd" value="{{pwd.confirmPwd}}" bindinput="onPwdInput" password placeholder="再输一次" />
+    </view>
+    <view class="pwd-actions">
+      <button class="plain-btn" bindtap="closePwd">取消</button>
+      <button class="primary-btn" loading="{{pwdSaving}}" bindtap="submitPwd">确定</button>
+    </view>
+  </view>
+</view>

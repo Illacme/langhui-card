@@ -325,6 +325,24 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		_, body = c.do("POST", fmt.Sprintf("/api/admin/employees/%d/enable", empID), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
+		// 全局名片统计：汇总 + 按员工（前面公开接口已上报过一次 visit）
+		_, body = c.do("GET", "/api/admin/stats", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		stats := body["data"].(map[string]interface{})
+		summary := stats["summary"].(map[string]interface{})
+		require.GreaterOrEqual(t, int(summary["visit"].(float64)), 1)
+		byStaff := stats["byStaff"].([]interface{})
+		require.GreaterOrEqual(t, len(byStaff), 1)
+		// 按员工列表须含 staffId/name 与三个计数，且总数与汇总一致
+		var sumVisit int64
+		for _, it := range byStaff {
+			m := it.(map[string]interface{})
+			require.Contains(t, m, "staffId")
+			require.Contains(t, m, "name")
+			sumVisit += int64(m["visit"].(float64))
+		}
+		require.EqualValues(t, summary["visit"], sumVisit)
+
 		// 员工登录（用重置后的密码）
 		_, body = c.do("POST", "/api/employee/login", map[string]interface{}{
 			"phone": "13900000002", "password": resetPwd,

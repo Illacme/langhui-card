@@ -32,6 +32,12 @@ const routes = [
         meta: { title: '员工管理', group: '审核管理' },
       },
       {
+        path: 'stats',
+        name: 'stats',
+        component: () => import('@/views/Stats.vue'),
+        meta: { title: '名片统计', group: '数据统计' },
+      },
+      {
         path: 'content/company-info',
         name: 'company-info',
         component: () => import('@/views/content/CompanyInfo.vue'),

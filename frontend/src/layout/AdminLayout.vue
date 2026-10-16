@@ -58,7 +58,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { UserFilled, Key, SwitchButton, Document, Van } from '@element-plus/icons-vue'
+import { UserFilled, Key, SwitchButton, Document, Van, DataLine } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
 import { adminLogout } from '@/api/auth'
 import ChangePasswordDialog from '@/components/ChangePasswordDialog.vue'
@@ -77,6 +77,11 @@ const menuGroups = [
       { path: '/apply/modify', title: '名片修改审核' },
       { path: '/employees', title: '员工管理' },
     ],
+  },
+  {
+    group: '数据统计',
+    icon: 'DataLine',
+    items: [{ path: '/stats', title: '名片统计' }],
   },
   {
     group: '企业内容',
