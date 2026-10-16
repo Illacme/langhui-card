@@ -278,6 +278,21 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		empID := int64(body["staffId"].(float64))
 		require.NotEmpty(t, body["initialPassword"])
 
+		// 创建即落库职位（曾疑「创建员工不保存职位」）：列表回读断言
+		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		var created bool
+		for _, it := range body["data"].([]interface{}) {
+			m := it.(map[string]interface{})
+			if int64(m["staffId"].(float64)) != empID {
+				continue
+			}
+			created = true
+			require.Equal(t, "销售", m["title"])
+			require.Equal(t, "l@a.com", m["email"])
+		}
+		require.True(t, created, "新建员工应出现在列表中")
+
 		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
