@@ -34,9 +34,10 @@
         <el-table-column label="提交时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right" align="center">
+        <el-table-column label="操作" width="190" fixed="right" align="center">
           <template #default="{ row }">
             <template v-if="row.status === 'pending'">
+              <el-button type="primary" link @click="openDetail(row)">明细</el-button>
               <el-button type="success" link :loading="actingId === row.id" @click="approve(row)">通过</el-button>
               <el-button type="danger" link @click="openReject(row)">驳回</el-button>
             </template>
@@ -67,7 +68,7 @@
       </el-descriptions>
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button type="success" @click="approve(detailRow)">通过此申请</el-button>
+        <el-button type="success" :loading="actingId === detailRow.id" @click="approve(detailRow)">通过此申请</el-button>
       </template>
     </el-dialog>
 
@@ -76,7 +77,7 @@
       <el-input v-model="rejectReason" type="textarea" :rows="3" placeholder="请填写驳回原因（必填）" />
       <template #footer>
         <el-button @click="rejectVisible = false">取消</el-button>
-        <el-button type="primary" :disabled="!rejectReason.trim()" @click="submitReject">确定驳回</el-button>
+        <el-button type="primary" :loading="rejecting" :disabled="!rejectReason.trim()" @click="submitReject">确定驳回</el-button>
       </template>
     </el-dialog>
   </div>
@@ -96,6 +97,7 @@ const FIELD_LABELS: Record<string, string> = {
   name: '姓名',
   title: '职位',
   phone: '手机',
+  landline: '座机',
   email: '邮箱',
 }
 
@@ -111,6 +113,7 @@ const actingId = ref<number | null>(null)
 const rejectVisible = ref(false)
 const rejectReason = ref('')
 const rejectId = ref<number | null>(null)
+const rejecting = ref(false)
 
 const detailVisible = ref(false)
 const detailRow = ref<any>({})
@@ -186,7 +189,8 @@ function openReject(row: any) {
 }
 
 async function submitReject() {
-  if (!rejectId.value) return
+  if (!rejectId.value || rejecting.value) return
+  rejecting.value = true
   try {
     await rejectModify(rejectId.value, rejectReason.value.trim())
     ElMessage.success('已驳回')
@@ -194,6 +198,8 @@ async function submitReject() {
     await load()
   } catch {
     /* 拦截器已提示 */
+  } finally {
+    rejecting.value = false
   }
 }
 

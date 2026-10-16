@@ -41,8 +41,8 @@ miniprogram/
 
 ## 小程序码 + 海报生成
 - 后端 `GET /api/wechat/wxacode?staffId=` 调用微信 `getwxacodeunlimit` 生成小程序码（scene=`staffId=12`），按员工磁盘缓存到 `uploads/wxacode/<id>.jpg` 并返回可访问 URL（复用 `/uploads` 静态托管），避免反复消耗微信配额；access_token 在服务端内存缓存并在失效时自动刷新重试。
-- 小程序端 `pages/poster/poster` 用 canvas 2d 把「员工信息 + 头像 + 小程序码」合成为海报图，`wx.canvasToTempFilePath` 导出后 `wx.saveImageToPhotosAlbum` 保存到相册。
-- 首页增加「生成分享海报」入口跳转到 poster 页（携带 staffId）。
+- 小程序端 `pages/poster/poster` 用 canvas 2d 把「头像 / 姓名 / 职位 / 公司 / 地址 / 电话 / 小程序码」合成为海报图，`wx.canvasToTempFilePath` 导出后 `wx.saveImageToPhotosAlbum` 保存到相册。
+- 首页「生成分享海报」与「我的」页「生成海报」均跳转到 poster 页（携带 staffId）。
 - 通过小程序码扫码进入时，`index.onLoad` 解析 `query.scene`（形如 `staffId=12`）定位到对应员工名片。
 - 后端需配置 `WX_APPID` / `WX_APPSECRET`（环境变量）；未配置时接口返回明确错误。
 

@@ -32,7 +32,10 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "已提交，等待审核"})
 	})
 
-	// 员工本人名片信息（需登录）
+	// 员工本人名片信息（需登录）。
+	// 响应根级附带 pendingModify：是否有待审的名片修改申请——编辑名片页据此
+	// 展示「审核中」标签（需求 B9：审核期对外仍显示旧信息，仅 approve 时写回）。
+	// 放根级而非塞进 data，是不动既有 data=Employee 契约（小程序 edit/me 两页在用）。
 	r.GET("/api/employee/me", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
 		var e model.Employee
@@ -40,7 +43,9 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": e})
+		var pending int64
+		db.Model(&model.CardModifyApply{}).Where("staff_id = ? AND status = ?", staffID, "pending").Count(&pending)
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": e, "pendingModify": pending > 0})
 	})
 
 	// 员工提交名片修改（待审，对外仍显示旧信息）

@@ -23,9 +23,13 @@
         <text class="cell-label">我的名片</text>
         <text class="cell-arrow">›</text>
       </view>
+      <view class="cell" bindtap="goPoster" hover-class="cell-hover">
+        <text class="cell-label">生成海报</text>
+        <text class="cell-arrow">›</text>
+      </view>
       <view class="cell" bindtap="goEdit" hover-class="cell-hover">
         <text class="cell-label">编辑名片</text>
-        <text class="cell-value">修改需超管审核</text>
+        <text class="cell-value">{{pendingModify ? '审核中' : '修改需超管审核'}}</text>
         <text class="cell-arrow">›</text>
       </view>
       <view class="cell" bindtap="goStat" hover-class="cell-hover">

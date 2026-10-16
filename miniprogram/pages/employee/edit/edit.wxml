@@ -1,4 +1,9 @@
 <view class="form" wx:if="{{!loading}}">
+  <!-- 审核中标签（需求 B9）：有待审修改申请时展示；审核期对外仍显示旧信息 -->
+  <view class="pending-tip" wx:if="{{pendingModify}}">
+    <text class="pending-tag">审核中</text>
+    <text class="pending-text">修改已提交，等待超管审核，通过后生效</text>
+  </view>
   <view class="form-item avatar-row">
     <text class="label">头像</text>
     <image class="avatar-preview" src="{{form.avatar}}" mode="aspectFill" lazy-load wx:if="{{form.avatar}}" />

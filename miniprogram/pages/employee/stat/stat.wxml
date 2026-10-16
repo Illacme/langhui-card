@@ -2,7 +2,13 @@
   <view class="loading" wx:if="{{loading}}">加载中…</view>
 
   <block wx:elif="{{stat}}">
-    <view class="stat-cards">
+    <!-- 空状态（需求 B11）：三项计数全 0 时占位，避免空荡荡的三个 0 -->
+    <view class="stat-empty" wx:if="{{!stat.visit && !stat.call && !stat.save}}">
+      <view class="stat-empty-icon">📊</view>
+      <view class="stat-empty-text">暂无访问数据</view>
+      <view class="stat-empty-hint">把名片分享给客户，被浏览后这里会出现统计</view>
+    </view>
+    <view class="stat-cards" wx:else>
       <view class="stat-card">
         <view class="stat-num">{{stat.visit}}</view>
         <view class="stat-label">名片访问</view>
