@@ -1,0 +1,35 @@
+/*
+ * 管理后台通用样式（全局，非 scoped）。
+ * 用于统一弹窗分辨率适配与高端视觉风格，所有内容管理页共享。
+ */
+
+/* ===== 弹窗分辨率适配 =====
+   限制内容区高度并内部滚动，页脚常驻可见，避免内容超长时
+   底部「取消/保存」被裁切到视口外（原 bug：弹窗对分辨率没适配）。
+   .project-dialog 为项目案例页使用；.resp-dialog 为其它页可复用的同类弹窗类。 */
+.project-dialog .el-dialog__body,
+.resp-dialog .el-dialog__body {
+  max-height: calc(84vh - 150px);
+  overflow-y: auto;
+  padding-right: 22px;
+}
+.project-dialog .el-dialog__footer,
+.resp-dialog .el-dialog__footer {
+  padding: 14px 22px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  border-radius: 0 0 var(--el-border-radius-base) var(--el-border-radius-base);
+}
+.project-dialog .el-dialog__header,
+.resp-dialog .el-dialog__header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+  margin-right: 0;
+}
+
+@media (max-width: 768px) {
+  .project-dialog,
+  .resp-dialog {
+    width: 94vw !important;
+    max-width: 94vw;
+  }
+}

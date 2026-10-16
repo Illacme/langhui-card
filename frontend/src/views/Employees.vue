@@ -71,7 +71,7 @@
     </el-card>
 
     <!-- 新增员工 -->
-    <el-dialog v-model="createVisible" title="新增员工" width="520px" @closed="resetForm">
+    <el-dialog v-model="createVisible" title="新增员工" width="520px" class="resp-dialog" @closed="resetForm">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" placeholder="必填" />
@@ -96,7 +96,7 @@
     </el-dialog>
 
     <!-- 重置密码结果 -->
-    <el-dialog v-model="pwdVisible" title="重置密码成功" width="420px">
+    <el-dialog v-model="pwdVisible" title="重置密码成功" width="420px" class="resp-dialog">
       <el-descriptions :column="1" border>
         <el-descriptions-item label="员工编号">{{ pwdResult.staffId }}</el-descriptions-item>
         <el-descriptions-item label="新初始密码">
