@@ -1,7 +1,98 @@
 # 生产上线 Runbook（从零到发布）
 
 > 适用场景：首次部署到生产服务器。联调 / 日常开发见《部署与联调.md》，本文只讲生产路径。
+> **没有 Docker，或想先跑起来测试？** 直接看下方「无 Docker 部署」一节（三条路径，A 路径十分钟可跑通）；就绪后再按第 0 节起的 Docker 主流程上生产。
 > 预计耗时：服务器与域名就绪后 1–2 小时（不含微信审核等待）。
+
+## 无 Docker 部署（先测试 / 无 Docker 环境）
+
+本项目不依赖 Docker 也能完整运行：后端 `cmd/devserver` 用纯 Go SQLite（免 cgo、免 MySQL），前端 vite dev server 自带 `/api` 代理。
+前置：**Go ≥ 1.26**（`go.mod` 要求，`go version` 确认）+ **Node ≥ 20**。
+
+### A. 先跑起来测（同机，约 10 分钟）
+
+```bash
+# 终端 1：后端 —— SQLite + 演示数据，不需要 MySQL
+cd backend && go run ./cmd/devserver          # 监听 :8080
+
+# 终端 2：PC 管理后台 —— vite 自动把 /api 代理到 8080
+cd frontend && npm install && npm run dev     # 打开 http://localhost:5173
+```
+
+- 演示账号：超管 `admin/admin123456`；员工手机 `13800000001` / 密码 `demo1234`
+- **小程序**：开发者工具导入 `miniprogram/`，`app.ts` 的 `baseUrl` 指向 `http://<电脑局域网IP>:8080`（`urlCheck:false` 已配，http 可直接连）
+- **手机看 PC 后台**：同一 WiFi 下开 `http://<电脑IP>:5173`（vite 绑定 `0.0.0.0`）
+- **真机测上传**：设 `DEV_UPLOAD_BASE_URL=http://<电脑IP>:8080/uploads` 再启动 devserver——否则返回给端的头像 URL 写死 `127.0.0.1`，手机取不到图（启动日志里的 `upload base url:` 会显示当前生效值）
+- 已知限制：SQLite 库在系统临时目录，**重启即丢数据**（每次重新 seed 演示数据）——功能测试无所谓，要持久化走 B/C
+
+### B. 编译二进制 + nginx（贴近生产的运行形态，仍免 MySQL）
+
+```bash
+cd backend && go build -o langhui ./cmd/devserver   # 产出单文件二进制
+cd frontend && npm run build                         # 产物在 frontend/dist
+```
+
+nginx（即 Docker 版 `frontend/nginx.conf` 的配置，仅把 `backend:8080` 换成 `127.0.0.1:8080`、root 指向 dist）：
+
+```nginx
+server {
+    listen 80;
+    root /path/to/langhui-card/frontend/dist;
+    index index.html;
+    client_max_body_size 50m;
+    location / { try_files $uri $uri/ /index.html; }
+    location /api/     { proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; }
+    location /uploads/ { proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; }
+}
+```
+
+后端常驻，二选一：
+
+```bash
+nohup /path/to/langhui-card/backend/langhui > /var/log/langhui.log 2>&1 &   # 最简
+```
+
+```ini
+# /etc/systemd/system/langhui.service（推荐：崩溃自拉起、开机自启）
+[Unit]
+Description=langhui backend (dev mode)
+After=network.target
+
+[Service]
+WorkingDirectory=/path/to/langhui-card/backend
+Environment=DEV_UPLOAD_BASE_URL=http://192.168.1.10:8080/uploads
+ExecStart=/path/to/langhui-card/backend/langhui
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl daemon-reload && sudo systemctl enable --now langhui
+```
+
+- 数据持久化同 A（临时库重启丢）；要真持久化用路径 C。日后如需 devserver 持久库，可加 `DEV_DB_PATH` 环境变量（当前未实现）。
+- `DEV_UPLOAD_BASE_URL` 设为局域网 IP 后，内网同事 / 真机的上传与头像均正常。
+
+### C. 完整生产（MySQL 原生 + systemd + HTTPS，不用 Docker）
+
+1. 安装 MySQL 8.0（`apt install mysql-server` 或 yum），建库 `langhui`，手动应用迁移（命令见第 4 节，与 Docker 无关完全适用）。
+2. `go build -o langhui-server ./cmd/server`，环境变量：`DB_DSN` / `JWT_KEY` / `ADMIN_USER` / `ADMIN_PASS` / `UPLOAD_BASE_URL` / `COOKIE_SECURE=true`。
+3. systemd 常驻（unit 同 B，`ExecStart` 换二进制、补 `Environment=` 行）。
+4. nginx 反代（同 B）+ HTTPS：前置 Caddy 自动证书（配置见第 5 节）。
+5. **MySQL parity 验证照常执行（第 6 节）**——与是否用 Docker 无关，生产用 MySQL 就必须跑。
+
+### 三条路径对比
+
+| | A 先跑起来 | B 二进制 + nginx | C 完整生产 |
+|---|---|---|---|
+| MySQL | 不用 | 不用 | 要（原生安装） |
+| 数据持久 | 重启丢 | 重启丢 | 持久 |
+| 真机 / 内网上传 | ✅ 设 `DEV_UPLOAD_BASE_URL` | ✅ 同 A | ✅ `UPLOAD_BASE_URL` 可配 |
+| HTTPS | 无 | 无（可加 Caddy） | ✅ |
+| 适合 | 功能测试 / 演示 | 内网部署 / 给同事看 | 上线 |
 
 ## 0. 前置条件
 

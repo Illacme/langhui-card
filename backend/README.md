@@ -100,6 +100,10 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ```
 演示账号：超管 `admin/admin123456`；员工手机 `13800000001` / 密码 `demo1234`（staffId=1）。生产部署仍走 `cmd/server`（MySQL + docker-compose）。
 
+两个联调注意点：
+- **真机 / 局域网上传**：上传基址默认 `http://127.0.0.1:<port>/uploads`（同机测试可直接用）；手机取不到图时设 `DEV_UPLOAD_BASE_URL=http://<本机IP>:8080/uploads` 再启动（启动日志 `upload base url:` 显示生效值）。
+- **数据不持久**：SQLite 库在系统临时目录，重启即丢并重新 seed；要持久化运行见仓库根 `docs/deploy-runbook.md`「无 Docker 部署」路径 B/C。
+
 ## 生产文件存储（MinIO / OSS）
 - 通过 `STORAGE_DRIVER` 切换，业务代码（handler / 前端 / 小程序）完全不变，仅 `main.go` 的 `newUploader` 工厂按环境变量选择实现，统一满足 `storage.Uploader` 接口：
   - `local`（默认）：写本地 `UPLOAD_DIR` 并由 `/uploads` 静态路由托管，适用于开发/单机。
