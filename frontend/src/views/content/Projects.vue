@@ -19,7 +19,7 @@
         </div>
       </div>
 
-      <el-table :data="paged" v-loading="loading" border stripe>
+      <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="名称" min-width="180" />
         <el-table-column label="分类" width="130">
           <template #default="{ row }">{{ categoryName(row.categoryId) }}</template>
@@ -44,7 +44,31 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序" width="80" align="center" />
+        <el-table-column label="排序" width="120" align="center">
+          <template #default="{ row }">
+            <div class="sort-cell">
+              <span class="drag-handle" draggable="true" title="按住拖拽调整顺序">
+                <el-icon><Rank /></el-icon>
+              </span>
+              <el-button
+                link
+                :disabled="isFirstRow(row)"
+                title="上移"
+                @click="moveUp(row)"
+              >
+                <el-icon><ArrowUp /></el-icon>
+              </el-button>
+              <el-button
+                link
+                :disabled="isLastRow(row)"
+                title="下移"
+                @click="moveDown(row)"
+              >
+                <el-icon><ArrowDown /></el-icon>
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
@@ -64,7 +88,14 @@
       />
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑案例' : '新增案例'" width="720px" @closed="resetForm">
+    <el-dialog
+      v-model="dialogVisible"
+      :title="editingId ? '编辑案例' : '新增案例'"
+      width="760px"
+      class="project-dialog"
+      :append-to-body="true"
+      @closed="resetForm"
+    >
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="分类" prop="categoryId">
           <el-select v-model="form.categoryId" placeholder="选择业绩分类" style="width: 240px">
@@ -105,14 +136,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted, defineAsyncComponent } from 'vue'
-import { Refresh, Plus, Search } from '@element-plus/icons-vue'
+import { ref, reactive, computed, watch, onMounted, nextTick, defineAsyncComponent } from 'vue'
+import { Refresh, Plus, Search, Rank, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   listProjects,
   createProject,
   updateProject,
   deleteProject,
+  sortProjects,
   listCategories,
 } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
@@ -157,6 +189,112 @@ function categoryName(id: number) {
   const c = categories.value.find((x) => x.id === id)
   return c ? c.name : '—'
 }
+
+/* ===== 列表顺序调整：拖拽 + 上下箭头 ===== */
+const tableRef = ref<any>()
+
+function globalIndex(row: any) {
+  return rows.value.findIndex((r) => r.id === row.id)
+}
+function isFirstRow(row: any) {
+  return globalIndex(row) <= 0
+}
+function isLastRow(row: any) {
+  const i = globalIndex(row)
+  return i < 0 || i === rows.value.length - 1
+}
+
+// 重排后按新顺序重算 sort 并一次性批量持久化
+async function applyAndPersist() {
+  rows.value.forEach((r, i) => (r.sort = i + 1))
+  try {
+    await sortProjects(rows.value.map((r) => ({ id: r.id, sort: r.sort })))
+  } catch {
+    /* 拦截器已提示 */
+  }
+}
+
+async function moveUp(row: any) {
+  const i = globalIndex(row)
+  if (i <= 0) return
+  const arr = [...rows.value]
+  ;[arr[i - 1], arr[i]] = [arr[i], arr[i - 1]]
+  rows.value = arr
+  await applyAndPersist()
+}
+
+async function moveDown(row: any) {
+  const i = globalIndex(row)
+  if (i < 0 || i >= rows.value.length - 1) return
+  const arr = [...rows.value]
+  ;[arr[i + 1], arr[i]] = [arr[i], arr[i + 1]]
+  rows.value = arr
+  await applyAndPersist()
+}
+
+// 拖拽：以 tbody 内 <tr> 的序号映射回当前页数据，再落到全局顺序
+let dragId: number | null = null
+
+function trToRow(tr: Element | null) {
+  if (!tr || !tr.closest('.el-table__body-wrapper')) return null
+  const tbody = tr.parentElement
+  if (!tbody) return null
+  const idx = [...tbody.children].indexOf(tr)
+  return idx >= 0 ? paged.value[idx] : null
+}
+
+function onDragStart(e: Event) {
+  const de = e as DragEvent
+  const tr = (de.target as HTMLElement)?.closest?.('tr')
+  const row = trToRow(tr)
+  if (!row) return
+  dragId = row.id
+  de.dataTransfer?.setData('text/plain', String(row.id))
+  if (de.dataTransfer) de.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(e: Event) {
+  const de = e as DragEvent
+  if (!(de.target as HTMLElement)?.closest?.('.el-table__body-wrapper')) return
+  de.preventDefault()
+  if (de.dataTransfer) de.dataTransfer.dropEffect = 'move'
+}
+
+async function onDrop(e: Event) {
+  const de = e as DragEvent
+  de.preventDefault()
+  const tr = (de.target as HTMLElement)?.closest?.('tr')
+  const target = trToRow(tr)
+  if (!target || dragId == null || target.id === dragId) {
+    dragId = null
+    return
+  }
+  const from = rows.value.findIndex((r) => r.id === dragId)
+  const to = rows.value.findIndex((r) => r.id === target.id)
+  dragId = null
+  if (from < 0 || to < 0) return
+  const arr = [...rows.value]
+  const [moved] = arr.splice(from, 1)
+  arr.splice(to, 0, moved)
+  rows.value = arr
+  await applyAndPersist()
+}
+
+function onDragEnd() {
+  dragId = null
+}
+
+// 事件委托挂在表格根节点上（el-table 行会随数据重建，委托更稳）
+onMounted(() => {
+  nextTick(() => {
+    const root = tableRef.value?.$el
+    if (!root) return
+    root.addEventListener('dragstart', onDragStart)
+    root.addEventListener('dragover', onDragOver)
+    root.addEventListener('drop', onDrop)
+    root.addEventListener('dragend', onDragEnd)
+  })
+})
 
 async function load() {
   loading.value = true
@@ -257,6 +395,8 @@ onMounted(load)
 </script>
 
 <style scoped>
+/* 弹窗分辨率适配与视觉规范见全局 src/styles/admin.css（.project-dialog 类）。 */
+
 .page-bar {
   display: flex;
   align-items: center;
@@ -278,5 +418,30 @@ onMounted(load)
 }
 .muted {
   color: #c0c4cc;
+}
+/* 排序操作区：拖拽手柄 + 上下箭头 */
+.sort-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.sort-cell .drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 2px;
+  border-radius: 4px;
+  color: #909399;
+  cursor: grab;
+  transition: background-color 0.2s, color 0.2s;
+}
+.sort-cell .drag-handle:hover {
+  background: #f0f2f5;
+  color: #409eff;
+}
+.sort-cell .drag-handle:active {
+  cursor: grabbing;
 }
 </style>

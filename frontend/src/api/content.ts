@@ -53,6 +53,10 @@ export function updateProject(id: number, p: any) {
 export function deleteProject(id: number) {
   return http.delete(`/admin/projects/${id}`)
 }
+// 批量保存排序（拖拽 / 上下箭头调整顺序后一次性提交）
+export function sortProjects(items: { id: number; sort: number }[]) {
+  return http.put('/admin/projects/sort', items)
+}
 
 // ===== 业务服务 =====
 export function listServices() {
