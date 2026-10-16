@@ -33,6 +33,7 @@ backend/
 ├── migrations/0003_soft_delete.sql   # 软删除列
 ├── migrations/0004_token_version.sql # token_version 安全戳（账号级吊销）
 ├── migrations/0005_revoked_sessions.sql # 会话黑名单表（单设备精确吊销）
+├── migrations/0006_employee_landline.sql # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
@@ -162,7 +163,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/logout | 否 | 吊销当前会话 sid（单设备精确吊销）+ 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
 | POST | /api/apply/open | 否 | 员工自助提交开通申请（pending） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
-| PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息） |
+| PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息；可含 landline） |
 | GET  | /api/employee/me/stat | employee | 本人访问/拨号/保存统计 |
 | PUT  | /api/employee/password | employee | 修改本人密码 |
 | GET  | /api/admin/apply/open | admin | 开通申请列表 |
@@ -173,6 +174,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/admin/apply/modify/:id/reject | admin | 驳回 |
 | GET  | /api/admin/employees | admin | 员工列表 |
 | POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码） |
+| PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码） |
 | POST | /api/admin/employees/:id/disable | admin | 停用账号 |
 | POST | /api/admin/employees/:id/enable | admin | 启用账号 |
 | POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码） |

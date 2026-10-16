@@ -6,6 +6,8 @@ export interface Employee {
   title: string
   avatar: string
   phone: string
+  /** 座机（本人办公电话）；为空时名片「座机」行回退公司总机 company.tel */
+  landline: string
   email: string
   status: string
 }

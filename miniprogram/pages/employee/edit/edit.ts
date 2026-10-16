@@ -2,7 +2,7 @@ import { request, apiBaseUrl } from '../../../utils/request'
 
 Page({
   data: {
-    form: { avatar: '', name: '', title: '', phone: '', email: '' },
+    form: { avatar: '', name: '', title: '', phone: '', landline: '', email: '' },
     loading: true,
   },
   onLoad() {

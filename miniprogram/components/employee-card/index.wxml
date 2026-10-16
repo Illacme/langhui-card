@@ -15,7 +15,7 @@
   <view class="rows">
     <view class="row"><text class="label">地址</text><text>{{company.address}}</text></view>
     <view class="row"><text class="label">手机</text><text>{{employee.phone}}</text></view>
-    <view class="row"><text class="label">座机</text><text>{{company.tel}}</text></view>
+    <view class="row"><text class="label">座机</text><text>{{employee.landline || company.tel}}</text></view>
     <view class="row"><text class="label">邮箱</text><text>{{employee.email}}</text></view>
   </view>
 </view>

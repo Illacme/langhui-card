@@ -10,8 +10,12 @@
     <input data-field="name" value="{{form.name}}" bindinput="onInput" />
   </view>
   <view class="form-item">
-    <text class="label">岗位</text>
+    <text class="label">职位</text>
     <input data-field="title" value="{{form.title}}" bindinput="onInput" />
+  </view>
+  <view class="form-item">
+    <text class="label">座机</text>
+    <input data-field="landline" value="{{form.landline}}" bindinput="onInput" placeholder="选填，如 021-88888888" />
   </view>
   <view class="form-item">
     <text class="label">手机</text>
