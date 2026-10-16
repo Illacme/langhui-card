@@ -13,7 +13,7 @@
 | `frontend/` | Vue 3 + Element Plus 的 PC 管理后台（超管使用） |
 | `miniprogram/` | 原生微信小程序前端（员工 / 访客侧） |
 | `backend/migrations/` | MySQL 建表与种子 SQL（含软删除迁移 `0003` 等） |
-| `docs/` | OpenAPI 3 接口规范（`openapi.yaml`）· 分支保护协作规范（`branch-protection.md`） |
+| `docs/` | OpenAPI 3 接口规范（`openapi.yaml`）· 分支保护协作规范（`branch-protection.md`）· 生产上线 Runbook（`deploy-runbook.md`） |
 | `scripts/` | 运维脚本（`backup.sh`：MySQL 逻辑备份 + 轮转；`alert_check.sh`：最小告警三规则） |
 | `*.md`（根目录） | 需求 / 架构 / 接口字段映射等中文文档 |
 
@@ -83,7 +83,7 @@ CI 见 `.github/workflows/ci.yml`，四个 job：
 - 需求与架构：《朗汇机电小程序V1.3_开发内容与工作量确认》《朗汇机电小程序V1.3_自建技术架构方案》
 - 接口 / 字段映射：《首页组件》《跳转页组件》《PC 后台组件与接口字段映射》《三端联调与接口总表》
 - 接口规范：`docs/openapi.yaml`（OpenAPI 3.0.3）
-- 部署与运维：《部署与联调》（含日志 / 指标 / 最小告警 / 备份 / 黑名单维护）· `scripts/backup.sh` · `scripts/alert_check.sh`
+- 部署与运维：《部署与联调》（联调环境）· `docs/deploy-runbook.md`（生产上线 Runbook）· `scripts/backup.sh` · `scripts/alert_check.sh`
 - 协作规范：`docs/branch-protection.md`（分支保护 / CI 门禁 / 评审流）
 - 子工程说明：`backend/README.md` · `frontend/README.md` · `miniprogram/README.md`
 

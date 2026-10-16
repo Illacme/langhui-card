@@ -56,6 +56,12 @@ services:
       # 与下方 nginx 发布端口一致（宿主机访问地址）
       UPLOAD_BASE_URL: http://localhost:8080/uploads
       WXACODE_TTL_HOURS: "720"
+      # HTTPS 生产必须：httpOnly Cookie 加 Secure 标志（http 联调保持 false）
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # 跨子域共享登录态才设（如前端 admin.xxx.com / 接口 api.xxx.com）
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      # 可选：=1 开放 /metrics（Prometheus 抓取，建议仅内网可达）
+      METRICS_ENABLED: ${METRICS_ENABLED:-false}
       # 可选：WX_APPID / WX_APPSECRET / MINIO_* / OSS_* / CDN_*
     volumes:
       - uploads_data:/app/uploads
