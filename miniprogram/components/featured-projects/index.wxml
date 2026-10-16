@@ -1,6 +1,6 @@
 <view class="featured" wx:if="{{featured.length}}">
   <view class="feat-item" wx:for="{{featured}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap">
-    <image class="feat-cover" src="{{item.cover}}" mode="aspectFill" wx:if="{{item.cover}}" />
+    <image class="feat-cover" src="{{item.cover}}" mode="aspectFill" lazy-load wx:if="{{item.cover}}" />
     <view class="feat-name">{{item.name}}</view>
   </view>
 </view>

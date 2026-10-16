@@ -1,6 +1,10 @@
-<view class="detail" wx:if="{{!loading && project}}">
-  <image class="banner" src="{{project.cover}}" mode="aspectFill" wx:if="{{project.cover}}" />
+<view class="detail" wx:if="{{!loading && !error && project}}">
+  <image class="banner" src="{{project.cover}}" mode="aspectFill" lazy-load wx:if="{{project.cover}}" />
   <view class="title">{{project.name}}</view>
+  <view class="meta">
+    <text wx:if="{{project.categoryName}}">{{project.categoryName}}</text>
+    <text wx:if="{{updatedAtText}}"> · 更新于 {{updatedAtText}}</text>
+  </view>
   <view class="summary">{{project.summary}}</view>
   <view class="rich">
     <block wx:for="{{segments}}" wx:key="index">
@@ -9,7 +13,20 @@
     </block>
   </view>
   <view class="album" wx:if="{{project.album.length}}">
-    <image wx:for="{{project.album}}" wx:key="*this" src="{{item}}" mode="aspectFill" class="album-img" data-url="{{item}}" bindtap="preview" />
+    <image
+      wx:for="{{project.album}}"
+      wx:key="*this"
+      src="{{item}}"
+      mode="aspectFill"
+      lazy-load
+      class="album-img"
+      data-url="{{item}}"
+      bindtap="preview"
+    />
   </view>
+</view>
+<view wx:elif="{{error}}" class="error-box">
+  <view class="error-text">网络异常，加载失败</view>
+  <button class="retry-btn" bindtap="load">重新加载</button>
 </view>
 <view wx:else class="loading">加载中…</view>

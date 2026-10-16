@@ -15,32 +15,37 @@
         </div>
       </div>
 
+      <!--
+        列宽口径同员工管理：固定 width 之和 + min-width 之和 ≈ 1024px < 内容区约 1170px。
+        本表历史上曾达 1200px（头像 80 / 状态 100 / 邮箱与驳回原因 min 160）超出容器，
+        与 Employees 同款遮挡风险。改动列宽请按同一口径重算，宁紧勿松。
+      -->
       <el-table :data="paged" v-loading="loading" border stripe>
-        <el-table-column prop="name" label="姓名" width="110" />
-        <el-table-column prop="phone" label="手机" width="140" />
-        <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip />
-        <el-table-column prop="title" label="职位" width="120" />
-        <el-table-column label="头像" width="80" align="center">
+        <el-table-column prop="name" label="姓名" width="100" />
+        <el-table-column prop="phone" label="手机" width="120" />
+        <el-table-column prop="email" label="邮箱" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="title" label="职位" width="110" />
+        <el-table-column label="头像" width="62" align="center">
           <template #default="{ row }">
             <el-image
               v-if="row.avatar"
               :src="row.avatar"
-              style="width: 40px; height: 40px; border-radius: 4px"
+              style="width: 36px; height: 36px; border-radius: 4px"
               fit="cover"
             />
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100" align="center">
+        <el-table-column label="状态" width="72" align="center">
           <template #default="{ row }">
             <el-tag :type="statusTag(row.status)" effect="light">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="rejectReason" label="驳回原因" min-width="160" show-overflow-tooltip />
+        <el-table-column prop="rejectReason" label="驳回原因" min-width="130" show-overflow-tooltip />
         <el-table-column label="提交时间" width="180">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right" align="center">
+        <el-table-column label="操作" width="120" fixed="right" align="center">
           <template #default="{ row }">
             <template v-if="row.status === 'pending'">
               <el-button type="success" link :loading="actingId === row.id" @click="approve(row)">通过</el-button>

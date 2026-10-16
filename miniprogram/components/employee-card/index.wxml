@@ -1,15 +1,21 @@
 <view class="emp-card">
   <view class="top">
-    <image class="avatar" src="{{employee.avatar}}" mode="aspectFill" wx:if="{{employee.avatar}}" />
+    <image class="avatar" src="{{employee.avatar}}" mode="aspectFill" lazy-load wx:if="{{employee.avatar}}" />
     <view class="avatar" wx:else />
     <view class="info">
       <view class="name">{{employee.name}}</view>
       <view class="title">{{employee.title}}</view>
     </view>
-    <view class="save-btn" bindtap="onSave">保存名片</view>
+    <!-- 右上两个操作：保存名片 / 案例进入（首页文档 §2 组件约定）。
+         「案例进入」不自己跳转，triggerEvent 通知页面决定：业绩区在首页布局里则滚动过去，
+         被隐藏则跳第一个分类的列表——组件不持有 categories / homeOrder，由页面兜底。 -->
+    <view class="ops">
+      <view class="save-btn" bindtap="onSave">保存名片</view>
+      <view class="case-btn" bindtap="onEnterCase">案例进入</view>
+    </view>
   </view>
   <view class="company">
-    <image class="logo" src="{{company.logo}}" mode="aspectFit" wx:if="{{company.logo}}" />
+    <image class="logo" src="{{company.logo}}" mode="aspectFit" lazy-load wx:if="{{company.logo}}" />
     <view class="cname">{{company.fullName}}</view>
   </view>
   <view class="rows">

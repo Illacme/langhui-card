@@ -1,6 +1,6 @@
 <view class="cat-grid">
   <view class="cat-item" wx:for="{{categories}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap">
-    <image class="cat-icon" src="{{item.icon}}" mode="aspectFit" wx:if="{{item.icon}}" />
+    <image class="cat-icon" src="{{item.icon}}" mode="aspectFit" lazy-load wx:if="{{item.icon}}" />
     <view class="cat-placeholder" wx:else>图</view>
     <view class="cat-name">{{item.name}}</view>
   </view>

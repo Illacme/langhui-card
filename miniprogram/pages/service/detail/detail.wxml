@@ -1,10 +1,17 @@
-<view class="detail" wx:if="{{!loading && service}}">
+<view class="detail" wx:if="{{!loading && !error && service}}">
   <view class="title">{{service.title}}</view>
+  <view class="meta">
+    <text wx:if="{{updatedAtText}}">更新于 {{updatedAtText}}</text>
+  </view>
   <view class="rich">
     <block wx:for="{{segments}}" wx:key="index">
       <rich-text wx:if="{{item.type === 'html'}}" nodes="{{item.content}}" />
       <rich-video wx:else channelId="{{item.content}}" />
     </block>
   </view>
+</view>
+<view wx:elif="{{error}}" class="error-box">
+  <view class="error-text">网络异常，加载失败</view>
+  <button class="retry-btn" bindtap="load">重新加载</button>
 </view>
 <view wx:else class="loading">加载中…</view>

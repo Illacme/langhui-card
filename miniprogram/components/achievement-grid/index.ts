@@ -2,10 +2,15 @@ Component({
   options: { addGlobalClass: true },
   properties: {
     categories: Array,
+    staffId: Number, // 从首页透传，子页分享/返回名片用（跳转页文档 §5）
   },
   methods: {
     onTap(e: any) {
-      wx.navigateTo({ url: '/pages/project/list/list?categoryId=' + e.currentTarget.dataset.id })
+      const url =
+        '/pages/project/list/list?categoryId=' +
+        e.currentTarget.dataset.id +
+        (this.data.staffId ? '&staffId=' + this.data.staffId : '')
+      wx.navigateTo({ url })
     },
   },
 })

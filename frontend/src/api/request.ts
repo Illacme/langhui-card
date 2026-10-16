@@ -98,16 +98,20 @@ http.interceptors.response.use(
       ElMessage.warning(data.msg || '无权限')
       return Promise.reject(new Error(data.msg || '无权限'))
     }
-    // 业务失败（code=1 及其他非 0）
+    // 业务失败（code=1 及其他非 0）。__silent：调用方自行降级（如预览弹窗拉小程序码，
+    // 未配微信凭据时 code=1 属预期，不该弹红条惊动运营）——仍然 reject，由调用方 catch。
     if (data.code !== 0) {
-      ElMessage.error(data.msg || '请求失败')
+      const cfg0 = resp.config as any
+      if (!cfg0 || !cfg0.__silent) ElMessage.error(data.msg || '请求失败')
       return Promise.reject(new Error(data.msg || '业务失败'))
     }
     // 成功：回传响应体，由各 api 函数提取 data / staffId 等
     return data as unknown as AxiosResponse
   },
   (error) => {
-    ElMessage.error('网络异常，请稍后重试')
+    // __silent 同样放过网络层失败（同上：调用方自行降级）
+    const cfg = (error && (error as any).config) as any
+    if (!cfg || !cfg.__silent) ElMessage.error('网络异常，请稍后重试')
     return Promise.reject(error)
   }
 )
