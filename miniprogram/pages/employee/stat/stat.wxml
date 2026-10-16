@@ -1,0 +1,23 @@
+<view class="stat-page">
+  <view class="loading" wx:if="{{loading}}">加载中…</view>
+
+  <block wx:elif="{{stat}}">
+    <view class="stat-cards">
+      <view class="stat-card">
+        <view class="stat-num">{{stat.visit}}</view>
+        <view class="stat-label">名片访问</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-num">{{stat.call}}</view>
+        <view class="stat-label">拨号点击</view>
+      </view>
+      <view class="stat-card">
+        <view class="stat-num">{{stat.save}}</view>
+        <view class="stat-label">保存点击</view>
+      </view>
+    </view>
+    <view class="stat-tip">
+      自访客浏览你的名片起实时累计：访问为名片被打开次数，拨号/保存为对应按钮被点击次数。
+    </view>
+  </block>
+</view>

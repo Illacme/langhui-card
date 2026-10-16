@@ -22,6 +22,12 @@ Page({
       const m = /staffId=(\d+)/.exec(params)
       if (m) staffId = parseInt(m[1], 10)
     }
+    // 仍无参数（直接打开 / 从「我的」tab 切回）：已登录员工用自己的编号，
+    // 免去每次手输；未登录才弹窗输入（联调取数 / 演示用）
+    if (!staffId) {
+      const app = getApp() as any
+      staffId = (app && app.globalData && app.globalData.myStaffId) || 0
+    }
     if (staffId) {
       this.setData({ staffId })
       this.loadAll()
