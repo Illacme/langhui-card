@@ -173,7 +173,8 @@ func seedDemoData(db *gorm.DB) {
 	if cnt == 0 {
 		hash, _ := auth.HashPassword("demo1234")
 		emp := model.Employee{
-			Name: "演示员工", Title: "客户经理", Phone: "13800000001", Email: "demo@langhui.com",
+			Name: "演示员工", Title: "客户经理", Phone: "13800000001", Landline: "021-66666666",
+			Email:  "demo@langhui.com",
 			Avatar: "https://placehold.co/96x96?text=EMP", PasswordHash: hash, Status: "enabled",
 		}
 		db.Create(&emp)
