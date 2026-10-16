@@ -32,6 +32,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// devModels devserver 的建表清单，须与 model 包的全部模型保持一致。
+// 新增 GORM 模型时必须同步追加——漏加不会编译报错，只会在运行期
+// 查询时报「no such table」（曾漏加 RevokedSession 导致 devserver
+// 下每次鉴权请求都被误判为「会话已吊销」而 401，见 main_test.go 的守卫）。
+var devModels = []interface{}{
+	&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
+	&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
+	&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
+	&model.OpenApply{}, &model.CardModifyApply{},
+	&model.RevokedSession{},
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -51,12 +63,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
-	if err := db.AutoMigrate(
-		&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
-		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
-		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
-		&model.OpenApply{}, &model.CardModifyApply{},
-	); err != nil {
+	if err := db.AutoMigrate(devModels...); err != nil {
 		log.Fatalf("auto migrate: %v", err)
 	}
 
