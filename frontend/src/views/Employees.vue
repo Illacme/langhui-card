@@ -16,39 +16,45 @@
         </div>
       </div>
 
+      <!--
+        列宽是「算」出来的，不是拍的：固定 width 之和 + min-width 之和 ≈ 1116px，
+        需小于后台内容区宽度（约 1170px）。历史上操作列曾设 280px，加上其余列
+        合计 1380px 超出容器，fixed="right" 的操作列直接压住「创建时间」列。
+        改动列宽时请按同一口径重算，宁紧勿松。
+      -->
       <el-table :data="paged" v-loading="loading" border stripe>
-        <el-table-column prop="staffId" label="编号" width="80" align="center" />
-        <el-table-column prop="name" label="姓名" width="110" />
-        <el-table-column prop="title" label="职位" width="120" />
-        <el-table-column prop="phone" label="手机" width="140" />
-        <el-table-column label="座机" width="140">
+        <el-table-column prop="staffId" label="编号" width="62" align="center" />
+        <el-table-column prop="name" label="姓名" min-width="90" />
+        <el-table-column prop="title" label="职位" min-width="90" />
+        <el-table-column prop="phone" label="手机" width="120" show-overflow-tooltip />
+        <el-table-column label="座机" width="120">
           <template #default="{ row }">
             <span :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="email" label="邮箱" min-width="160" show-overflow-tooltip />
-        <el-table-column label="头像" width="80" align="center">
+        <el-table-column prop="email" label="邮箱" min-width="130" show-overflow-tooltip />
+        <el-table-column label="头像" width="62" align="center">
           <template #default="{ row }">
             <el-image
               v-if="row.avatar"
               :src="row.avatar"
-              style="width: 40px; height: 40px; border-radius: 4px"
+              style="width: 36px; height: 36px; border-radius: 4px"
               fit="cover"
             />
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="90" align="center">
+        <el-table-column label="状态" width="72" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 'enabled' ? 'success' : 'info'" effect="light">
               {{ row.status === 'enabled' ? '正常' : '已停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="180">
+        <el-table-column label="创建时间" width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right" align="center">
+        <el-table-column label="操作" width="190" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
             <el-button
