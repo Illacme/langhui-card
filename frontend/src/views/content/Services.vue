@@ -16,14 +16,28 @@
         </div>
       </div>
 
-      <el-table :data="paged" v-loading="loading" border stripe>
+      <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="title" label="标题" min-width="200" />
         <el-table-column label="内容(摘要)" min-width="280" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="muted">{{ stripHtml(row.content) }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="sort" label="排序" width="90" align="center" />
+        <el-table-column label="排序" width="120" align="center">
+          <template #default="{ row }">
+            <div class="sort-cell">
+              <span class="drag-handle" draggable="true" title="按住拖拽调整顺序">
+                <el-icon><Rank /></el-icon>
+              </span>
+              <el-button link :disabled="isFirstRow(row)" title="上移" @click="moveUp(row)">
+                <el-icon><ArrowUp /></el-icon>
+              </el-button>
+              <el-button link :disabled="isLastRow(row)" title="下移" @click="moveDown(row)">
+                <el-icon><ArrowDown /></el-icon>
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="180" />
         <el-table-column label="操作" width="160" fixed="right" align="center">
           <template #default="{ row }">
@@ -72,15 +86,17 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, defineAsyncComponent } from 'vue'
-import { Refresh, Plus, Search } from '@element-plus/icons-vue'
+import { Refresh, Plus, Search, Rank, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   listServices,
   createService,
   updateService,
   deleteService,
+  sortServices,
 } from '@/api/content'
 import { useTable } from '@/composables/useTable'
+import { useSortableRows } from '@/composables/useSortableRows'
 // 富文本编辑器体积较大（~800KB），按页面懒加载，避免拖累首屏
 const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 
@@ -88,6 +104,12 @@ const rows = ref<any[]>([])
 const { keyword, currentPage, size, total, paged } = useTable(
   rows,
   (r, kw) => (r.title || '').toLowerCase().includes(kw)
+)
+// 列表顺序调整：拖拽 + 上下箭头（与项目案例/业绩分类共用同一 composable）
+const { tableRef, isFirstRow, isLastRow, moveUp, moveDown } = useSortableRows(
+  rows,
+  paged,
+  sortServices
 )
 const loading = ref(false)
 const dialogVisible = ref(false)

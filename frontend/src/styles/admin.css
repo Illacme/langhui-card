@@ -33,3 +33,32 @@
     max-width: 94vw;
   }
 }
+
+/* ===== 列表排序操作区（项目案例 / 业绩分类 / 业务服务共用） =====
+   拖拽手柄 + 上下箭头，全局定义避免在各页 scoped 样式里重复。 */
+.sort-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.sort-cell .drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 2px;
+  border-radius: 4px;
+  color: #909399;
+  cursor: grab;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+.sort-cell .drag-handle:hover {
+  background: #f0f2f5;
+  color: #409eff;
+}
+.sort-cell .drag-handle:active {
+  cursor: grabbing;
+}
