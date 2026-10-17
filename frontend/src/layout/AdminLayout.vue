@@ -2,7 +2,7 @@
   <el-container class="admin-layout">
     <el-aside width="220px" class="admin-aside">
       <div class="brand">
-        <span class="brand-logo">朗</span>
+        <span class="brand-logo">智</span>
         <span class="brand-name">{{ brandName }}</span>
       </div>
       <el-menu
@@ -145,17 +145,17 @@ watch(
   }
 )
 
-// 侧边栏品牌名：企业管理员取「企业简称」（在「企业管理」里设置，未设置时默认「智能名片」）；
-// 平台超管恒为「朗汇机电」。
+// 侧边栏品牌名：取「企业简称」（在「企业管理」里设置，未设置时默认「智能名片」）；
+// 平台超管无归属企业，同样显示「智能名片」。
 // 注意：公司信息页里的简称只作为小程序展示值，与本标识没有关联。
 const brandName = computed(() =>
   auth.isPlatform || !auth.companyName
-    ? '朗汇机电 · 管理后台'
+    ? '智能名片 · 管理后台'
     : `${auth.companyShortName || '智能名片'} · 管理后台`
 )
 
 const activeMenu = computed(() => route.path)
-const currentTitle = computed(() => (route.meta?.title as string) || '朗汇机电管理后台')
+const currentTitle = computed(() => (route.meta?.title as string) || '智能名片管理后台')
 
 async function onLogout() {
   try {

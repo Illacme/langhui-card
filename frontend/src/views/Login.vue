@@ -2,8 +2,8 @@
   <div class="login-wrap">
     <el-card class="login-card">
       <div class="login-head">
-        <div class="login-logo">朗</div>
-        <h2>朗汇机电 · 管理后台</h2>
+        <div class="login-logo">智</div>
+        <h2>智能名片 · 管理后台</h2>
         <p class="login-sub">管理员登录（平台 / 企业）</p>
       </div>
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="onSubmit">

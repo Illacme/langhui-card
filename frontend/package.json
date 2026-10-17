@@ -3,7 +3,7 @@
   "version": "1.3.0",
   "private": true,
   "type": "module",
-  "description": "朗汇机电电子名片管理小程序 · PC 管理后台（Vue3 + Element Plus）",
+  "description": "智能名片 · PC 管理后台（Vue3 + Element Plus）",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
