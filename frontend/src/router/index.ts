@@ -79,6 +79,13 @@ const routes = [
         component: () => import('@/views/content/CdnRefresh.vue'),
         meta: { title: 'CDN 刷新', group: '企业内容' },
       },
+      {
+        // 企业管理（多租户）：仅平台超级管理员可见可访问
+        path: 'companies',
+        name: 'companies',
+        component: () => import('@/views/Companies.vue'),
+        meta: { title: '企业管理', group: '平台管理', platformOnly: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/apply/open' },
@@ -91,6 +98,8 @@ const router = createRouter({
 
 // 路由守卫：未登录访问非公开页 → /login；已登录访问 /login → 后台首页
 // （令牌在 httpOnly Cookie 中，JS 以非敏感登录标记 loggedIn 判断）
+// platformOnly 页面（企业管理）仅放行平台超管；企业管理员直接回后台首页
+// （后端接口同样有 PlatformAdminMiddleware 兜底，双保险）。
 router.beforeEach((to) => {
   const auth = useAuthStore()
   if (!to.meta.public && !auth.loggedIn) {
@@ -98,6 +107,9 @@ router.beforeEach((to) => {
   }
   if (to.path === '/login' && auth.loggedIn) {
     return { path: '/' }
+  }
+  if (to.meta.platformOnly && !auth.isPlatform) {
+    return { path: '/apply/open' }
   }
 })
 

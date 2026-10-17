@@ -4,7 +4,7 @@
       <div class="login-head">
         <div class="login-logo">朗</div>
         <h2>朗汇机电 · 管理后台</h2>
-        <p class="login-sub">超级管理员登录</p>
+        <p class="login-sub">管理员登录（平台 / 企业）</p>
       </div>
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="onSubmit">
         <el-form-item prop="username">
@@ -62,13 +62,17 @@ async function onSubmit() {
   if (!ok) return
   loading.value = true
   try {
-    await adminLogin(form.username, form.password)
-    auth.setAuth(form.username)
+    const resp = await adminLogin(form.username, form.password)
+    auth.setAuth(form.username, {
+      companyId: resp.companyId ?? 0,
+      companyName: resp.companyName ?? '',
+      isPlatform: resp.isPlatform ?? false,
+    })
     ElMessage.success('登录成功')
     const redirect = (route.query.redirect as string) || '/apply/open'
     router.replace(redirect)
   } catch {
-    // 拦截器已提示（账号不存在 / 密码错误）
+    // 拦截器已提示（账号不存在 / 密码错误 / 企业已停用）
   } finally {
     loading.value = false
   }

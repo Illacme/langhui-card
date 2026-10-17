@@ -3,7 +3,7 @@
     <el-aside width="220px" class="admin-aside">
       <div class="brand">
         <span class="brand-logo">朗</span>
-        <span class="brand-name">朗汇机电 · 管理后台</span>
+        <span class="brand-name">{{ brandName }}</span>
       </div>
       <el-menu
         :default-active="activeMenu"
@@ -31,9 +31,16 @@
       <el-header class="admin-header">
         <div class="header-title">{{ currentTitle }}</div>
         <div class="header-right">
+          <span v-if="auth.companyName" class="header-company">
+            <el-icon><OfficeBuilding /></el-icon>
+            {{ auth.companyName }}
+          </span>
           <span class="header-user">
             <el-icon><UserFilled /></el-icon>
-            {{ auth.username || '超管' }}
+            {{ auth.username || '管理员' }}
+            <el-tag size="small" :type="auth.isPlatform ? 'warning' : 'info'" effect="plain">
+              {{ auth.isPlatform ? '平台超管' : '企业管理员' }}
+            </el-tag>
           </span>
           <el-button text @click="showPwd = true">
             <el-icon><Key /></el-icon> 修改密码
@@ -56,11 +63,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { UserFilled, Key, SwitchButton, Document, Van, DataLine } from '@element-plus/icons-vue'
+import { UserFilled, Key, SwitchButton, Document, Van, DataLine, OfficeBuilding, School } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
-import { adminLogout } from '@/api/auth'
+import { adminLogout, getMe } from '@/api/auth'
 import ChangePasswordDialog from '@/components/ChangePasswordDialog.vue'
 
 const auth = useAuthStore()
@@ -68,7 +75,20 @@ const route = useRoute()
 const router = useRouter()
 const showPwd = ref(false)
 
-const menuGroups = [
+// 页面刷新后恢复身份：令牌在 httpOnly Cookie 中，JS 读不到 claims，
+// 用 /api/admin/me 取回「平台超管 / 企业管理员」与当前企业（服务端为准，覆盖本地缓存）。
+onMounted(async () => {
+  if (auth.loggedIn && !auth.profileLoaded) {
+    try {
+      const resp = await getMe()
+      if (resp.code === 0 && resp.data) auth.hydrate(resp.data)
+    } catch {
+      // 网络异常时保留本地缓存身份，不阻塞界面
+    }
+  }
+})
+
+const allMenuGroups = [
   {
     group: '审核管理',
     icon: Van,
@@ -96,7 +116,23 @@ const menuGroups = [
       { path: '/content/cdn-refresh', title: 'CDN 刷新' },
     ],
   },
+  {
+    // 仅平台超级管理员可见（企业管理：开通/停用企业、企业管理员管理）
+    group: '平台管理',
+    icon: School,
+    platformOnly: true,
+    items: [{ path: '/companies', title: '企业管理' }],
+  },
 ]
+
+// 企业管理员不显示平台管理组
+const menuGroups = computed(() =>
+  allMenuGroups.filter((g) => !(g as { platformOnly?: boolean }).platformOnly || auth.isPlatform)
+)
+
+const brandName = computed(() =>
+  auth.isPlatform || !auth.companyName ? '朗汇机电 · 管理后台' : `${auth.companyName} · 管理后台`
+)
 
 const activeMenu = computed(() => route.path)
 const currentTitle = computed(() => (route.meta?.title as string) || '朗汇机电管理后台')
@@ -170,6 +206,16 @@ async function onLogout() {
   gap: 4px;
   color: #606266;
   margin-right: 8px;
+}
+.header-company {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #409eff;
+  font-weight: 600;
+  margin-right: 8px;
+  padding-right: 12px;
+  border-right: 1px solid #ebeef5;
 }
 .admin-main {
   background: #f5f7fa;
