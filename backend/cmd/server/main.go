@@ -68,6 +68,7 @@ func main() {
 	r.Static("/uploads", cfg.UploadDir)
 	handler.RegisterUpload(r, db, up, refresher)       // POST /api/admin/upload + /api/employee/upload
 	handler.RegisterStorage(r, db, up, refresher, cfg) // 直传预签名 / 私有桶签名 / CDN 刷新 / 本地私有文件流
+	handler.RegisterAssets(r, db, up)                  // 常用素材库（内嵌图标/封面/LOGO）：清单 / 采用 / 预览图
 	handler.RegisterWechat(r, cfg, up)                 // GET /api/wechat/wxacode（小程序码，按 staffId）
 
 	log.Printf("listen :%s (storage driver=%s)", cfg.Port, cfg.StorageDriver)
