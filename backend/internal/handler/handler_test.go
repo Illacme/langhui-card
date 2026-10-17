@@ -1204,3 +1204,51 @@ func TestMultiTenantIsolation(t *testing.T) {
 	require.EqualValues(t, 0, body["code"])
 	require.Equal(t, "乙司", body["companyShortName"])
 }
+
+// TestCompanyShortNameDefault 企业简称缺省值：企业管理里未设置简称（留空/纯空白）时，
+// company.short_name 回落「智能名片」（侧边栏品牌名）；公司信息简称不跟随该缺省值
+// （留空 → 小程序顶栏展示企业全称），两个简称相互独立。
+func TestCompanyShortNameDefault(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	plat := newTestClient(r, t)
+
+	_, body := plat.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "admin", "password": "admin123456",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+
+	// 不填简称开通 → company.short_name 缺省「智能名片」
+	_, body = plat.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{
+		"name": "缺省简称公司", "adminUsername": "defcomp", "adminPassword": "defpass",
+	})
+	require.EqualValues(t, 0, body["code"])
+	compID := int64(body["data"].(map[string]interface{})["id"].(float64))
+	require.Equal(t, "智能名片", body["data"].(map[string]interface{})["shortName"], "未填简称应回落缺省值")
+
+	// 企业管理员登录：companyShortName 取缺省值（侧边栏「智能名片 · 管理后台」）
+	defc := newTestClient(r, t)
+	_, body = defc.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "defcomp", "password": "defpass",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "智能名片", body["companyShortName"])
+
+	// 公司信息简称不跟随缺省值：留空 → 小程序展示企业全称
+	_, body = defc.doWithCookie("GET", "/api/admin/company-info", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "", body["data"].(map[string]interface{})["shortName"])
+
+	// 编辑时清空（纯空白）简称 → 同样回落缺省值
+	_, body = plat.doWithCookie("PUT", "/api/admin/companies/"+fmt.Sprint(compID), map[string]interface{}{
+		"name": "缺省简称公司", "shortName": "   ",
+	})
+	require.EqualValues(t, 0, body["code"])
+	_, body = plat.doWithCookie("GET", "/api/admin/companies", nil)
+	require.EqualValues(t, 0, body["code"])
+	for _, item := range body["data"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if int64(m["id"].(float64)) == compID {
+			require.Equal(t, "智能名片", m["shortName"], "清空简称后应回落缺省值")
+		}
+	}
+}

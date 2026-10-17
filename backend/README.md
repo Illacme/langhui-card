@@ -234,14 +234,15 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 |---|---|---|
 | GET  | /api/admin/me | 当前登录身份（用户名 / companyId / companyName / companyShortName / isPlatform；前端刷新后恢复身份用） |
 | GET  | /api/admin/companies | 企业列表（含简称 / 员工数 / 管理员数） |
-| POST | /api/admin/companies | 开通企业（name 必填；shortName 为企业简称——侧边栏品牌名 + 公司信息简称初始值；adminUsername+adminPassword 可选，一并建企业管理员） |
-| PUT  | /api/admin/companies/:id | 编辑企业（name / shortName；只改 company 表，不回写公司信息里的简称） |
+| POST | /api/admin/companies | 开通企业（name 必填；shortName 为企业简称——侧边栏品牌名 + 公司信息简称初始值，留空默认「智能名片」；adminUsername+adminPassword 可选，一并建企业管理员） |
+| PUT  | /api/admin/companies/:id | 编辑企业（name / shortName；shortName 留空回落缺省「智能名片」；只改 company 表，不回写公司信息里的简称） |
 | POST | /api/admin/companies/:id/status | 停用 / 启用企业（body `{"status":"enabled"\|"disabled"}`；停用后该企业管理员与员工均不能登录） |
 | GET  | /api/admin/companies/:id/admins | 企业管理员列表 |
 | POST | /api/admin/companies/:id/admins | 新增企业管理员（username + password） |
 
 > 企业简称（`company.short_name`）与公司信息里的简称（`company_info.short_name`，0009）相互独立：
-> 前者是 PC 后台侧边栏「简称 · 管理后台」品牌名（企业管理员登录/me 时随身份下发），仅用于小程序展示。
+> 前者是 PC 后台侧边栏「简称 · 管理后台」品牌名（未设置时缺省「智能名片」，企业管理员登录/me 时随身份下发），
+> 后者仅用于小程序展示（留空则小程序顶栏展示企业全称）。
 
 ### 小程序码（公开，分享海报用）
 | 方法 | 路径 | 说明 |
