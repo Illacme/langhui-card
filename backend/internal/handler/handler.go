@@ -19,9 +19,22 @@ func New(db *gorm.DB) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// 健康检查：容器编排 / 负载均衡探活用
+	// 健康检查（就绪探针）：容器编排 / 负载均衡探活用。
+	// 注意：这里必须探 DB 连通性，而不是无条件返回 200。若只做存活探测，
+	// DB 故障（连接断开 / 实例宕机）时 /healthz 仍为 200，docker-compose 的
+	// backend healthcheck（依赖本端点）与 alert_check.sh 的 R1 探活都会误判为
+	// "可用"，实际所有 /api 请求已 5xx。改为 DB 不可达时返回 503，让编排的
+	// depends_on/service_healthy 与外部探活告警能识别"进程在但不可用"。
 	r.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		if err := db.Exec("SELECT 1").Error; err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status": "degraded",
+				"db":     "down",
+				"error":  err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "ok", "db": "up"})
 	})
 
 	// 聚合名片（员工 + 企业 + 简介）
