@@ -197,6 +197,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	r.POST("/api/admin/services", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req struct {
 			Title   string `json:"title"`
+			Icon    string `json:"icon"`
 			Content string `json:"content"`
 			Sort    int    `json:"sort"`
 		}
@@ -204,7 +205,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
 			return
 		}
-		s := model.BizService{Title: req.Title, Content: req.Content, Sort: req.Sort}
+		s := model.BizService{Title: req.Title, Icon: req.Icon, Content: req.Content, Sort: req.Sort}
 		db.Create(&s)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
@@ -213,6 +214,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
 			Title   string `json:"title"`
+			Icon    string `json:"icon"`
 			Content string `json:"content"`
 			Sort    int    `json:"sort"`
 		}
@@ -221,7 +223,7 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 			return
 		}
 		db.Model(&model.BizService{}).Where("id = ?", id).
-			Updates(map[string]interface{}{"title": req.Title, "content": req.Content, "sort": req.Sort})
+			Updates(map[string]interface{}{"title": req.Title, "icon": req.Icon, "content": req.Content, "sort": req.Sort})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 	r.DELETE("/api/admin/services/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {

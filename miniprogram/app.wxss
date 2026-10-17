@@ -12,7 +12,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .emp-card .info { flex: 1; margin-left: 20rpx; }
 .emp-card .name { font-size: 34rpx; font-weight: 600; }
 .emp-card .title { color: #888; margin-top: 6rpx; }
-.emp-card .save-btn { font-size: 24rpx; color: #1aad19; border: 1rpx solid #1aad19; padding: 6rpx 16rpx; border-radius: 24rpx; }
+.emp-card .save-btn { font-size: 24rpx; color: #1a8cff; border: 1rpx solid #1a8cff; padding: 6rpx 16rpx; border-radius: 24rpx; }
 .emp-card .company { display: flex; align-items: center; margin-top: 20rpx; }
 .emp-card .logo { width: 48rpx; height: 48rpx; margin-right: 12rpx; }
 .emp-card .cname { font-weight: 600; }
@@ -39,14 +39,17 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 
 /* 服务网格 */
 .svc-grid { display: flex; flex-wrap: wrap; }
-.svc-item { width: 50%; padding: 16rpx; box-sizing: border-box; }
-.svc-title { background: #f0f0f0; border-radius: 8rpx; padding: 24rpx; text-align: center; }
+.svc-item { width: 50%; padding: 12rpx; box-sizing: border-box; }
+.svc-card { background: #fff; border-radius: 12rpx; padding: 20rpx; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.svc-icon { width: 72rpx; height: 72rpx; margin-bottom: 12rpx; }
+.svc-icon-ph { width: 72rpx; height: 72rpx; margin-bottom: 12rpx; border-radius: 12rpx; background: #E8F3FF; color: #1a8cff; display: flex; align-items: center; justify-content: center; font-size: 30rpx; }
+.svc-title { text-align: center; font-size: 26rpx; color: #333; }
 
 /* 底部操作栏 */
 .action-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #fff; border-top: 1rpx solid #eee; padding: 16rpx 24rpx; padding-bottom: calc(16rpx + env(safe-area-inset-bottom)); }
 .ab-btn { flex: 1; margin: 0 12rpx; border-radius: 40rpx; font-size: 30rpx; }
-.ab-btn.call { background: #1aad19; color: #fff; }
-.ab-btn.save { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; }
+.ab-btn.call { background: #1a8cff; color: #fff; }
+.ab-btn.save { background: #fff; color: #1a8cff; border: 1rpx solid #1a8cff; }
 
 /* 列表/详情通用 */
 .list { padding: 16rpx; }
@@ -68,7 +71,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .form-item { display: flex; align-items: center; padding: 20rpx 0; border-bottom: 1rpx solid #eee; }
 .form-item .label { width: 160rpx; color: #666; }
 .form-item input { flex: 1; }
-.submit-btn { margin-top: 40rpx; background: #1aad19; color: #fff; border-radius: 40rpx; }
+.submit-btn { margin-top: 40rpx; background: #1a8cff; color: #fff; border-radius: 40rpx; }
 
 /* 编辑名片「审核中」提示条（需求 B9） */
 .pending-tip { display: flex; align-items: center; padding: 20rpx 24rpx; margin-bottom: 16rpx; background: #fdf6ec; border-radius: 12rpx; }
@@ -77,11 +80,11 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 
 /* 海报入口 + 海报页 */
 .poster-entry { padding: 24rpx; }
-.poster-btn { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 40rpx; font-size: 28rpx; }
+.poster-btn { background: #fff; color: #1a8cff; border: 1rpx solid #1a8cff; border-radius: 40rpx; font-size: 28rpx; }
 .poster-page { padding: 24rpx; }
 .poster-canvas { width: 320px; height: 460px; background: #fff; border-radius: 12rpx; }
 .actions { margin-top: 24rpx; }
-.save-btn { background: #1aad19; color: #fff; border-radius: 40rpx; }
+.save-btn { background: #1a8cff; color: #fff; border-radius: 40rpx; }
 
 /* 员工头像上传 */
 .form-item.avatar-row { align-items: center; }
@@ -92,18 +95,18 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 /* 网络异常占位 + 重试（首页 / 列表 / 详情共用；断网时 loading 必须落下来） */
 .error-box { padding: 160rpx 48rpx; text-align: center; }
 .error-text { color: #999; font-size: 30rpx; }
-.retry-btn { margin-top: 32rpx; background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 40rpx; font-size: 28rpx; }
+.retry-btn { margin-top: 32rpx; background: #fff; color: #1a8cff; border: 1rpx solid #1a8cff; border-radius: 40rpx; font-size: 28rpx; }
 
 /* 详情页元信息行（分类名 / 更新时间） */
 .detail .meta { padding: 0 24rpx 16rpx; color: #999; font-size: 24rpx; }
 
 /* 员工名片区右上双按钮（保存名片 / 案例进入） */
 .emp-card .ops { display: flex; flex-direction: column; }
-.emp-card .case-btn { font-size: 24rpx; color: #1aad19; border: 1rpx solid #1aad19; padding: 6rpx 16rpx; border-radius: 24rpx; margin-top: 12rpx; text-align: center; }
+.emp-card .case-btn { font-size: 24rpx; color: #1a8cff; border: 1rpx solid #1a8cff; padding: 6rpx 16rpx; border-radius: 24rpx; margin-top: 12rpx; text-align: center; }
 
 /* 通用按钮 */
-.primary-btn { background: #1aad19; color: #fff; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
-.plain-btn { background: #fff; color: #1aad19; border: 1rpx solid #1aad19; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
+.primary-btn { background: #1a8cff; color: #fff; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
+.plain-btn { background: #fff; color: #1a8cff; border: 1rpx solid #1a8cff; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
 
 /* 「我的」页（员工 tabBar） */
 .me { padding: 24rpx; }
@@ -134,7 +137,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 /* 申请开通页 */
 .tip { color: #999; font-size: 24rpx; margin-top: 24rpx; line-height: 1.6; }
 .done { padding: 120rpx 48rpx; text-align: center; }
-.done-icon { width: 120rpx; height: 120rpx; border-radius: 50%; background: #1aad19; color: #fff; font-size: 60rpx; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.done-icon { width: 120rpx; height: 120rpx; border-radius: 50%; background: #1a8cff; color: #fff; font-size: 60rpx; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
 .done-title { font-size: 36rpx; font-weight: 600; margin-top: 32rpx; }
 .done-tip { color: #888; margin-top: 16rpx; line-height: 1.6; }
 
@@ -142,7 +145,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .stat-page { padding: 24rpx; }
 .stat-cards { display: flex; }
 .stat-card { flex: 1; background: #fff; border-radius: 12rpx; margin: 0 8rpx; padding: 40rpx 0; text-align: center; }
-.stat-num { font-size: 48rpx; font-weight: 600; color: #1aad19; }
+.stat-num { font-size: 48rpx; font-weight: 600; color: #1a8cff; }
 .stat-label { color: #888; font-size: 26rpx; margin-top: 12rpx; }
 .stat-tip { color: #999; font-size: 24rpx; margin-top: 24rpx; line-height: 1.6; }
 /* 空状态（需求 B11：暂无访问数据） */

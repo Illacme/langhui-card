@@ -76,6 +76,7 @@ type ProjectCase struct {
 type BizService struct {
 	ID        int64          `gorm:"primaryKey;column:id" json:"id"`
 	Title     string         `gorm:"column:title" json:"title"`
+	Icon      string         `gorm:"column:icon" json:"icon"` // 业务服务图标（首页服务区卡片展示）
 	Content   string         `gorm:"column:content;type:text" json:"content"`
 	Sort      int            `gorm:"column:sort" json:"sort"`
 	CreatedAt time.Time      `gorm:"column:created_at" json:"createdAt"`

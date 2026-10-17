@@ -15,6 +15,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -31,6 +32,12 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+// seedAssetFS 内嵌设计还原用的蓝色主题 PNG 占位素材（由 gen_seed_assets.py 生成）。
+// 这些仅用于本地联调/演示占位；正式上线请在 PC 后台上传真实图片替换。
+//
+//go:embed seedassets/*.png
+var seedAssetFS embed.FS
 
 // devModels devserver 的建表清单，须与 model 包的全部模型保持一致。
 // 新增 GORM 模型时必须同步追加——漏加不会编译报错，只会在运行期
@@ -79,7 +86,7 @@ func main() {
 	log.Printf("upload base url: %s", cfg.UploadBaseURL)
 	handler.SeedAdmin(db, cfg)
 
-	seedDemoData(db)
+	seedDemoData(db, cfg)
 
 	r := handler.New(db)
 	// 与生产一致的可观测性中间件（请求 ID + 访问日志）
@@ -101,7 +108,7 @@ func main() {
 	handler.RegisterWechat(r, cfg, up)
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
-	log.Printf("演示账号：超管 admin/admin123456；员工手机 13800000001 / 密码 demo1234")
+	log.Printf("演示账号：超管 admin/admin123456；员工手机 13832603521 / 密码 langhui123（高立新，业务经理）")
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
@@ -125,61 +132,104 @@ func uploadBaseURL(port string) string {
 	return "http://127.0.0.1:" + port + "/uploads"
 }
 
-// seedDemoData 注入一套可联调的演示数据（仅开发态；生产由 migrations SQL + PC 后台录入）
-func seedDemoData(db *gorm.DB) {
+// seedDemoData 注入一套可联调的演示数据（仅开发态；生产由 migrations SQL + PC 后台录入）。
+// 数据内容与小程序 V1.3 设计稿一致：廊坊市朗汇机电设备有限公司 / 员工高立新 / 7 分类 / 2 精选项目 / 4 业务服务。
+// 图片素材（LOGO/头像/分类图标/项目封面/服务图标等）由 writeSeedAssets 写入上传目录，
+// 并以 cfg.UploadBaseURL 为基址回写，保证本机与真机（配 DEV_UPLOAD_BASE_URL）都能取到图。
+func seedDemoData(db *gorm.DB, cfg config.Config) {
+	assets := writeSeedAssets(cfg.UploadDir, cfg.UploadBaseURL)
+
 	// 公司信息 / 简介
 	db.Where("id = ?", 1).FirstOrCreate(&model.CompanyInfo{
-		ID: 1, FullName: "朗汇机电设备有限公司", Address: "上海市浦东新区XX路88号",
-		Tel: "021-88888888", Logo: "https://placehold.co/96x96?text=LH",
+		ID: 1, FullName: "廊坊市朗汇机电设备有限公司", Address: "廊坊市广阳区紫金城商住楼1-2-1911",
+		Tel: "0316-823950", Logo: assets["logo.png"],
 	})
 	db.Where("id = ?", 1).FirstOrCreate(&model.CompanyProfile{
-		ID: 1, IntroText: "朗汇机电专注机电设备销售、安装与维保，服务政务、医疗、商业等多场景。",
-		VideoChannelID: "", Cover: "https://placehold.co/640x360?text=company",
+		ID: 1, IntroText: "朗汇机电设备有限公司专注于电梯销售、安装、维修保养与改造服务，为住宅、政务中心、医疗、商业、公共交通、生产制造与仓储物流等多场景提供机电一体化解决方案。",
+		VideoChannelID: "", BackupMp4URL: "", Cover: assets["cover-company.png"],
 	})
 
-	// 经典业绩 7 分类（与迁移种子一致）
+	// 经典业绩 7 分类（与设计稿一致，客户已确认锁定）
 	cats := []model.AchievementCategory{
-		{ID: 1, Name: "居住住宅", Sort: 1},
-		{ID: 2, Name: "政务办公", Sort: 2},
-		{ID: 3, Name: "医院、学校", Sort: 3},
-		{ID: 4, Name: "商业、酒店", Sort: 4},
-		{ID: 5, Name: "公共交通", Sort: 5},
-		{ID: 6, Name: "生产制造、仓储物流", Sort: 6},
-		{ID: 7, Name: "私人住宅", Sort: 7},
+		{ID: 1, Name: "居住住宅", Icon: assets["cat-1.png"], Sort: 1, IsLocked: true},
+		{ID: 2, Name: "政务办公", Icon: assets["cat-2.png"], Sort: 2, IsLocked: true},
+		{ID: 3, Name: "医院、学校", Icon: assets["cat-3.png"], Sort: 3, IsLocked: true},
+		{ID: 4, Name: "商业、酒店", Icon: assets["cat-4.png"], Sort: 4, IsLocked: true},
+		{ID: 5, Name: "公共交通", Icon: assets["cat-5.png"], Sort: 5, IsLocked: true},
+		{ID: 6, Name: "生产制造、仓储物流", Icon: assets["cat-6.png"], Sort: 6, IsLocked: true},
+		{ID: 7, Name: "私人住宅", Icon: assets["cat-7.png"], Sort: 7, IsLocked: true},
 	}
 	for _, c := range cats {
 		db.Where("id = ?", c.ID).FirstOrCreate(&c)
 	}
 
-	// 1 个精选项目（含视频号块，验证 rich-video 渲染路径）
-	db.Where("id = ?", 1).FirstOrCreate(&model.ProjectCase{
-		ID: 1, CategoryID: 2, Name: "某政务中心机电总包", Summary: "空调+给排水+强弱电一体化交付",
-		Detail: "<p>项目概况与交付亮点。</p><wx-video channel-id=\"gh_demo\"></wx-video><p>更多图文说明。</p>",
-		Cover:  "https://placehold.co/640x360?text=project", Album: `["https://placehold.co/300x200?text=1"]`,
+	// 2 个精选项目（设计稿）
+	db.Where("id = ?", 101).FirstOrCreate(&model.ProjectCase{
+		ID: 101, CategoryID: 1, Name: "大兴临空服务中心", Summary: "临空经济区地标机电总包",
+		Detail: "<p>大兴临空服务中心项目涵盖多栋客货梯与自动扶梯的供货、安装与维保，满足高客流交通枢纽的可靠运行需求。</p>",
+		Cover:  assets["cover-daxing.png"], Album: `["` + assets["album-1.png"] + `","` + assets["album-2.png"] + `"]`,
 		IsHomeFeatured: true, Enabled: true, Sort: 1,
 	})
-
-	// 1 个业务服务（含视频号块）
-	db.Where("id = ?", 1).FirstOrCreate(&model.BizService{
-		ID: 1, Title: "机电维保", Content: "<p>7x24 应急维保服务。</p><wx-video channel-id=\"gh_demo\"></wx-video>", Sort: 1,
+	db.Where("id = ?", 102).FirstOrCreate(&model.ProjectCase{
+		ID: 102, CategoryID: 3, Name: "某医院电梯项目", Summary: "医疗楼宇专用电梯解决方案",
+		Detail: "<p>某医院电梯项目提供医疗专用电梯的定制、安装与运维，兼顾洁净、安静与应急响应。</p>",
+		Cover:  assets["cover-hospital.png"], Album: `["` + assets["album-1.png"] + `"]`,
+		IsHomeFeatured: true, Enabled: true, Sort: 2,
 	})
+
+	// 4 个业务服务（设计稿示例：电梯销售/安装/维修保养/改造）
+	svcs := []model.BizService{
+		{ID: 1, Title: "电梯销售", Icon: assets["svc-1.png"], Content: "<p>全系列电梯设备销售与选型咨询，匹配不同楼宇场景需求。</p>", Sort: 1},
+		{ID: 2, Title: "电梯安装", Icon: assets["svc-2.png"], Content: "<p>专业安装团队，标准化施工与验收交付，保障工期与质量。</p>", Sort: 2},
+		{ID: 3, Title: "电梯维修保养", Icon: assets["svc-3.png"], Content: "<p>7x24 应急响应与按需定制的保养计划，延长设备寿命。</p>", Sort: 3},
+		{ID: 4, Title: "电梯改造", Icon: assets["svc-4.png"], Content: "<p>旧梯升级改造，提升安全性、乘运体验与能效表现。</p>", Sort: 4},
+	}
+	for _, s := range svcs {
+		db.Where("id = ?", s.ID).FirstOrCreate(&s)
+	}
 
 	// 首页布局
 	db.Where("id = ?", 1).FirstOrCreate(&model.HomeLayout{ID: 1, Order: `["achievement","service"]`})
 
-	// 1 个演示员工（手机号登录用）
+	// 1 个演示员工（设计稿员工：高立新 / 业务经理；手机号登录用）
 	var cnt int64
-	db.Model(&model.Employee{}).Where("phone = ?", "13800000001").Count(&cnt)
+	db.Model(&model.Employee{}).Where("phone = ?", "13832603521").Count(&cnt)
 	if cnt == 0 {
-		hash, _ := auth.HashPassword("demo1234")
+		hash, _ := auth.HashPassword("langhui123")
 		emp := model.Employee{
-			Name: "演示员工", Title: "客户经理", Phone: "13800000001", Landline: "021-66666666",
-			Email:  "demo@langhui.com",
-			Avatar: "https://placehold.co/96x96?text=EMP", PasswordHash: hash, Status: "enabled",
+			Name: "高立新", Title: "业务经理", Phone: "13832603521", Landline: "0316-823950",
+			Email:  "138266603521@163.com",
+			Avatar: assets["avatar-gaolixin.png"], PasswordHash: hash, Status: "enabled",
 		}
 		db.Create(&emp)
 		var got model.Employee
-		db.Where("phone = ?", "13800000001").First(&got)
+		db.Where("phone = ?", "13832603521").First(&got)
 		fmt.Printf("演示员工 staffId=%d\n", got.StaffID)
 	}
+}
+
+// writeSeedAssets 把内嵌的 PNG 占位素材写入上传目录，并返回「文件名→可访问 URL」映射。
+// 每次启动都重写（上传目录为临时目录，重启即清空），保证素材始终可用。
+func writeSeedAssets(uploadDir, baseURL string) map[string]string {
+	urls := map[string]string{}
+	entries, err := seedAssetFS.ReadDir("seedassets")
+	if err != nil {
+		log.Printf("读取内嵌素材失败: %v", err)
+		return urls
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		data, err := seedAssetFS.ReadFile("seedassets/" + e.Name())
+		if err != nil {
+			continue
+		}
+		if err := os.WriteFile(filepath.Join(uploadDir, e.Name()), data, 0644); err != nil {
+			log.Printf("写入素材 %s 失败: %v", e.Name(), err)
+			continue
+		}
+		urls[e.Name()] = strings.TrimRight(baseURL, "/") + "/" + e.Name()
+	}
+	return urls
 }

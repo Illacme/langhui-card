@@ -13,7 +13,7 @@
   ],
   "tabBar": {
     "color": "#909399",
-    "selectedColor": "#1aad19",
+    "selectedColor": "#1a8cff",
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/index/index", "text": "名片" },

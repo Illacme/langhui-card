@@ -100,7 +100,7 @@ docker run -e DB_DSN="$DB_DSN" -e JWT_KEY="$JWT_KEY" -e UPLOAD_DIR="./uploads" -
 ```bash
 go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ```
-演示账号：超管 `admin/admin123456`；员工手机 `13800000001` / 密码 `demo1234`（staffId=1）。生产部署仍走 `cmd/server`（MySQL + docker-compose）。
+演示账号：超管 `admin/admin123456`；员工手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）。生产部署仍走 `cmd/server`（MySQL + docker-compose）。
 
 两个联调注意点：
 - **真机 / 局域网上传**：上传基址默认 `http://127.0.0.1:<port>/uploads`（同机测试可直接用）；手机取不到图时设 `DEV_UPLOAD_BASE_URL=http://<本机IP>:8080/uploads` 再启动（启动日志 `upload base url:` 显示生效值）。
