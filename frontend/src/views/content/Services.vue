@@ -18,6 +18,17 @@
 
       <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="title" label="标题" min-width="200" />
+        <el-table-column label="图标" width="90" align="center">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.icon"
+              :src="row.icon"
+              style="width: 36px; height: 36px"
+              fit="cover"
+            />
+            <span v-else class="muted">—</span>
+          </template>
+        </el-table-column>
         <el-table-column label="内容(摘要)" min-width="280" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="muted">{{ stripHtml(row.content) }}</span>
@@ -71,6 +82,9 @@
         <el-form-item label="标题" prop="title">
           <el-input v-model="form.title" />
         </el-form-item>
+        <el-form-item label="图标">
+          <UploadField v-model="form.icon" :multiple="false" accept="image/*" />
+        </el-form-item>
         <el-form-item label="内容">
           <RichEditor v-model="form.content" :height="320" />
         </el-form-item>
@@ -101,6 +115,7 @@ import {
 import { useTable } from '@/composables/useTable'
 import { useSortableRows } from '@/composables/useSortableRows'
 import { formatDateTime } from '@/utils/datetime'
+import UploadField from '@/components/UploadField.vue'
 // 富文本编辑器体积较大（~800KB），按页面懒加载，避免拖累首屏
 const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 
@@ -120,7 +135,7 @@ const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
 const saving = ref(false)
 const formRef = ref<FormInstance>()
-const form = reactive({ title: '', content: '', sort: 1 })
+const form = reactive({ title: '', icon: '', content: '', sort: 1 })
 const rules: FormRules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
 }
@@ -147,6 +162,7 @@ async function load() {
 
 function resetForm() {
   form.title = ''
+  form.icon = ''
   form.content = ''
   form.sort = 1
   editingId.value = null
@@ -161,6 +177,7 @@ function openCreate() {
 function openEdit(row: any) {
   editingId.value = row.id
   form.title = row.title
+  form.icon = row.icon
   form.content = row.content
   form.sort = row.sort
   dialogVisible.value = true

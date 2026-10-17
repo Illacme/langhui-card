@@ -66,10 +66,10 @@ export function sortProjects(items: { id: number; sort: number }[]) {
 export function listServices() {
   return http.get('/admin/services').then((r: any) => (r.data ?? []) as any[])
 }
-export function createService(p: { title: string; content: string; sort: number }) {
+export function createService(p: { title: string; icon?: string; content: string; sort: number }) {
   return http.post('/admin/services', p).then((r: any) => r.data as any)
 }
-export function updateService(id: number, p: { title: string; content: string; sort: number }) {
+export function updateService(id: number, p: { title: string; icon?: string; content: string; sort: number }) {
   return http.put(`/admin/services/${id}`, p)
 }
 export function deleteService(id: number) {
