@@ -36,8 +36,14 @@ func GetAchievements(db *gorm.DB) ([]model.AchievementCategory, []model.ProjectC
 
 func ListProjects(db *gorm.DB, categoryID int64) ([]model.ProjectCase, error) {
 	var ps []model.ProjectCase
-	err := db.Where("category_id = ? AND enabled = ?", categoryID, true).Order("sort asc").Find(&ps).Error
-	if err != nil {
+	q := db.Order("sort asc")
+	if categoryID > 0 {
+		q = q.Where("category_id = ? AND enabled = ?", categoryID, true)
+	} else {
+		// 未传分类：返回全部上架案例（供公开接口 /api/projects 无 categoryId 时列出全部）
+		q = q.Where("enabled = ?", true)
+	}
+	if err := q.Find(&ps).Error; err != nil {
 		return nil, err
 	}
 	fillCategoryNames(db, ps)
