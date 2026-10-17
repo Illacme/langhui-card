@@ -113,15 +113,18 @@ const allMenuGroups = [
       { path: '/content/projects', title: '项目案例' },
       { path: '/content/services', title: '业务服务' },
       { path: '/content/home-layout', title: '首页布局' },
-      { path: '/content/cdn-refresh', title: 'CDN 刷新' },
     ],
   },
   {
-    // 仅平台超级管理员可见（企业管理：开通/停用企业、企业管理员管理）
+    // 仅平台超级管理员可见：企业管理（开通/停用企业、企业管理员管理）
+    // + CDN 刷新（平台级基础设施操作，上传后已自动 purge）
     group: '平台管理',
     icon: School,
     platformOnly: true,
-    items: [{ path: '/companies', title: '企业管理' }],
+    items: [
+      { path: '/companies', title: '企业管理' },
+      { path: '/platform/cdn-refresh', title: 'CDN 刷新' },
+    ],
   },
 ]
 
