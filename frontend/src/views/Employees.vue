@@ -24,8 +24,8 @@
       -->
       <el-table :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="编号" width="62" align="center" />
-        <el-table-column prop="name" label="姓名" min-width="80" />
-        <el-table-column prop="title" label="职位" min-width="80" />
+        <el-table-column prop="name" label="姓名" min-width="90" class-name="cell-nowrap" show-overflow-tooltip />
+        <el-table-column prop="title" label="职位" width="96" class-name="cell-nowrap" show-overflow-tooltip />
         <el-table-column prop="phone" label="手机" width="120" show-overflow-tooltip />
         <el-table-column label="座机" width="132" show-overflow-tooltip>
           <template #default="{ row }">
@@ -397,6 +397,10 @@ onMounted(load)
 .openid-cell {
   font-family: monospace;
   font-size: 12px;
+}
+/* 姓名/职位等短文本列：禁止换行，超出省略并悬浮显示全文（避免被压宽后折行） */
+.cell-nowrap {
+  white-space: nowrap;
 }
 .landline-cell {
   white-space: nowrap;
