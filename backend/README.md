@@ -37,6 +37,7 @@ backend/
 ├── migrations/0007_updated_at.sql   # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
 ├── migrations/0008_open_apply_landline.sql  # 开通申请增加座机字段
 ├── migrations/0009_company_short_name.sql   # 企业简称（小程序顶栏居中展示）
+├── migrations/0010_wechat_identity.sql     # 微信身份：openid + 昵称
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
@@ -219,6 +220,9 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 |---|---|---|
 | GET  | /api/wechat/wxacode?staffId= | 按员工生成小程序码（wxacodeunlimit，scene=staffId=），磁盘缓存后返回 URL |
 | GET  | /api/wechat/wxacode?staffId=&page= | 指定落地页（默认 pages/index/index） |
+| POST | /api/wechat/openid | 微信身份换取：传 `wx.login` 的 `code`，经 jscode2session 返回 `openid`（申请/登录时采集，供后台核实身份） |
+
+> openid 接口复用 `WX_APPID/WX_APPSECRET`（与小程序码同一份凭据）：`wx.login` 拿到临时 `code`，后端换取用户在本小程序内的唯一 `openid`。昵称由小程序端经用户授权（`getUserProfile`）获取后随申请/登录提交。未配置凭据时 openid 接口返回明确错误，前端降级为空，不影响账号密码登录与申请。员工登录成功时若带上 openid/昵称会记录到员工表，便于后台「员工管理」核实。
 
 > 小程序码缓存 TTL：生成的图片通过当前存储驱动的 `SaveBytes` 写入（local → `uploads/wxacode/<staffId>.jpg`；minio/oss → 对应对象）。返回策略：公开桶/本地直接返回公开 URL；**私有桶**（`STORAGE_PUBLIC=false` 且存储支持签名）返回**每次重新签发的 1 小时限时签名 URL**。二维码内容按 `WXACODE_TTL_HOURS`（默认 720h=30 天）做内存 TTL 缓存，过期才重新调微信生成，既避免反复消耗微信配额，也支持变更样式/落地页后自然刷新。`access_token` 服务端内存缓存并在 40001/42001 时自动刷新重试。
 > 鉴权方式：请求头 `Authorization: Bearer <token>`（admin 接口）。小程序码接口为公开（分享用），未配置 `WX_APPID/WX_APPSECRET` 时返回明确错误。

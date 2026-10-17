@@ -128,7 +128,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		emp := model.Employee{Name: a.Name, Phone: a.Phone, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, PasswordHash: hash, Status: "enabled"}
+		emp := model.Employee{Name: a.Name, Phone: a.Phone, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, OpenID: a.OpenID, Nickname: a.Nickname, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		a.Status = "approved"
 		db.Save(&a)

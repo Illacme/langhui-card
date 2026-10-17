@@ -30,6 +30,8 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		var req struct {
 			Phone    string `json:"phone"`
 			Password string `json:"password"`
+			OpenID   string `json:"openid"`   // 微信 openid（wx.login 换取，供后台核实身份）
+			Nickname string `json:"nickname"` // 微信昵称（用户授权后采集）
 		}
 		if err := c.ShouldBindJSON(&req); err != nil || req.Phone == "" || req.Password == "" {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -47,6 +49,13 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		if !auth.CheckPassword(e.PasswordHash, req.Password) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码错误"})
 			return
+		}
+		// 记录本次登录的微信身份（openid / 昵称），供后台核实；为空（未授权/未配置）则不覆盖已有值
+		if req.OpenID != "" || req.Nickname != "" {
+			db.Model(&e).Updates(map[string]interface{}{
+				"openid":   req.OpenID,
+				"nickname": req.Nickname,
+			})
 		}
 		access, refresh, expiresIn, err := auth.IssueTokens(e.StaffID, "employee", e.TokenVersion)
 		if err != nil {

@@ -6,7 +6,7 @@
         <div class="bar-right">
           <el-input
             v-model="keyword"
-            placeholder="搜索姓名/手机/职位/座机"
+            placeholder="搜索姓名/手机/职位/座机/昵称/openid"
             clearable
             :prefix-icon="Search"
             style="width: 240px"
@@ -33,6 +33,16 @@
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="nickname" label="微信昵称" width="100" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span :class="{ muted: !row.nickname }">{{ row.nickname || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="openid" label="openid" width="210" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="openid-cell" :class="{ muted: !row.openid }">{{ row.openid || '—' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="头像" width="62" align="center">
           <template #default="{ row }">
             <el-image
@@ -200,7 +210,9 @@ const { keyword, currentPage, size, total, paged } = useTable(
     (r.name || '').toLowerCase().includes(kw) ||
     (r.phone || '').includes(kw) ||
     (r.title || '').toLowerCase().includes(kw) ||
-    (r.landline || '').includes(kw)
+    (r.landline || '').includes(kw) ||
+    (r.nickname || '').toLowerCase().includes(kw) ||
+    (r.openid || '').includes(kw)
 )
 const loading = ref(false)
 const actingId = ref<number | null>(null)
@@ -374,6 +386,10 @@ onMounted(load)
 }
 .muted {
   color: #c0c4cc;
+}
+.openid-cell {
+  font-family: monospace;
+  font-size: 12px;
 }
 .landline-cell {
   white-space: nowrap;
