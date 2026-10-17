@@ -1,5 +1,5 @@
 import { request } from '../../../utils/request'
-import { getOpenid, getWechatNickname } from '../../../utils/wechat'
+import { getOpenid } from '../../../utils/wechat'
 
 Page({
   data: {
@@ -16,12 +16,11 @@ Page({
       wx.showToast({ title: '请输入手机号和密码', icon: 'none' })
       return
     }
-    // 采集微信身份（openid 静默 + 昵称授权弹窗）：
-    // 两个函数在此同步触发，getWechatNickname 里的 wx.getUserProfile 才处于点击手势上下文、能弹出授权框。
-    // 任一失败都降级为空串，不阻塞登录。
+    // 只静默采集 openid（wx.login 换取，无需弹窗）供后台核实身份；
+    // 不再弹昵称授权框——昵称在申请开通时由用户显式授权填写，登录不重复索取。
     this.setData({ submitting: true })
-    const [openid, nickname] = await Promise.all([getOpenid(), getWechatNickname()])
-    const r = await request('POST', '/api/employee/login', { phone, password, openid, nickname })
+    const openid = await getOpenid()
+    const r = await request('POST', '/api/employee/login', { phone, password, openid })
     this.setData({ submitting: false })
     if (r.code === 0 && r.token) {
       wx.setStorageSync('empToken', r.token)
