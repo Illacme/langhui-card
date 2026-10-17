@@ -86,25 +86,28 @@ Page({
         request('GET', '/api/services'),
         request('GET', '/api/home-layout'),
       ])
-      // 停用：后端返回 code=2（无 data）
+      // 停用：后端返回 code=2（无 employee）
       if (card.code === 2) {
         this.setData({ disabled: true, loading: false })
         return
       }
-      // 不存在：后端返回 code=1
-      if (card.code === 1 || !card.data || !card.data.employee) {
+      // 不存在：后端返回 code=1（无 employee）。
+      // 注意：/api/card 的 employee/company/profile 在响应根级（非 data 包裹），
+      // /api/achievements 的 categories/featured、/api/home-layout 的 order 同样在根级，
+      // 切勿误读成 card.data.* / ach.data.* / layout.data.*（此前 bug：卡片页恒走 notFound）。
+      if (card.code === 1 || !card.employee) {
         this.setData({ notFound: true, loading: false })
         wx.showToast({ title: '员工不存在', icon: 'none' })
         return
       }
       this.setData({
-        employee: card.data.employee,
-        company: card.data.company,
-        profile: card.data.profile,
-        categories: ach.data ? ach.data.categories || [] : [],
-        featured: ach.data ? ach.data.featured || [] : [],
+        employee: card.employee,
+        company: card.company,
+        profile: card.profile,
+        categories: ach.categories || [],
+        featured: ach.featured || [],
         services: svc.data || [],
-        homeOrder: layout.data && layout.data.order ? layout.data.order : ['achievement', 'service'],
+        homeOrder: layout.order && layout.order.length ? layout.order : ['achievement', 'service'],
         disabled: false,
         notFound: false,
         loading: false,

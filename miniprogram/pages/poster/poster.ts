@@ -23,8 +23,10 @@ Page({
       request('GET', '/api/card?staffId=' + sid),
       request('GET', '/api/wechat/wxacode?staffId=' + sid),
     ])
+    // /api/wechat/wxacode 成功返回 {code:0,data:{url}}（data.url 正确）；
+    // /api/card 的 employee/company/profile 在响应根级（非 data 包裹），故此处直接存整个响应。
     const qrUrl = code.data ? code.data.url : ''
-    this.setData({ card: card.data, qrUrl })
+    this.setData({ card, qrUrl })
     this.draw()
   },
   draw() {
