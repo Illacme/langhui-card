@@ -63,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UserFilled, Key, SwitchButton, Document, Van, DataLine, OfficeBuilding, School } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
@@ -130,6 +130,21 @@ const menuGroups = computed(() =>
   allMenuGroups.filter((g) => !(g as { platformOnly?: boolean }).platformOnly || auth.isPlatform)
 )
 
+// 切换页面时把当前菜单项滚进可视区：侧边栏可滚动后（菜单组展开会超出一屏），
+// 选中项可能藏在滚动区外（如底部的「企业管理」），这里自动 scrollIntoView。
+// nextTick 等 el-menu 的 is-active 类落到 DOM 上之后再定位。
+watch(
+  () => route.path,
+  () => {
+    nextTick(() => {
+      const el = document.querySelector('.admin-menu .is-active')
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest' })
+      }
+    })
+  }
+)
+
 const brandName = computed(() =>
   auth.isPlatform || !auth.companyName ? '朗汇机电 · 管理后台' : `${auth.companyName} · 管理后台`
 )
@@ -154,9 +169,16 @@ async function onLogout() {
 }
 .admin-aside {
   background: #1f2d3d;
+  /* 侧边栏改为「品牌头固定 + 菜单区独立滚动」：
+     菜单组全部展开（企业内容 7 项 + 审核管理 3 项 + 平台管理…）会超出视口高度，
+     此前 overflow:hidden 把底部「平台管理」组直接裁掉且无法滚动查看。
+     这里让 aside 成为纵向 flex：brand 固定 60px，菜单 flex:1 内部滚动。 */
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .brand {
+  flex: none;
   height: 60px;
   display: flex;
   align-items: center;
@@ -182,6 +204,23 @@ async function onLogout() {
 }
 .admin-menu {
   border-right: none;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* 深色细滚动条（WebKit）：默认亮色滚动条在深色侧栏上很突兀 */
+.admin-menu::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+.admin-menu::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+.admin-menu::-webkit-scrollbar-track {
+  background: transparent;
 }
 .admin-header {
   display: flex;
