@@ -9,8 +9,10 @@ miniprogram/
 ├── project.config.json / tsconfig.json / sitemap.json
 ├── utils/
 │   ├── request.ts      # wx.request 封装（自动注入 empToken、统一 code 处理）
+│   ├── tenant.ts       # 多租户：企业独立版锁定（pinnedCompanyId）/ 平台模式扫码分发与粘滞
 │   ├── types.ts        # 与后端 JSON 对齐的 TS 类型
 │   ├── richtext.ts     # <wx-video> 富文本拆分（视频号块 ↔ channel-video）
+│   ├── wechat.ts       # 微信身份：wx.login 换 openid / getUserProfile 授权昵称
 │   └── contact.ts      # 保存名片到通讯录（员工名片区 / 底部栏共用）
 ├── components/         # 7 个可复用组件（均开启 addGlobalClass）
 │   ├── employee-card / company-video / achievement-grid
@@ -46,6 +48,26 @@ miniprogram/
 - 通过小程序码扫码进入时，`index.onLoad` 解析 `query.scene`（形如 `staffId=12`）定位到对应员工名片。
 - 后端需配置 `WX_APPID` / `WX_APPSECRET`（环境变量）；未配置时接口返回明确错误。
 
+## 多租户与企业独立版（第二期）
+
+小程序按企业分发，`utils/tenant.ts` 是唯一决策点，两种部署形态：
+
+1. **企业独立小程序版本**（`tenantConfig.pinnedCompanyId` 设为企业 id，在 PC 后台「企业管理」查看编号）：
+   整个小程序锁定为该企业的独立版本——内容 / 申请 / 分享恒带该 companyId，
+   且**不读任何外部来源**（扫码 scene、分享参数、Storage 残留都不能改写），
+   不存在切换多租户的行为，呈现为「该企业专属小程序」。
+2. **平台模式**（`pinnedCompanyId = 0`，默认）：
+   访客扫企业专属小程序码（scene 携带 `companyId=N`，或分享链接带 `companyId`）
+   首次进入时绑定该企业并写入 Storage 粘滞，之后本机所有入口（直接打开 / 分享）均落该企业；
+   无任何来源时不传 companyId，由后端缺省落 1 号租户（朗汇）。
+
+机制说明：
+- `request.ts` 对内容类 GET（`/api/achievements|services|projects|home-layout|company`）与申请 POST（`/api/apply/open`）自动注入 companyId；`/api/card` 按员工归属企业取，`/api/employee/*`、登录刷新等与租户无关，一律不注入。
+- `app.ts` `onLaunch` 与 `index.onLoad` 都会调 `bindCompanyFromScene`（幂等，覆盖冷启动与热启动两条路径）。
+- 申请页（`pages/apply/open`）顶部展示「申请加入：XX公司」（`GET /api/company`），访客可确认申请目标；申请由该企业的管理员在 PC 后台审核。
+- 员工登录态与名片内容始终按员工归属企业走（token / staffId 维度），不受本模块影响。
+- 后端公开接口的 `companyId` 参数、企业停用拦截（`code=1`）与两级后台见 `backend/README.md`。
+
 ## 运行
 1. 微信开发者工具 → 导入项目 → 选择 `miniprogram/` 目录（appid 可用测试号）。
 2. 修改 `app.ts` 的 `globalData.baseUrl` 指向后端地址；开发阶段 `project.config.json` 已设 `urlCheck:false` 允许 http。
@@ -57,12 +79,13 @@ miniprogram/
 cd backend
 go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖）
 ```
-内置演示数据：超管 `admin / admin123456`；演示员工 手机 `13800000001` / 密码 `demo1234`（staffId=1）；公司信息、7 个业绩分类、1 个精选项目（详情含 `<wx-video>`）、1 个业务服务、首页布局。
+内置演示数据：平台超管 `admin / admin123456`；演示员工 手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）；公司信息、7 个业绩分类、多个项目案例、4 个业务服务、首页布局。
 小程序侧联调步骤：
 1. 微信开发者工具导入 `miniprogram/`（测试号 appid，`urlCheck:false` 已开）。
 2. 把 `app.ts` 的 `globalData.baseUrl` 改成开发机地址：模拟器用 `http://127.0.0.1:8080`，真机用电脑局域网 IP（同网段、关防火墙）。
 3. 首页直接打开会弹「输入员工编号」，输入 `1` 进入演示员工名片；或经 PC 后台生成的分享链接 / 小程序码进入（scene=`staffId=1`）。
-4. 员工登录页用 `13800000001 / demo1234` 登录，可改头像（上传走 `/api/employee/upload`）、提交名片修改（待超管审核）。
+4. 员工登录页用 `13832603521 / langhui123` 登录，可改头像（上传走 `/api/employee/upload`）、提交名片修改（待平台/企业管理员审核）。
+5. 多租户联调：平台超管在 PC 后台「企业管理」开通企业并建企业管理员 → 企业管理员登录管理自己企业的内容 → 小程序申请页填 `companyId` 或用 `?companyId=` 访问公开接口验证隔离（见「多租户与企业独立版」）。
 
 > 接口约定：登录返回 `token` 在**根级**（`{code:0, token}`），`login.ts` 按 `r.token` 读取（与 PC 后台 `adminLogin` 一致）；其余资源在 `data` 下。视频号 `<channel-video>` 需真机 + 已绑定视频号的小程序 AppID 才能渲染，测试号下该块留空、`company-video` 自动回退封面/MP4；小程序码接口需配置 `WX_APPID/WX_APPSECRET` 才返回真实码，未配置时返回 `code:1`（联调预期内）。
 
@@ -79,6 +102,7 @@ go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖�
 
 - `tests/richtext.spec.ts`：富文本与视频号拆分——自闭合 `<wx-video ... />`、成对 `<wx-video ...></wx-video>`（闭合标签必须一并消费，不能漏进后续 html 片段）、属性顺序无关、无视频号时整体作为一段 html、含 `channel-id` 缺失时不误判等。
 - `tests/request.spec.ts`：`wx.request` 封装——自动注入 `Authorization: Bearer`、`code=0` 直接 resolve、`code=401` 先用 refresh 令牌静默换发并重试一次（成功则放行）、刷新失败清 token 并 reject、`code!=0` 业务错误直接 reject 等。采用「同步挂起 + `respond(i, v)` 显式应答」模式驱动 Promise 链，不依赖真实计时器。
+- `tests/tenant.spec.ts`：多租户解析——平台模式扫码 scene / 分享 query 绑定并粘滞、无来源缺省 0、非法值拦截、`resetCompanyBinding` 清绑定；企业独立版恒返回锁定值且拒绝一切外部绑定（scene / query / Storage 残留）。
 
 ```bash
 cd frontend && npm test        # 前端 + 小程序 spec 一并运行
