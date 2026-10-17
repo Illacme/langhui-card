@@ -150,11 +150,13 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ## 已实现接口
 
-> **多租户（第一期：后台多租户 + 数据隔离）**：所有业务表带 `company_id`；朗汇机电为 1 号租户。
-> 公开内容接口接受可选 `?companyId=`（缺省 1=朗汇，小程序零改动），企业停用即拒。
+> **多租户**：所有业务表带 `company_id`；朗汇机电为 1 号租户。
+> 公开内容接口接受可选 `?companyId=`（缺省 1=朗汇），企业停用即拒。
 > 后台两级身份：平台超管（`admin.company_id=0`，可见全部租户）/ 企业管理员（`company_id>0`，仅本企业），
 > 由 JWT `companyId` claim 承载（见 `internal/auth/jwt.go`、`internal/middleware/auth.go`）。
-> 小程序按企业分发（第二期）再让小程序的入口带上 `companyId`。
+> 小程序分发（第二期，已落地）：`miniprogram/utils/tenant.ts` 支持两种形态——
+> 配置 `pinnedCompanyId` 即为**企业独立小程序版本**（锁定单租户，无任何切换行为）；
+> 缺省为平台模式（扫码 scene / 分享链接带 `companyId` 首次绑定并粘滞本机），详见 `miniprogram/README.md`。
 
 ### 读（首页 + 跳转页）
 | 方法 | 路径 | 说明 |
@@ -166,6 +168,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/services?companyId= | 业务服务列表 |
 | GET  | /api/services/:id?companyId= | 业务服务详情（含 updatedAt） |
 | GET  | /api/home-layout?companyId= | 首页板块顺序 |
+| GET  | /api/company?companyId= | 企业公开信息（名称/简称/LOGO/状态）：小程序申请页展示申请目标、企业独立版自检配置用 |
 | POST | /api/stat/track | 埋点上报（staffId + eventType） |
 
 ### 写 + 审核流（员工 / 管理员，账号密码，JWT）
