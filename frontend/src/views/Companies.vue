@@ -14,7 +14,7 @@
         <el-table-column prop="id" label="编号" width="70" align="center" />
         <el-table-column prop="name" label="企业名称" min-width="220" show-overflow-tooltip />
         <el-table-column label="简称" min-width="130" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.shortName || '—' }}</template>
+          <template #default="{ row }">{{ row.shortName || '智能名片' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
@@ -57,7 +57,7 @@
         <el-form-item label="企业简称">
           <el-input
             v-model="createForm.shortName"
-            placeholder="侧边栏「简称 · 管理后台」品牌名，留空则显示企业全称"
+            placeholder="侧边栏「简称 · 管理后台」品牌名，留空默认「智能名片」"
             clearable
           />
         </el-form-item>
@@ -86,12 +86,12 @@
         <el-form-item label="企业简称">
           <el-input
             v-model="editForm.shortName"
-            placeholder="侧边栏「简称 · 管理后台」品牌名，留空则显示企业全称"
+            placeholder="侧边栏「简称 · 管理后台」品牌名，留空默认「智能名片」"
             clearable
           />
         </el-form-item>
         <div class="edit-tip">
-          简称修改后同步后台侧边栏品牌名；公司信息里的简称（仅小程序展示）不受影响，由企业管理员在「公司信息」页维护。
+          简称修改后同步后台侧边栏品牌名（留空默认「智能名片」）；公司信息里的简称（仅小程序展示）不受影响，由企业管理员在「公司信息」页维护。
         </div>
       </el-form>
       <template #footer>

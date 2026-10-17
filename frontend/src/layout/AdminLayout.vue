@@ -145,13 +145,13 @@ watch(
   }
 )
 
-// 侧边栏品牌名：企业管理员取「企业简称」（在「企业管理」里设置，作为侧边栏显示名），
-// 简称缺省时退回企业全称；平台超管恒为「朗汇机电」。
+// 侧边栏品牌名：企业管理员取「企业简称」（在「企业管理」里设置，未设置时默认「智能名片」）；
+// 平台超管恒为「朗汇机电」。
 // 注意：公司信息页里的简称只作为小程序展示值，与本标识没有关联。
 const brandName = computed(() =>
   auth.isPlatform || !auth.companyName
     ? '朗汇机电 · 管理后台'
-    : `${auth.companyShortName || auth.companyName} · 管理后台`
+    : `${auth.companyShortName || '智能名片'} · 管理后台`
 )
 
 const activeMenu = computed(() => route.path)
