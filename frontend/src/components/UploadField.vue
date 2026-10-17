@@ -23,8 +23,8 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ref, watch, computed } from 'vue'
 
 const props = defineProps({
   modelValue: { type: [String, Array], default: '' }, // 单选为 string，多选为 string[]

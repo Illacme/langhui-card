@@ -25,9 +25,9 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { ref, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { getHomeLayout, saveHomeLayout } from '@/api/content'
 
 const BLOCKS = ['achievement', 'service']

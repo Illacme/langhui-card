@@ -19,11 +19,11 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { ref, shallowRef, watch, onBeforeUnmount } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import type { IDomEditor } from '@wangeditor/editor'
 import '@wangeditor/editor/dist/css/style.css'
-import { ElMessage } from 'element-plus'
 import { VideoCamera } from '@element-plus/icons-vue'
 import { registerWxVideoModule, WX_VIDEO_TYPE } from '@/editor/wxVideoModule'
 

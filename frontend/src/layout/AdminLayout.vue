@@ -71,7 +71,7 @@ const showPwd = ref(false)
 const menuGroups = [
   {
     group: '审核管理',
-    icon: 'Van',
+    icon: Van,
     items: [
       { path: '/apply/open', title: '开通审核' },
       { path: '/apply/modify', title: '名片修改审核' },
@@ -80,12 +80,12 @@ const menuGroups = [
   },
   {
     group: '数据统计',
-    icon: 'DataLine',
+    icon: DataLine,
     items: [{ path: '/stats', title: '名片统计' }],
   },
   {
     group: '企业内容',
-    icon: 'Document',
+    icon: Document,
     items: [
       { path: '/content/company-info', title: '公司信息' },
       { path: '/content/company-profile', title: '公司简介' },

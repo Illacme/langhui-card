@@ -98,9 +98,9 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { listOpenApply, approveOpen, rejectOpen } from '@/api/apply'
 import { useTable } from '@/composables/useTable'
 import { formatDateTime } from '@/utils/datetime'

@@ -172,7 +172,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Refresh, Plus, Search } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import type { FormInstance, FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   listEmployees,
   createEmployee,

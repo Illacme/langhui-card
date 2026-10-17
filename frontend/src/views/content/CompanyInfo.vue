@@ -26,9 +26,9 @@
 </template>
 
 <script setup lang="ts">
+import { ElMessage } from 'element-plus'
 import { reactive, ref, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { getCompanyInfo, saveCompanyInfo } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
 
