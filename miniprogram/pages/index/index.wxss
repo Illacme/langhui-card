@@ -48,3 +48,15 @@
   font-size: 26rpx;
   color: #1a8cff;
 }
+
+/* 首页背景图（后台「首页布局」可选设置）：
+   背景层与遮罩层用 fixed + 负 z-index，铺在视口最底层——
+   内容（顶栏/名片区/各板块）按常规流绘制，天然在其上方，不会被遮住。 */
+.page { position: relative; }
+.page-bg { position: fixed; left: 0; right: 0; top: 0; bottom: 0; width: 100%; height: 100%; z-index: -1; }
+.page-bg-mask { position: fixed; left: 0; right: 0; top: 0; bottom: 0; background: #000; z-index: -1; }
+
+/* 有背景时的高端包装：卡片半透明浮起 + 圆角阴影，与深色背景形成层次 */
+.has-bg .custom-nav { background: rgba(255,255,255,.94); border-bottom: none; }
+.has-bg .section { background: rgba(255,255,255,.95); border-radius: 16rpx; margin: 20rpx 24rpx; padding: 28rpx; box-shadow: 0 6rpx 20rpx rgba(0,0,0,.10); }
+.has-bg .nav-spacer + .section, .has-bg .section:first-of-type { margin-top: 20rpx; }

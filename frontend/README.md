@@ -87,16 +87,18 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 ## 开源素材库（减少找图/处理图成本）
 
-所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：分类 tab（全部 + 图标/封面/LOGO/头像）+ 关键字搜索 + 卡片网格，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
+所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像、**小程序首页背景**）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：分类 tab（全部 + 图标/封面/LOGO/头像/首页背景）+ 关键字搜索 + 卡片网格 + **底部分页器**，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
 
-- 素材清单来自后端 `GET /api/admin/assets/library`，预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
+- 素材清单走**服务端分页**：`GET /api/admin/assets/library?page=&size=&type=&keyword=`，返回 `{items,total,page,size,pages}`；翻页 / 切分类 / 搜索（300ms 防抖）都会重新请求并重置到第 1 页，已选中的素材跨页保留。
+- 当前内置 **118 项**（64 图标 / 16 封面 / 14 LOGO / 12 头像 / 12 首页背景），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
 - 采用走 `POST /api/admin/assets/adopt`：后端把内嵌素材复制进当前上传存储，返回与手动上传**完全同构**的 URL，后续展示/CDN 链路零差异。
-- 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
+- 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar` / `background`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
 
 ```vue
-<!-- 分类/服务：图标库；项目：封面库；公司简介：封面库；公司信息：LOGO 库；员工：头像库 -->
+<!-- 分类/服务：图标库；项目：封面库；公司简介：封面库；公司信息：LOGO 库；员工：头像库；首页布局：背景库 -->
 <UploadField v-model="form.icon" library-type="icon" :multiple="false" />
 <UploadField v-model="form.cover" library-type="cover" :multiple="false" />
+<UploadField v-model="layout.bgImage" library-type="background" :multiple="false" />
 ```
 
 ## 企业内容管理说明
@@ -108,7 +110,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 | 业绩分类 | `GET/POST/PUT/DELETE /api/admin/categories` | 删除强校验：锁定或存在关联项目拦截 |
 | 项目案例 | `GET/POST/PUT/DELETE /api/admin/projects` | 详情含 `<wx-video channel-id>` 视频号块；相册为 URL 数组 |
 | 业务服务 | `GET/POST/PUT/DELETE /api/admin/services` | content 含视频号块 |
-| 首页布局 | `GET/PUT /api/admin/home-layout` | order 数组控制板块顺序 |
+| 首页布局 | `GET/PUT /api/admin/home-layout` | 板块顺序 + **首页背景图**（可从素材库「首页背景」直接选用）+ 遮罩浓度滑块与效果预览 |
 
 > 富文本编辑器（项目案例.详情 / 业务服务.内容）已接入 wangEditor v5 可视化编辑，并注册「视频号块」自定义节点；详见下方「富文本编辑器（wangEditor）」。
 
@@ -150,7 +152,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/editor/wxVideoModule.spec.ts`：`<wx-video channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致）。
 - `src/views/Login.spec.ts`：登录页视图层用例——表单校验提示、登录成功后写 Pinia + 跳转、`code=401` 时展示错误并不写登录态（jsdom + Element Plus 组件挂载）。
 - `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
-- `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、搜索过滤。
+- `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**。
 - `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
 
 小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：

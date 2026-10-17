@@ -86,10 +86,21 @@ export function sortServices(items: { id: number; sort: number }[]) {
   return http.put('/admin/services/sort', items)
 }
 
-// ===== 首页布局（板块顺序） =====
-export function getHomeLayout() {
-  return http.get('/admin/home-layout').then((r: any) => (r.data?.order ?? []) as string[])
+// ===== 首页布局（板块顺序 + 首页背景） =====
+// bgImage 背景图 URL（空串=不设背景）；bgMask 遮罩浓度 0~100（压暗背景保证白卡片可读）
+export interface HomeLayoutData {
+  order: string[]
+  bgImage: string
+  bgMask: number
 }
-export function saveHomeLayout(order: string[]) {
-  return http.put('/admin/home-layout', { order })
+export function getHomeLayout() {
+  return http
+    .get('/admin/home-layout')
+    .then(
+      (r: any) =>
+        (r.data ?? { order: [], bgImage: '', bgMask: 0 }) as HomeLayoutData
+    )
+}
+export function saveHomeLayout(p: Partial<HomeLayoutData>) {
+  return http.put('/admin/home-layout', p)
 }

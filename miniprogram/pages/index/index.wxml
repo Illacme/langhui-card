@@ -10,7 +10,12 @@
 </block>
 
 <block wx:else>
-  <view class="page">
+  <view class="page {{bgImage ? 'has-bg' : ''}}">
+    <!-- 首页背景图（可选，后台「首页布局」设置）：全屏铺底 + 遮罩压暗，
+         白色内容卡片浮于其上，形成高端名片的层次感 -->
+    <image wx:if="{{bgImage}}" class="page-bg" src="{{bgImage}}" mode="aspectFill" />
+    <view wx:if="{{bgImage}}" class="page-bg-mask" style="opacity: {{bgMaskAlpha}}" />
+
     <!-- 自定义顶栏（navigationStyle=custom）：左上角「我的」入口，固定常驻 -->
     <view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
       <view class="nav-inner">
