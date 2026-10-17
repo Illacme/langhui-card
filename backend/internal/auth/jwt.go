@@ -21,50 +21,54 @@ const (
 
 // Claims 自定义 JWT 载荷
 type Claims struct {
-	StaffID int64  `json:"staffId"` // 员工 staff_id 或超管 admin.id
-	Role    string `json:"role"`    // employee / admin
-	JTI     string `json:"jti"`     // 单令牌唯一标识，便于审计
-	SID     string `json:"sid"`     // 会话 ID：一次登录生成一个，access/refresh 共享；登出写入黑名单实现单设备精确吊销
-	Typ     string `json:"typ"`     // "access" | "refresh"
-	VID     int    `json:"vid"`     // 签发时的 token_version（安全戳）；改密/禁用时自增即令旧令牌失效
+	StaffID   int64  `json:"staffId"` // 员工 staff_id 或管理员 admin.id
+	Role      string `json:"role"`    // employee / admin
+	CompanyID int64  `json:"companyId"` // 租户：员工/企业管理员归属企业；平台超管为 0
+	JTI       string `json:"jti"`     // 单令牌唯一标识，便于审计
+	SID       string `json:"sid"`     // 会话 ID：一次登录生成一个，access/refresh 共享；登出写入黑名单实现单设备精确吊销
+	Typ       string `json:"typ"`     // "access" | "refresh"
+	VID       int    `json:"vid"`     // 签发时的 token_version（安全戳）；改密/禁用时自增即令旧令牌失效
 	jwt.RegisteredClaims
 }
 
 // IssueTokens 新会话签发 access + refresh 令牌（生成新 sid）。
 // version 为用户当前的 token_version；任何密码变更 / 账号禁用都会使其自增，
 // 从而让本次签发的令牌立即失效（账号级吊销）。
-func IssueTokens(staffID int64, role string, version int) (access, refresh string, expiresIn int, err error) {
-	return issueTokens(staffID, role, version, mustSessionID())
+// companyID 为租户标识：employee 取员工归属企业，admin 取 company_id（0=平台超管）。
+func IssueTokens(staffID int64, role string, version int, companyID int64) (access, refresh string, expiresIn int, err error) {
+	return issueTokens(staffID, role, version, companyID, mustSessionID())
 }
 
 // IssueTokensWithSID 复用已有会话 ID 重新签发双令牌（/api/refresh 用）。
 // 刷新不换 sid：一次登录始终对应同一个会话，登出吊销该 sid 即终结整条令牌链
 // （含此前轮换掉的旧 refresh 令牌）。
-func IssueTokensWithSID(staffID int64, role string, version int, sid string) (access, refresh string, expiresIn int, err error) {
-	return issueTokens(staffID, role, version, sid)
+func IssueTokensWithSID(staffID int64, role string, version int, companyID int64, sid string) (access, refresh string, expiresIn int, err error) {
+	return issueTokens(staffID, role, version, companyID, sid)
 }
 
-func issueTokens(staffID int64, role string, version int, sid string) (access, refresh string, expiresIn int, err error) {
+func issueTokens(staffID int64, role string, version int, companyID int64, sid string) (access, refresh string, expiresIn int, err error) {
 	now := time.Now()
 	accessClaims := Claims{
-		StaffID: staffID,
-		Role:    role,
-		JTI:     mustJTI(),
-		SID:     sid,
-		Typ:     "access",
-		VID:     version,
+		StaffID:   staffID,
+		Role:      role,
+		CompanyID: companyID,
+		JTI:       mustJTI(),
+		SID:       sid,
+		Typ:       "access",
+		VID:       version,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(AccessTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
 	refreshClaims := Claims{
-		StaffID: staffID,
-		Role:    role,
-		JTI:     mustJTI(),
-		SID:     sid,
-		Typ:     "refresh",
-		VID:     version,
+		StaffID:   staffID,
+		Role:      role,
+		CompanyID: companyID,
+		JTI:       mustJTI(),
+		SID:       sid,
+		Typ:       "refresh",
+		VID:       version,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(RefreshTokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(now),
