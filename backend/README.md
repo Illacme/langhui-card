@@ -41,6 +41,7 @@ backend/
 ├── migrations/0009_company_short_name.sql   # 企业简称（小程序顶栏居中展示）
 ├── migrations/0010_wechat_identity.sql     # 微信身份：openid + 昵称
 ├── migrations/0011_company_tenant.sql      # 多租户第一期：company 租户表 + 各表 company_id + admin 两级
+├── migrations/0012_company_admin_short_name.sql  # 企业简称（company.short_name）：侧边栏品牌名 + 公司信息简称初始值
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
@@ -231,12 +232,16 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ### 企业管理（仅平台超级管理员，company_id=0）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET  | /api/admin/me | 当前登录身份（用户名 / companyId / companyName / isPlatform；前端刷新后恢复身份用） |
-| GET  | /api/admin/companies | 企业列表（含员工数 / 管理员数） |
-| POST | /api/admin/companies | 开通企业（name 必填；adminUsername+adminPassword 可选，一并建企业管理员） |
+| GET  | /api/admin/me | 当前登录身份（用户名 / companyId / companyName / companyShortName / isPlatform；前端刷新后恢复身份用） |
+| GET  | /api/admin/companies | 企业列表（含简称 / 员工数 / 管理员数） |
+| POST | /api/admin/companies | 开通企业（name 必填；shortName 为企业简称——侧边栏品牌名 + 公司信息简称初始值；adminUsername+adminPassword 可选，一并建企业管理员） |
+| PUT  | /api/admin/companies/:id | 编辑企业（name / shortName；只改 company 表，不回写公司信息里的简称） |
 | POST | /api/admin/companies/:id/status | 停用 / 启用企业（body `{"status":"enabled"\|"disabled"}`；停用后该企业管理员与员工均不能登录） |
 | GET  | /api/admin/companies/:id/admins | 企业管理员列表 |
 | POST | /api/admin/companies/:id/admins | 新增企业管理员（username + password） |
+
+> 企业简称（`company.short_name`）与公司信息里的简称（`company_info.short_name`，0009）相互独立：
+> 前者是 PC 后台侧边栏「简称 · 管理后台」品牌名（企业管理员登录/me 时随身份下发），仅用于小程序展示。
 
 ### 小程序码（公开，分享海报用）
 | 方法 | 路径 | 说明 |

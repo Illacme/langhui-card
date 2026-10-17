@@ -107,16 +107,19 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		setAuthCookies(c, access, refresh, auth.AccessTokenTTL, auth.RefreshTokenTTL, cfg)
 		// 回显身份（非敏感）：PC 后台据此区分平台超管 / 企业管理员并展示当前企业
 		companyName := ""
+		companyShortName := ""
 		if a.CompanyID > 0 {
 			var comp model.Company
 			if db.First(&comp, "id = ?", a.CompanyID).Error == nil {
 				companyName = comp.Name
+				companyShortName = comp.ShortName
 			}
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0, "expiresIn": expiresIn,
 			"companyId": a.CompanyID, "companyName": companyName,
-			"isPlatform": a.CompanyID == 0,
+			"companyShortName": companyShortName,
+			"isPlatform":       a.CompanyID == 0,
 		})
 	})
 
