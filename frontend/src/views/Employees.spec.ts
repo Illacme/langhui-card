@@ -258,15 +258,31 @@ describe('Employees', () => {
     await vi.waitFor(() => expect(vi.mocked(listEmployees)).toHaveBeenCalledTimes(2))
   })
 
-  it('重置密码：成功后弹窗展示新初始密码', async () => {
+  it('重置密码：确认后调 resetPassword 并弹窗展示新初始密码', async () => {
     const w = mountEmployees()
     await flushLoad(w)
 
     const resetBtn = w.findAll('button.el-button').find((b) => b.text() === '重置密码')
     await resetBtn!.trigger('click')
+    await vi.waitFor(() => expect(vi.mocked(ElMessageBox.confirm)).toHaveBeenCalledTimes(1))
     await vi.waitFor(() => expect(vi.mocked(resetPassword)).toHaveBeenCalledWith(1))
     await vi.waitFor(() => expect(w.text()).toContain('reset123'))
     expect(w.text()).toContain('重置密码成功')
+  })
+
+  it('重置密码取消时不调用接口', async () => {
+    vi.mocked(ElMessageBox.confirm).mockImplementation(async () =>
+      Promise.reject(new Error('cancel'))
+    )
+    const w = mountEmployees()
+    await flushLoad(w)
+
+    const resetBtn = w.findAll('button.el-button').find((b) => b.text() === '重置密码')
+    await resetBtn!.trigger('click')
+    await vi.waitFor(() => expect(vi.mocked(ElMessageBox.confirm)).toHaveBeenCalledTimes(1))
+    await nextTick()
+    await nextTick()
+    expect(vi.mocked(resetPassword)).not.toHaveBeenCalled()
   })
 
   it('编辑员工：回填表单（含座机）→ 调 updateEmployee 保存并重载', async () => {

@@ -27,9 +27,9 @@
         <el-table-column prop="name" label="姓名" min-width="80" />
         <el-table-column prop="title" label="职位" min-width="80" />
         <el-table-column prop="phone" label="手机" width="120" show-overflow-tooltip />
-        <el-table-column label="座机" width="120">
+        <el-table-column label="座机" width="132" show-overflow-tooltip>
           <template #default="{ row }">
-            <span :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
+            <span class="landline-cell" :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="120" show-overflow-tooltip />
@@ -54,7 +54,7 @@
         <el-table-column label="创建时间" width="180" show-overflow-tooltip>
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right" align="center">
+        <el-table-column label="操作" width="190" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="preview(row)">预览</el-button>
             <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
@@ -69,7 +69,13 @@
             <el-button v-else type="warning" link :loading="actingId === row.staffId" @click="disable(row)"
               >停用</el-button
             >
-            <el-button type="primary" link @click="reset(row)">重置密码</el-button>
+            <el-button
+              type="primary"
+              link
+              :loading="actingId === row.staffId"
+              @click="reset(row)"
+              >重置密码</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -324,6 +330,14 @@ async function enable(row: any) {
 }
 
 async function reset(row: any) {
+  const confirmed = await ElMessageBox.confirm(
+    `确认重置「${row.name}」的登录密码？重置后该员工旧密码立即失效，需使用新初始密码重新登录。`,
+    '提示',
+    { type: 'warning' }
+  )
+    .then(() => true)
+    .catch(() => false)
+  if (!confirmed) return
   actingId.value = row.staffId
   try {
     const pwd = await resetPassword(row.staffId)
@@ -360,6 +374,9 @@ onMounted(load)
 }
 .muted {
   color: #c0c4cc;
+}
+.landline-cell {
+  white-space: nowrap;
 }
 .pwd {
   font-family: monospace;
