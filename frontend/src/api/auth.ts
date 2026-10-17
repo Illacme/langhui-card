@@ -1,12 +1,14 @@
 import http from './request'
 
 // 后台登录身份（多租户两级）：平台超管 companyId=0/isPlatform=true；
-// 企业管理员 companyId=企业 id、companyName=企业名。
+// 企业管理员 companyId=企业 id、companyName=企业名、companyShortName=企业简称
+// （侧边栏「xxxx · 管理后台」品牌名，取自企业管理里设置的简称）。
 export interface AdminProfile {
   adminId: number
   username: string
   companyId: number
   companyName: string
+  companyShortName: string
   isPlatform: boolean
 }
 
@@ -18,6 +20,7 @@ export function adminLogin(username: string, password: string) {
     expiresIn?: number
     companyId?: number
     companyName?: string
+    companyShortName?: string
     isPlatform?: boolean
   }>('/admin/login', { username, password })
 }

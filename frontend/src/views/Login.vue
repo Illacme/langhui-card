@@ -66,6 +66,7 @@ async function onSubmit() {
     auth.setAuth(form.username, {
       companyId: resp.companyId ?? 0,
       companyName: resp.companyName ?? '',
+      companyShortName: resp.companyShortName ?? '',
       isPlatform: resp.isPlatform ?? false,
     })
     ElMessage.success('登录成功')

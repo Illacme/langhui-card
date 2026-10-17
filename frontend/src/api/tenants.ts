@@ -6,6 +6,7 @@ import http from './request'
 export interface CompanyItem {
   id: number
   name: string
+  shortName: string
   status: 'enabled' | 'disabled'
   createdAt: string
   employeeCount: number
@@ -23,13 +24,24 @@ export function listCompanies() {
   return http.get<{ code: number; data?: CompanyItem[] }>('/admin/companies')
 }
 
-// 开通企业：name 必填；adminUsername + adminPassword 要么都填（一并建企业管理员），要么都不填
+// 开通企业：name 必填，shortName 为企业简称（侧边栏品牌名 + 公司信息简称初始值）；
+// adminUsername + adminPassword 要么都填（一并建企业管理员），要么都不填
 export function createCompany(payload: {
   name: string
+  shortName?: string
   adminUsername?: string
   adminPassword?: string
 }) {
-  return http.post<{ code: number; data?: { id: number; name: string } }>('/admin/companies', payload)
+  return http.post<{ code: number; data?: { id: number; name: string; shortName: string } }>(
+    '/admin/companies',
+    payload
+  )
+}
+
+// 编辑企业（名称 / 简称）：简称改后同步侧边栏品牌名，但不回写公司信息里的简称
+// （公司信息简称仅用于小程序展示，由企业管理员在「公司信息」页自行维护）
+export function updateCompany(id: number, payload: { name: string; shortName?: string }) {
+  return http.put(`/admin/companies/${id}`, payload)
 }
 
 // 停用 / 启用企业（停用后该企业的管理员与员工均不能登录）
