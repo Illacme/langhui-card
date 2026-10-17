@@ -36,6 +36,7 @@ backend/
 ├── migrations/0006_employee_landline.sql
 ├── migrations/0007_updated_at.sql   # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
 ├── migrations/0008_open_apply_landline.sql  # 开通申请增加座机字段
+├── migrations/0009_company_short_name.sql   # 企业简称（小程序顶栏居中展示）
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
