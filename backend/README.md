@@ -9,23 +9,25 @@ backend/
 ├── cmd/devserver/main.go        # 开发态入口：SQLite（免 cgo）+ 自动 seed 演示数据
 ├── internal/
 │   ├── config/config.go         # 环境变量注入（DB_DSN / PORT / JWT_KEY / 上传 / 小程序码 / 超管 / TTL / METRICS_ENABLED）
-│   ├── model/models.go          # GORM 模型（员工/企业/分类/项目/服务/布局/统计/超管/两类申请/吊销会话）
-│   ├── repository/repository.go # 数据访问层
+│   ├── model/models.go          # GORM 模型（员工/企业/租户/分类/项目/服务/布局/统计/管理员/两类申请/吊销会话）
+│   ├── repository/repository.go # 数据访问层（公开内容查询按 company_id 隔离）
 │   ├── repository/session.go    # 会话黑名单读写 + 过期清理（revoked_sessions）
-│   ├── auth/jwt.go              # JWT 双令牌签发 / 解析（access 15m + refresh 30d，sid 会话维度）
+│   ├── auth/jwt.go              # JWT 双令牌签发 / 解析（access 15m + refresh 30d，sid 会话维度，claims 带 companyId）
 │   ├── auth/password.go         # bcrypt 哈希 / 校验
-│   ├── handler/handler.go       # 首页相关 HTTP 接口（读）
-│   ├── handler/auth.go          # 员工/超管登录，签发 JWT + 刷新 + 登出
-│   ├── handler/apply.go         # 开通申请 / 名片修改审核 / 员工管理 / 统计（写 + 审核流）
-│   ├── handler/content.go       # 企业内容管理（分类/项目/服务/简介…）含分类删除强校验
+│   ├── handler/handler.go       # 首页相关 HTTP 接口（读，按租户：companyId 缺省朗汇）
+│   ├── handler/auth.go          # 员工/管理员登录，签发 JWT + 刷新 + 登出（企业停用校验）
+│   ├── handler/apply.go         # 开通申请 / 名片修改审核 / 员工管理 / 统计（写 + 审核流，按租户隔离）
+│   ├── handler/content.go       # 企业内容管理（分类/项目/服务/简介…）按租户隔离 + 分类删除强校验
+│   ├── handler/companies.go     # 企业管理（平台超管）：开通/停用企业、企业管理员管理、/api/admin/me
+│   ├── handler/tenant.go        # 多租户助手：租户范围解析 / 目标租户 / 企业启停校验
 │   ├── handler/cookie.go        # httpOnly Cookie 读写（PC 后台鉴权）
-│   ├── handler/seed.go          # 首次启动自动创建初始超管（SeedAdmin）
+│   ├── handler/seed.go          # 首次启动自动创建初始平台超管（SeedAdmin，company_id=0）
 │   ├── handler/wechat.go        # 小程序码生成 + 缓存（写入当前存储驱动）
 │   ├── storage/storage.go        # Uploader 接口 + LocalUploader（默认）
 │   ├── storage/minio.go          # MinIO / S3 兼容实现
 │   ├── storage/oss.go            # 阿里云 OSS 实现
 │   └── middleware/
-│       ├── auth.go              # JWT 鉴权 + 角色守卫 + 会话黑名单校验
+│       ├── auth.go              # JWT 鉴权 + 角色守卫 + 平台超管守卫 + 会话黑名单校验
 │       ├── ratelimit.go         # 登录 IP 限流
 │       └── observability.go     # 可观测三件套：RequestID / AccessLog / Metrics（/metrics）
 ├── migrations/0001_init.sql      # 建表 + 经典业绩 7 分类种子
@@ -38,13 +40,14 @@ backend/
 ├── migrations/0008_open_apply_landline.sql  # 开通申请增加座机字段
 ├── migrations/0009_company_short_name.sql   # 企业简称（小程序顶栏居中展示）
 ├── migrations/0010_wechat_identity.sql     # 微信身份：openid + 昵称
+├── migrations/0011_company_tenant.sql      # 多租户第一期：company 租户表 + 各表 company_id + admin 两级
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
 
 ## 本地运行
 ```bash
-# 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单）
+# 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单 / 多租户 company_id）
 for f in migrations/000*.sql; do mysql -u root -p langhui < "$f"; done
 
 # 2. 配置环境变量（JWT_KEY 必填，用于 token 签名）
@@ -146,66 +149,73 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 小程序码已接入私有桶签名通道：`STORAGE_PUBLIC=false` 且存储支持签名时，`/api/wechat/wxacode` 返回 **1 小时有效**的限时签名 URL（每次请求重新签发），二维码内容本身仍按 `WXACODE_TTL_HOURS` 缓存、到期才重新调微信生成；公开桶/本地驱动仍返回公开 URL。
 
 ## 已实现接口
+
+> **多租户（第一期：后台多租户 + 数据隔离）**：所有业务表带 `company_id`；朗汇机电为 1 号租户。
+> 公开内容接口接受可选 `?companyId=`（缺省 1=朗汇，小程序零改动），企业停用即拒。
+> 后台两级身份：平台超管（`admin.company_id=0`，可见全部租户）/ 企业管理员（`company_id>0`，仅本企业），
+> 由 JWT `companyId` claim 承载（见 `internal/auth/jwt.go`、`internal/middleware/auth.go`）。
+> 小程序按企业分发（第二期）再让小程序的入口带上 `companyId`。
+
 ### 读（首页 + 跳转页）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET  | /api/card?staffId= | 聚合名片（员工+企业+简介），禁用返回 code=2 |
-| GET  | /api/achievements | 分类 + 精选项目 |
-| GET  | /api/projects?categoryId= | 项目列表（enabled=1；列表项含回填的 categoryName） |
-| GET  | /api/projects/:id | 项目详情（解析 album JSON；含 categoryName 与 updatedAt） |
-| GET  | /api/services | 业务服务列表 |
-| GET  | /api/services/:id | 业务服务详情（含 updatedAt） |
-| GET  | /api/home-layout | 首页板块顺序 |
+| GET  | /api/card?staffId= | 聚合名片（员工+企业+简介），禁用返回 code=2；企业信息按员工归属租户取 |
+| GET  | /api/achievements?companyId= | 分类 + 精选项目（缺省朗汇；企业停用返回 code=1） |
+| GET  | /api/projects?categoryId=&companyId= | 项目列表（enabled=1；列表项含回填的 categoryName） |
+| GET  | /api/projects/:id?companyId= | 项目详情（解析 album JSON；含 categoryName 与 updatedAt） |
+| GET  | /api/services?companyId= | 业务服务列表 |
+| GET  | /api/services/:id?companyId= | 业务服务详情（含 updatedAt） |
+| GET  | /api/home-layout?companyId= | 首页板块顺序 |
 | POST | /api/stat/track | 埋点上报（staffId + eventType） |
 
-### 写 + 审核流（员工 / 超管，账号密码，JWT）
+### 写 + 审核流（员工 / 管理员，账号密码，JWT）
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
-| POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token + refreshToken（小程序 Bearer） |
-| POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 写 httpOnly Cookie，响应体仅 expiresIn |
+| POST | /api/employee/login | 否 | 员工登录（手机号+密码）→ 返回 token + refreshToken（小程序 Bearer）；企业停用返回 code=2 |
+| POST | /api/admin/login | 否 | 管理员登录（用户名+密码）→ 写 httpOnly Cookie，响应体仅 expiresIn + 身份（companyId/companyName/isPlatform） |
 | POST | /api/refresh | 否 | 换发新 access（PC 读 refresh Cookie；小程序 body 传 refreshToken） |
 | POST | /api/logout | 否 | 吊销当前会话 sid（单设备精确吊销）+ 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
-| POST | /api/apply/open | 否 | 员工自助提交开通申请（pending；可含 landline / avatar） |
+| POST | /api/apply/open | 否 | 员工自助提交开通申请（pending；可含 landline / avatar / companyId，缺省落朗汇） |
 | POST | /api/apply/open/avatar | 否 | 申请开通时上传头像（公开端点，仅图片，供访客在账号创建前设置头像） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息；可含 landline） |
 | GET  | /api/employee/me/stat | employee | 本人访问/拨号/保存统计 |
 | PUT  | /api/employee/password | employee | 修改本人密码 |
-| GET  | /api/admin/apply/open | admin | 开通申请列表 |
-| POST | /api/admin/apply/open/:id/approve | admin | 通过 → 自动建员工账号并生成初始密码 |
+| GET  | /api/admin/apply/open | admin | 开通申请列表（按租户隔离；平台超管可用 ?companyId= 收窄） |
+| POST | /api/admin/apply/open/:id/approve | admin | 通过 → 自动建员工账号并生成初始密码（员工落到申请所属租户） |
 | POST | /api/admin/apply/open/:id/reject | admin | 驳回 |
-| GET  | /api/admin/apply/modify | admin | 名片修改申请列表 |
+| GET  | /api/admin/apply/modify | admin | 名片修改申请列表（按租户隔离） |
 | POST | /api/admin/apply/modify/:id/approve | admin | 通过 → 应用快照到员工 |
 | POST | /api/admin/apply/modify/:id/reject | admin | 驳回 |
-| GET  | /api/admin/employees | admin | 员工列表 |
-| POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码） |
-| PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码） |
-| GET  | /api/admin/stats | admin | 全局名片统计（汇总 + 按员工，零数据员工补 0） |
-| POST | /api/admin/employees/:id/disable | admin | 停用账号 |
-| POST | /api/admin/employees/:id/enable | admin | 启用账号 |
-| POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码） |
-| PUT  | /api/admin/password | admin | 超管修改自己密码 |
+| GET  | /api/admin/employees | admin | 员工列表（按租户隔离；平台超管可用 ?companyId= 收窄） |
+| POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码；企业管理员落本企业，平台超管可用 ?companyId= 指定） |
+| PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码；按租户隔离） |
+| GET  | /api/admin/stats | admin | 名片统计（汇总 + 按员工，零数据员工补 0；按租户隔离） |
+| POST | /api/admin/employees/:id/disable | admin | 停用账号（按租户隔离，越权为空操作） |
+| POST | /api/admin/employees/:id/enable | admin | 启用账号（按租户隔离） |
+| POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码；按租户隔离） |
+| PUT  | /api/admin/password | admin | 修改自己密码 |
 
-### 企业内容管理（超管）
+### 企业内容管理（管理员登录，按租户隔离）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET  | /api/admin/company-info | 公司基础信息（id=1 单行） |
+| GET  | /api/admin/company-info?companyId= | 公司基础信息（按租户单行；企业管理员固定本企业，平台超管缺省朗汇） |
 | PUT  | /api/admin/company-info | 更新公司信息 |
-| GET  | /api/admin/company-profile | 公司简介 + 视频号 |
+| GET  | /api/admin/company-profile?companyId= | 公司简介 + 视频号 |
 | PUT  | /api/admin/company-profile | 更新简介 + 视频号 |
-| GET  | /api/admin/categories | 业绩分类列表 |
-| POST | /api/admin/categories | 新增分类 |
-| PUT  | /api/admin/categories/:id | 编辑分类 |
+| GET  | /api/admin/categories?companyId= | 业绩分类列表 |
+| POST | /api/admin/categories | 新增分类（租户外键以服务端解析为准） |
+| PUT  | /api/admin/categories/:id | 编辑分类（带租户条件，越权返回未找到） |
 | DELETE | /api/admin/categories/:id | 删除分类（强校验：关联项目存在则拦截 / 锁定分类拦截，均返回 code=1） |
-| GET  | /api/admin/projects?categoryId= | 项目案例列表（含下架） |
+| GET  | /api/admin/projects?categoryId=&companyId= | 项目案例列表（含下架） |
 | POST | /api/admin/projects | 新增项目案例 |
 | PUT  | /api/admin/projects/:id | 编辑项目案例 |
 | DELETE | /api/admin/projects/:id | 删除项目案例 |
-| GET  | /api/admin/services | 业务服务列表 |
+| GET  | /api/admin/services?companyId= | 业务服务列表 |
 | POST | /api/admin/services | 新增业务服务 |
 | PUT  | /api/admin/services/:id | 编辑业务服务 |
 | DELETE | /api/admin/services/:id | 删除业务服务 |
-| GET  | /api/admin/home-layout | 首页板块顺序 |
+| GET  | /api/admin/home-layout?companyId= | 首页板块顺序 |
 | PUT  | /api/admin/home-layout | 更新板块顺序 |
 | POST | /api/admin/upload | 文件上传（图片/mp4），返回可访问 URL（填回封面/相册/头像/LOGO） |
 | POST | /api/employee/upload | 员工上传头像（员工鉴权），返回可访问 URL |
@@ -214,6 +224,16 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/admin/storage/sign | 私有桶：提交已存 URL 列表，返回限时签名 URL（仅 minio/oss 私有桶） |
 | POST | /api/employee/storage/sign | 同上（员工鉴权） |
 | POST | /api/admin/cdn/refresh | 触发 CDN 缓存刷新（body: `{"urls":[...]}`），需 `CDN_ENABLED=1` |
+
+### 企业管理（仅平台超级管理员，company_id=0）
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET  | /api/admin/me | 当前登录身份（用户名 / companyId / companyName / isPlatform；前端刷新后恢复身份用） |
+| GET  | /api/admin/companies | 企业列表（含员工数 / 管理员数） |
+| POST | /api/admin/companies | 开通企业（name 必填；adminUsername+adminPassword 可选，一并建企业管理员） |
+| POST | /api/admin/companies/:id/status | 停用 / 启用企业（body `{"status":"enabled"\|"disabled"}`；停用后该企业管理员与员工均不能登录） |
+| GET  | /api/admin/companies/:id/admins | 企业管理员列表 |
+| POST | /api/admin/companies/:id/admins | 新增企业管理员（username + password） |
 
 ### 小程序码（公开，分享海报用）
 | 方法 | 路径 | 说明 |
