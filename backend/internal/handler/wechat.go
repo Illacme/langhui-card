@@ -31,13 +31,33 @@ type wxacodeEntry struct {
 // 海报合成放在小程序端 canvas；后端只负责产出小程序码图片，存到 local/minio/oss 后返回访问 URL。
 // 私有桶（STORAGE_PUBLIC=false）下，返回的是限时签名 GET URL，避免把对象设为公开读。
 func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
+	wc := wechat.Config{AppID: cfg.WXAppID, AppSecret: cfg.WXAppSecret}
+
+	// 微信身份换取（公开）：小程序 wx.login 的 code → openid。
+	// 无论是否配置小程序码凭据都注册；未配置时返回明确错误，前端据此降级（不影响账号密码登录/申请）。
+	r.POST("/api/wechat/openid", func(c *gin.Context) {
+		var req struct {
+			Code string `json:"code"`
+		}
+		if c.ShouldBindJSON(&req) != nil || req.Code == "" {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "缺少 code"})
+			return
+		}
+		openid, _, err := wechat.Code2Session(wc, req.Code)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "openid": openid})
+	})
+
+	// 小程序码接口需要 access_token，未配置凭据时降级为明确错误（分享海报二维码位已兼容）
 	if cfg.WXAppID == "" || cfg.WXAppSecret == "" {
 		r.GET("/api/wechat/wxacode", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未配置 WX_APPID / WX_APPSECRET"})
 		})
 		return
 	}
-	wc := wechat.Config{AppID: cfg.WXAppID, AppSecret: cfg.WXAppSecret}
 
 	r.GET("/api/wechat/wxacode", func(c *gin.Context) {
 		staffID, _ := strconv.ParseInt(c.Query("staffId"), 10, 64)

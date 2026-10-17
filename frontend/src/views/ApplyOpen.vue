@@ -6,10 +6,10 @@
         <div class="bar-right">
           <el-input
             v-model="keyword"
-            placeholder="搜索姓名/手机/邮箱"
+            placeholder="搜索姓名/手机/邮箱/昵称/openid"
             clearable
             :prefix-icon="Search"
-            style="width: 220px"
+            style="width: 260px"
           />
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
         </div>
@@ -23,6 +23,16 @@
       <el-table :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="phone" label="手机" width="120" />
+        <el-table-column prop="nickname" label="微信昵称" width="100" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span :class="{ muted: !row.nickname }">{{ row.nickname || '—' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="openid" label="openid" width="210" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span class="openid-cell" :class="{ muted: !row.openid }">{{ row.openid || '—' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="landline" label="座机" width="120" show-overflow-tooltip />
         <el-table-column prop="email" label="邮箱" min-width="130" show-overflow-tooltip />
         <el-table-column prop="title" label="职位" width="110" />
@@ -112,7 +122,9 @@ const { keyword, currentPage, size, total, paged } = useTable(
   (r, kw) =>
     (r.name || '').toLowerCase().includes(kw) ||
     (r.phone || '').includes(kw) ||
-    (r.email || '').toLowerCase().includes(kw)
+    (r.email || '').toLowerCase().includes(kw) ||
+    (r.nickname || '').toLowerCase().includes(kw) ||
+    (r.openid || '').includes(kw)
 )
 const loading = ref(false)
 const actingId = ref<number | null>(null)
@@ -198,6 +210,10 @@ onMounted(load)
 }
 .muted {
   color: #c0c4cc;
+}
+.openid-cell {
+  font-family: monospace;
+  font-size: 12px;
 }
 .pwd {
   font-family: monospace;

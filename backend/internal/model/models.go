@@ -17,6 +17,8 @@ type Employee struct {
 	Phone        string    `gorm:"column:phone" json:"phone"`       // 手机
 	Landline     string    `gorm:"column:landline" json:"landline"` // 座机
 	Email        string    `gorm:"column:email" json:"email"`
+	OpenID       string    `gorm:"column:openid" json:"openid"`     // 微信 openid（登录时采集，供后台核实身份）
+	Nickname     string    `gorm:"column:nickname" json:"nickname"` // 微信昵称（登录时授权采集）
 	PasswordHash string    `gorm:"column:password_hash" json:"-"`
 	Status       string    `gorm:"column:status;default:enabled" json:"status"` // enabled / disabled
 	TokenVersion int       `gorm:"column:token_version;default:0" json:"-"`     // 安全戳：改密/禁用自增，令旧令牌失效
@@ -133,6 +135,8 @@ type OpenApply struct {
 	Title        string    `gorm:"column:title" json:"title"`
 	Landline     string    `gorm:"column:landline" json:"landline"` // 座机（选填）
 	Avatar       string    `gorm:"column:avatar" json:"avatar"`
+	OpenID       string    `gorm:"column:openid" json:"openid"`     // 提交申请时的微信 openid
+	Nickname     string    `gorm:"column:nickname" json:"nickname"` // 提交申请时的微信昵称
 	Status       string    `gorm:"column:status;default:pending" json:"status"` // pending/approved/rejected
 	RejectReason string    `gorm:"column:reject_reason" json:"rejectReason"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`

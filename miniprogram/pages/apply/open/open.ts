@@ -1,4 +1,5 @@
 import { request, apiBaseUrl } from '../../../utils/request'
+import { getOpenid, getWechatNickname } from '../../../utils/wechat'
 
 // 访客自助提交开通申请（POST /api/apply/open）。
 // 头像：默认读取用户微信头像（按钮 open-type=chooseAvatar 会直接调起微信头像选择器，
@@ -68,8 +69,12 @@ Page({
       return
     }
     this.setData({ saving: true })
+    // 采集微信身份（openid 静默 + 昵称授权弹窗），随申请提交供后台核实。
+    // 两个函数在此同步触发，保证 getWechatNickname 的 wx.getUserProfile 处于点击手势上下文。
+    // 任一失败都降级为空串，不阻塞提交。
+    const [openid, nickname] = await Promise.all([getOpenid(), getWechatNickname()])
     try {
-      const r = await request('POST', '/api/apply/open', this.data.form)
+      const r = await request('POST', '/api/apply/open', { ...this.data.form, openid, nickname })
       if (r.code === 0) {
         this.setData({ submitted: true })
       } else {

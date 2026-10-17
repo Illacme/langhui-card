@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -21,6 +22,42 @@ var (
 	token    string
 	tokenExp time.Time
 )
+
+// Code2Session 用小程序 wx.login 拿到的临时 code 换取 openid + session_key。
+// jscode2session 无需 access_token，直接用 appid/secret/js_code 调微信接口。
+// openid 是用户在本小程序内的唯一标识，用于在后台记录/核实申请人或登录者的微信身份。
+func Code2Session(cfg Config, code string) (openid, sessionKey string, err error) {
+	if cfg.AppID == "" || cfg.AppSecret == "" {
+		return "", "", fmt.Errorf("未配置 WX_APPID / WX_APPSECRET")
+	}
+	if code == "" {
+		return "", "", fmt.Errorf("缺少 js_code")
+	}
+	u := fmt.Sprintf(
+		"https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+		url.QueryEscape(cfg.AppID), url.QueryEscape(cfg.AppSecret), url.QueryEscape(code),
+	)
+	resp, err := http.Get(u)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	var r struct {
+		OpenID     string `json:"openid"`
+		SessionKey string `json:"session_key"`
+		UnionID    string `json:"unionid"`
+		ErrCode    int    `json:"errcode"`
+		ErrMsg     string `json:"errmsg"`
+	}
+	if err := json.Unmarshal(b, &r); err != nil {
+		return "", "", err
+	}
+	if r.ErrCode != 0 || r.OpenID == "" {
+		return "", "", fmt.Errorf("jscode2session err %d: %s", r.ErrCode, r.ErrMsg)
+	}
+	return r.OpenID, r.SessionKey, nil
+}
 
 // GetAccessToken 获取并缓存 access_token（默认 7200s，提前 5 分钟失效）
 func GetAccessToken(cfg Config) (string, error) {
