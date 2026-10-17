@@ -3,8 +3,8 @@ import axios, {
   type AxiosRequestConfig,
   type AxiosResponse,
 } from 'axios'
-import { ElMessage } from 'element-plus'
 import router from '@/router'
+import { ElMessage } from 'element-plus'
 
 /**
  * 统一响应体约定（见《三端联调与接口总表》§2）：
