@@ -82,7 +82,7 @@
           <el-input v-model="form.name" />
         </el-form-item>
         <el-form-item label="图标">
-          <UploadField v-model="form.icon" :multiple="false" accept="image/*" />
+          <UploadField v-model="form.icon" :multiple="false" accept="image/*" library-type="icon" />
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="form.sort" :min="0" />

@@ -29,12 +29,14 @@ frontend/
     │   ├── apply.ts          # 开通审核 / 名片修改审核
     │   ├── employees.ts      # 员工管理
     │   ├── content.ts        # 公司信息/简介/分类/项目/服务/首页布局
-    │   └── storage.ts        # CDN 刷新 / 私有桶签名
+    │   ├── storage.ts        # CDN 刷新 / 私有桶签名
+    │   └── assets.ts         # 开源素材库：清单 / 采用 / 预览图 URL
     ├── store/auth.ts         # Pinia 登录态（持久化 localStorage）
     ├── router/index.ts       # 路由表 + 路由守卫
     ├── layout/AdminLayout.vue # 侧边菜单 + 顶栏（改密/退出）
     ├── components/
-    │   ├── UploadField.vue   # 通用上传组件（直传预签名 + 回退普通上传）
+    │   ├── UploadField.vue   # 通用上传组件（直传预签名 + 回退普通上传 + 素材库入口）
+    │   ├── AssetPicker.vue   # 开源素材库选择器（分类 tab + 搜索 + 单选/多选采用）
     │   └── ChangePasswordDialog.vue
     └── views/
         ├── Login.vue
@@ -82,6 +84,20 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 ```
 
 `form.cover` 为 `string`，`form.album` 为 `string[]`。
+
+## 开源素材库（减少找图/处理图成本）
+
+所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：分类 tab（全部 + 图标/封面/LOGO/头像）+ 关键字搜索 + 卡片网格，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
+
+- 素材清单来自后端 `GET /api/admin/assets/library`，预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
+- 采用走 `POST /api/admin/assets/adopt`：后端把内嵌素材复制进当前上传存储，返回与手动上传**完全同构**的 URL，后续展示/CDN 链路零差异。
+- 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
+
+```vue
+<!-- 分类/服务：图标库；项目：封面库；公司简介：封面库；公司信息：LOGO 库；员工：头像库 -->
+<UploadField v-model="form.icon" library-type="icon" :multiple="false" />
+<UploadField v-model="form.cover" library-type="cover" :multiple="false" />
+```
 
 ## 企业内容管理说明
 
@@ -134,6 +150,8 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/editor/wxVideoModule.spec.ts`：`<wx-video channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致）。
 - `src/views/Login.spec.ts`：登录页视图层用例——表单校验提示、登录成功后写 Pinia + 跳转、`code=401` 时展示错误并不写登录态（jsdom + Element Plus 组件挂载）。
 - `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
+- `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、搜索过滤。
+- `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
 
 小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：
 - `miniprogram/tests/richtext.spec.ts`：`<wx-video>` 富文本拆分（自闭合 / 成对 / 属性顺序无关）、无视频号时整体走 `rich-text` 等。

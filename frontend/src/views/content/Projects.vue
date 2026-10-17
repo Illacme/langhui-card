@@ -112,10 +112,10 @@
           <RichEditor v-model="form.detail" :height="360" />
         </el-form-item>
         <el-form-item label="封面">
-          <UploadField v-model="form.cover" :multiple="false" accept="image/*" />
+          <UploadField v-model="form.cover" :multiple="false" accept="image/*" library-type="cover" />
         </el-form-item>
         <el-form-item label="相册">
-          <UploadField v-model="form.album" :multiple="true" :limit="9" accept="image/*" />
+          <UploadField v-model="form.album" :multiple="true" :limit="9" accept="image/*" library-type="cover" />
         </el-form-item>
         <el-form-item label="首页精选">
           <el-switch v-model="form.isHomeFeatured" />

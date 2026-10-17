@@ -126,7 +126,7 @@
           <el-input v-model="form.email" />
         </el-form-item>
         <el-form-item label="头像">
-          <UploadField v-model="form.avatar" :multiple="false" accept="image/*" />
+          <UploadField v-model="form.avatar" :multiple="false" accept="image/*" library-type="avatar" />
         </el-form-item>
       </el-form>
       <template #footer>

@@ -16,7 +16,7 @@
         <el-input v-model="form.backupMp4Url" placeholder="视频号异常时播放的 MP4 地址" />
       </el-form-item>
       <el-form-item label="封面 / 占位图">
-        <UploadField v-model="form.cover" :multiple="false" accept="image/*" />
+        <UploadField v-model="form.cover" :multiple="false" accept="image/*" library-type="cover" />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>

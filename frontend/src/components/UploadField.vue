@@ -1,5 +1,6 @@
 <template>
-  <!-- 通用上传组件：优先直传预签名（绕开应用服务器），不支持时回退普通上传 -->
+  <!-- 通用上传组件：优先直传预签名（绕开应用服务器），不支持时回退普通上传；
+       另提供「从素材库选择」入口——内置常用开源素材，点一下即用 -->
   <div class="upload-field">
     <el-upload
       :action="action"
@@ -19,12 +20,25 @@
         <div class="el-upload__tip">{{ tip }}</div>
       </template>
     </el-upload>
+    <div class="library-entry">
+      <el-button :icon="Picture" @click="pickerOpen = true">从素材库选择</el-button>
+      <span class="library-hint">内置常用开源素材，点击即用，无需自行找图和处理尺寸</span>
+    </div>
+    <AssetPicker
+      v-model="pickerOpen"
+      :multiple="multiple"
+      :limit="limit"
+      :default-category="libraryType"
+      @picked="onLibraryPicked"
+    />
   </div>
 </template>
 
 <script setup>
 import { ElMessage } from 'element-plus'
+import { Picture } from '@element-plus/icons-vue'
 import { ref, watch, computed } from 'vue'
+import AssetPicker from './AssetPicker.vue'
 
 const props = defineProps({
   modelValue: { type: [String, Array], default: '' }, // 单选为 string，多选为 string[]
@@ -34,8 +48,27 @@ const props = defineProps({
   action: { type: String, default: '/api/admin/upload' }, // 普通上传地址；预签名地址由 action 推导
   tip: { type: String, default: '支持图片，单文件 ≤10MB' },
   maxMB: { type: Number, default: 10 },
+  // 素材库打开时定位的分类：icon（分类/服务图标）/ cover（封面/相册）/ logo（LOGO）
+  libraryType: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])
+
+// 素材库选择器
+const pickerOpen = ref(false)
+
+// 素材库回调：单选直接替换，多选追加（受 limit 约束）
+function onLibraryPicked(picked) {
+  const arr = Array.isArray(picked) ? picked : picked ? [picked] : []
+  if (!arr.length) return
+  if (props.multiple) {
+    const cur = Array.isArray(props.modelValue) ? [...props.modelValue] : []
+    const room = Math.max(0, props.limit - cur.length)
+    if (arr.length > room) ElMessage.warning(`最多上传 ${props.limit} 个文件`)
+    emit('update:modelValue', [...cur, ...arr.slice(0, room)])
+  } else {
+    emit('update:modelValue', arr[0])
+  }
+}
 
 // PC 后台为 httpOnly Cookie 鉴权（withCredentials 自动携带，JS 不接触令牌）；
 // 上传走同源请求，浏览器会自动附带 Cookie，无需手动拼 Bearer。
@@ -156,3 +189,16 @@ function onExceed() {
   ElMessage.warning(`最多上传 ${props.limit} 个文件`)
 }
 </script>
+
+<style scoped>
+.library-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.library-hint {
+  font-size: 12px;
+  color: #909399;
+}
+</style>
