@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"langhui/internal/model"
 	"langhui/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -50,6 +51,26 @@ func New(db *gorm.DB) *gin.Engine {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "employee": e, "company": ci, "profile": cp})
+	})
+
+	// 企业公开信息（多租户分发用）：小程序申请页展示「申请目标企业」、
+	// 企业独立版部署时自检配置。companyId 缺省落朗汇；企业不存在/停用返回 code=1。
+	r.GET("/api/company", func(c *gin.Context) {
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
+		var comp model.Company
+		if db.First(&comp, "id = ?", cid).Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "企业不存在"})
+			return
+		}
+		var ci model.CompanyInfo
+		db.First(&ci, "company_id = ?", cid)
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
+			"id": comp.ID, "name": comp.Name, "status": comp.Status,
+			"shortName": ci.ShortName, "logo": ci.Logo,
+		}})
 	})
 
 	// 经典业绩：分类 + 精选项目（按租户：?companyId= 缺省朗汇）

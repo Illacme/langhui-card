@@ -1064,6 +1064,16 @@ func TestMultiTenantIsolation(t *testing.T) {
 	_, body = plat.do("GET", "/api/achievements?companyId=99", nil, "")
 	require.EqualValues(t, 1, body["code"])
 
+	// 企业公开信息（小程序申请页展示申请目标用）：缺省朗汇，?companyId= 可切
+	_, body = plat.do("GET", "/api/company", nil, "")
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "廊坊市朗汇机电设备有限公司", body["data"].(map[string]interface{})["name"])
+	_, body = plat.do("GET", "/api/company?companyId=2", nil, "")
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "测试乙公司", body["data"].(map[string]interface{})["name"])
+	_, body = plat.do("GET", "/api/company?companyId=99", nil, "")
+	require.EqualValues(t, 1, body["code"])
+
 	// ===== 5. 越权修改防护 =====
 	// 企业管理员改不到朗汇的分类
 	_, body = comp2.doWithCookie("PUT", "/api/admin/categories/"+fmt.Sprint(langhuiCatID), map[string]interface{}{"name": "被篡改"})
