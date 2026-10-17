@@ -152,6 +152,13 @@
           <el-descriptions-item label="手机">{{ previewRow.phone }}</el-descriptions-item>
           <el-descriptions-item label="座机">{{ previewRow.landline || '—' }}</el-descriptions-item>
           <el-descriptions-item label="邮箱">{{ previewRow.email || '—' }}</el-descriptions-item>
+          <el-descriptions-item label="微信昵称">
+            <span :class="{ muted: !previewRow.nickname }">{{ previewRow.nickname || '—' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="openid">
+            <span class="openid-cell" :class="{ muted: !previewRow.openid }">{{ previewRow.openid || '—' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDateTime(previewRow.createdAt) }}</el-descriptions-item>
           <el-descriptions-item label="状态">
             <el-tag :type="previewRow.status === 'enabled' ? 'success' : 'info'" effect="light">
               {{ previewRow.status === 'enabled' ? '正常' : '已停用' }}
