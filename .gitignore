@@ -29,3 +29,6 @@ uploads/
 *.exe
 backend/cmd/server/server
 backend/cmd/devserver/devserver
+
+# ── 微信小程序开发者工具本地私有配置 ──
+project.private.config.json
