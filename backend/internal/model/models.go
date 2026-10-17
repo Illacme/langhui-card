@@ -9,8 +9,10 @@ import (
 // Employee 员工即名片主体；staff_id 为对外唯一编号
 // Landline（座机）为员工个人办公电话，与 company_info.tel（公司总机）是两个层级：
 // 小程序名片「座机」行优先展示本人的，为空时回退到公司总机。
+// CompanyID 为租户外键：员工归属企业；登录令牌携带该值实现后台按租户隔离。
 type Employee struct {
 	StaffID      int64     `gorm:"primaryKey;autoIncrement;column:staff_id" json:"staffId"`
+	CompanyID    int64     `gorm:"column:company_id;index" json:"companyId"`
 	Name         string    `gorm:"column:name" json:"name"`
 	Title        string    `gorm:"column:title" json:"title"` // 职位（对外展示）
 	Avatar       string    `gorm:"column:avatar" json:"avatar"`
@@ -25,9 +27,26 @@ type Employee struct {
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
-// CompanyInfo 企业基础信息（首页固定展示）
+// Company 租户（企业）。多租户第一期：朗汇机电为 1 号租户，存量数据全部归属。
+// 与 CompanyInfo 是 1:1——CompanyInfo.company_id 指向本表主键，企业基础信息
+// （全称/简称/地址/电话/LOGO）按租户隔离。
+// status: enabled / disabled；停用后该企业的管理员与员工均不能登录（见 handler/auth.go）。
+type Company struct {
+	ID        int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	Name      string    `gorm:"column:name" json:"name"`
+	Status    string    `gorm:"column:status;default:enabled" json:"status"`
+	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
+}
+
+// TableName 显式指定单数表名：GORM 默认会把 Company 复数化为 companies，
+// 与 migrations/0011 的 company 表不一致（开发/生产两张名）。
+func (Company) TableName() string { return "company" }
+
+// CompanyInfo 企业基础信息（首页固定展示）。
+// company_id 为租户外键（唯一）：一个企业一行；历史 id=1 单行迁移为 company_id=1（朗汇）。
 type CompanyInfo struct {
 	ID        int64  `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID int64  `gorm:"column:company_id;uniqueIndex" json:"companyId"`
 	FullName  string `gorm:"column:full_name" json:"fullName"`
 	ShortName string `gorm:"column:short_name" json:"shortName"` // 企业简称（小程序顶栏居中展示）
 	Address   string `gorm:"column:address" json:"address"`
@@ -35,18 +54,20 @@ type CompanyInfo struct {
 	Logo      string `gorm:"column:logo" json:"logo"`
 }
 
-// CompanyProfile 公司简介 + 视频号 + 备用 MP4
+// CompanyProfile 公司简介 + 视频号 + 备用 MP4（按租户隔离，company_id 唯一）
 type CompanyProfile struct {
 	ID             int64  `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID      int64  `gorm:"column:company_id;uniqueIndex" json:"companyId"`
 	IntroText      string `gorm:"column:intro_text;type:text" json:"introText"`
 	VideoChannelID string `gorm:"column:video_channel_id" json:"videoChannelId"`
 	BackupMp4URL   string `gorm:"column:backup_mp4_url" json:"backupMp4Url"`
 	Cover          string `gorm:"column:cover" json:"cover"`
 }
 
-// AchievementCategory 经典业绩分类（种子 7 类）
+// AchievementCategory 经典业绩分类（种子 7 类，按租户隔离）
 type AchievementCategory struct {
 	ID        int64          `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID int64          `gorm:"column:company_id;index" json:"companyId"`
 	Name      string         `gorm:"column:name" json:"name"`
 	Icon      string         `gorm:"column:icon" json:"icon"`
 	Sort      int            `gorm:"column:sort" json:"sort"`
@@ -54,9 +75,10 @@ type AchievementCategory struct {
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
-// ProjectCase 项目案例
+// ProjectCase 项目案例（按租户隔离）
 type ProjectCase struct {
 	ID             int64          `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID      int64          `gorm:"column:company_id;index" json:"companyId"`
 	CategoryID     int64          `gorm:"column:category_id;index" json:"categoryId"`
 	Name           string         `gorm:"column:name" json:"name"`
 	Summary        string         `gorm:"column:summary" json:"summary"`
@@ -75,9 +97,10 @@ type ProjectCase struct {
 	CategoryName string `gorm:"-" json:"categoryName,omitempty"`
 }
 
-// BizService 业务服务（富文本含视频号块）
+// BizService 业务服务（富文本含视频号块，按租户隔离）
 type BizService struct {
 	ID        int64          `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID int64          `gorm:"column:company_id;index" json:"companyId"`
 	Title     string         `gorm:"column:title" json:"title"`
 	Icon      string         `gorm:"column:icon" json:"icon"` // 业务服务图标（首页服务区卡片展示）
 	Content   string         `gorm:"column:content;type:text" json:"content"`
@@ -87,10 +110,11 @@ type BizService struct {
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
-// HomeLayout 首页板块顺序（JSON 数组）
+// HomeLayout 首页板块顺序（JSON 数组，按租户隔离，company_id 唯一）
 type HomeLayout struct {
-	ID    int64  `gorm:"primaryKey;column:id" json:"id"`
-	Order string `gorm:"column:order_col;type:json" json:"order"`
+	ID        int64  `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID int64  `gorm:"column:company_id;uniqueIndex" json:"companyId"`
+	Order     string `gorm:"column:order_col;type:json" json:"order"`
 }
 
 // StatEvent 埋点原始事件
@@ -102,9 +126,13 @@ type StatEvent struct {
 	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
-// Admin 超级管理员（账号 + 密码登录，非微信 openid）
+// Admin 后台管理员（账号 + 密码登录，非微信 openid）。
+// 两级角色（多租户第一期）：
+//   - company_id = 0：平台超级管理员，可见/管理全部租户（企业管理入口仅对其开放）；
+//   - company_id > 0：企业管理员，仅可见/管理本企业的数据（登录时校验企业未停用）。
 type Admin struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	CompanyID    int64     `gorm:"column:company_id;index" json:"companyId"` // 0=平台超管
 	Username     string    `gorm:"column:username" json:"username"`
 	PasswordHash string    `gorm:"column:password_hash" json:"-"`
 	TokenVersion int       `gorm:"column:token_version;default:0" json:"-"` // 安全戳：改密自增，令旧令牌失效
@@ -126,9 +154,10 @@ type RevokedSession struct {
 	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
-// OpenApply 员工自助开通申请（审核流）
+// OpenApply 员工自助开通申请（审核流，按租户隔离：申请归属企业，审核后员工落到同企业）
 type OpenApply struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	CompanyID    int64     `gorm:"column:company_id;index" json:"companyId"`
 	Name         string    `gorm:"column:name" json:"name"`
 	Phone        string    `gorm:"column:phone" json:"phone"`
 	Email        string    `gorm:"column:email" json:"email"`
@@ -142,9 +171,11 @@ type OpenApply struct {
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 }
 
-// CardModifyApply 员工名片信息修改申请（审核流，对外仍显示旧信息直到通过）
+// CardModifyApply 员工名片信息修改申请（审核流，对外仍显示旧信息直到通过）。
+// company_id 冗余自员工归属租户：后台按企业隔离列表时免 join。
 type CardModifyApply struct {
 	ID           int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	CompanyID    int64     `gorm:"column:company_id;index" json:"companyId"`
 	StaffID      int64     `gorm:"column:staff_id;index" json:"staffId"`
 	Snapshot     string    `gorm:"column:snapshot;type:json" json:"snapshot"` // JSON：变更字段 {avatar,name,title,phone,landline,email}
 	Status       string    `gorm:"column:status;default:pending" json:"status"`
