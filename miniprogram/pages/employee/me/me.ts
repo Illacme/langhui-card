@@ -37,9 +37,13 @@ Page({
   goApply() {
     wx.navigateTo({ url: '/pages/apply/open/open' })
   },
-  // tabBar 页之间只能 switchTab，不能带参数 → staffId 走 globalData.myStaffId
+  // 返回名片首页：底部 tabBar 已移除，「我的」页由 navigateTo 进入，返回用 navigateBack；
+  // 若栈内已无名片页（极端入口），兜底 reLaunch 回名片页
   goMyCard() {
-    wx.switchTab({ url: '/pages/index/index' })
+    wx.navigateBack({
+      delta: 1,
+      fail: () => wx.reLaunch({ url: '/pages/index/index' }),
+    })
   },
   // 生成海报（B9）：带本人编号进海报页，canvas 合成后存相册
   goPoster() {

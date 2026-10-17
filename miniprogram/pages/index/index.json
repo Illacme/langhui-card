@@ -1,4 +1,5 @@
 {
+  "navigationStyle": "custom",
   "usingComponents": {
     "employee-card": "/components/employee-card/index",
     "company-video": "/components/company-video/index",

@@ -17,7 +17,7 @@ miniprogram/
 │   ├── featured-projects / service-grid / action-bar
 │   └── rich-video       # 视频号渲染控件：封装 <channel-video finder-user-name="{{channelId}}">
 ├── pages/
-│   ├── index/          # 名片首页（员工卡 + 公司简介视频 + 业绩 + 服务 + 底部栏）
+│   ├── index/          # 名片首页（自定义顶栏含「我的」入口 + 员工卡 + 公司简介卡片 + 业绩 + 服务；底部 tabBar 已移除）
 │   ├── project/list/   # 项目列表（按分类）
 │   ├── project/detail/ # 项目详情（富文本+视频号拆分+相册）
 │   ├── service/detail/ # 服务详情（富文本+视频号拆分）

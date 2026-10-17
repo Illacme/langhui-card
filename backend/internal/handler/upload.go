@@ -19,6 +19,11 @@ func RegisterUpload(r *gin.Engine, db *gorm.DB, up storage.Uploader, refresher s
 	h := uploadHandler(up, refresher)
 	r.POST("/api/admin/upload", middleware.AuthMiddleware(db, "admin"), h)
 	r.POST("/api/employee/upload", middleware.AuthMiddleware(db, "employee"), h)
+	// 访客自助开通申请上传头像：无鉴权公开端点。
+	// 放开匿名上传的考量：申请页在账号创建前就要收头像，访客没有 token；
+	// 安全由 storage.Save 兜底——仅允许图片扩展名 + 文件头魔数嗅探 + 10MB 上限，
+	// 无法借机落地非图片/超大文件。生产如需更严，可叠加频率限制或图形校验。
+	r.POST("/api/apply/open/avatar", h)
 }
 
 func uploadHandler(up storage.Uploader, refresher storage.CDNRefresher) gin.HandlerFunc {

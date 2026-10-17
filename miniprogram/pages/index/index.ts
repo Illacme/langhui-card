@@ -14,6 +14,12 @@ Page({
     notFound: false,
     loading: true,
     error: false,
+    // 自定义顶栏（navigationStyle=custom）：状态栏高度与整体高度，用于避让刘海/状态栏
+    statusBarHeight: 20,
+    navHeight: 64,
+    // 左上角「我的」入口：已登录则显示头像 + 姓名，未登录显示「我的」
+    meAvatar: '',
+    meName: '',
     // 访问埋点去重标记：同一 staffId 在本页面实例内只上报一次。
     // onShow 语义（首页文档 §4）是「每次显示 +1」，但从「我的」switchTab 回名片页
     // 会再次触发 onShow——不去重的话切两个 tab 来回几下访问量就虚高。
@@ -21,6 +27,14 @@ Page({
     lastVisitStaffId: 0,
   },
   onLoad(query: any) {
+    // 自定义顶栏：先按设备状态栏高度算出避让高度，避免内容被刘海/状态栏遮挡
+    let sb = 20
+    try {
+      const info = wx.getSystemInfoSync()
+      if (info && info.statusBarHeight) sb = info.statusBarHeight
+    } catch {}
+    this.setData({ statusBarHeight: sb, navHeight: sb + 44 })
+
     let staffId = parseInt(query.staffId || '0', 10)
     // 从小程序码 scene 解析（形如 "staffId=12"）
     if (!staffId && query.scene) {
@@ -28,7 +42,7 @@ Page({
       const m = /staffId=(\d+)/.exec(params)
       if (m) staffId = parseInt(m[1], 10)
     }
-    // 仍无参数（直接打开 / 从「我的」tab 切回）：已登录员工用自己的编号，
+    // 仍无参数（直接打开 / 从「我的」页返回）：已登录员工用自己的编号，
     // 免去每次手输；未登录才弹窗输入（联调取数 / 演示用）
     if (!staffId) {
       const app = getApp() as any
@@ -46,6 +60,26 @@ Page({
   onShow() {
     // 埋点挂 onShow（首页文档 §4 明确要求）：名片每次显示记一次访问
     this.trackVisit()
+    // 左上角「我的」入口跟随登录态刷新（登录 / 退出后回名片页时即时反映）
+    this.loadMeInfo()
+  },
+  // 读取当前登录员工，用于在自定义顶栏的「我的」入口展示头像 + 姓名；
+  // 无 token 时显示默认「我的」。失败（令牌失效）静默回退，不弹错。
+  loadMeInfo() {
+    const token = wx.getStorageSync('empToken')
+    if (!token) {
+      this.setData({ meAvatar: '', meName: '' })
+      return
+    }
+    request('GET', '/api/employee/me')
+      .then((r: any) => {
+        if (r && r.code === 0 && r.data) {
+          this.setData({ meAvatar: r.data.avatar || '', meName: r.data.name || '我的' })
+        } else {
+          this.setData({ meAvatar: '', meName: '' })
+        }
+      })
+      .catch(() => this.setData({ meAvatar: '', meName: '' }))
   },
   // 访问埋点：带 lastVisitStaffId 去重（见 data 注释）。
   // loadAll 成功后也会调一次——onLoad 走弹窗输编号时，onShow 早于 staffId 就绪，
@@ -146,6 +180,10 @@ Page({
       title: this.data.company ? this.data.company.fullName : '朗汇机电',
       path: '/pages/index/index?staffId=' + this.data.staffId,
     }
+  },
+  // 左上角「我的」入口：底部 tabBar 已移除，改由 navigateTo 进入「我的」页
+  goMe() {
+    wx.navigateTo({ url: '/pages/employee/me/me' })
   },
   goPoster() {
     wx.navigateTo({ url: '/pages/poster/poster?staffId=' + this.data.staffId })
