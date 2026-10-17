@@ -130,6 +130,7 @@ type OpenApply struct {
 	Phone        string    `gorm:"column:phone" json:"phone"`
 	Email        string    `gorm:"column:email" json:"email"`
 	Title        string    `gorm:"column:title" json:"title"`
+	Landline     string    `gorm:"column:landline" json:"landline"` // 座机（选填）
 	Avatar       string    `gorm:"column:avatar" json:"avatar"`
 	Status       string    `gorm:"column:status;default:pending" json:"status"` // pending/approved/rejected
 	RejectReason string    `gorm:"column:reject_reason" json:"rejectReason"`

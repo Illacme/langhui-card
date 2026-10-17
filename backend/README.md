@@ -34,7 +34,8 @@ backend/
 ├── migrations/0004_token_version.sql # token_version 安全戳（账号级吊销）
 ├── migrations/0005_revoked_sessions.sql # 会话黑名单表（单设备精确吊销）
 ├── migrations/0006_employee_landline.sql
-0007_updated_at.sql # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
+├── migrations/0007_updated_at.sql   # 员工座机列（名片「座机」行优先本人，为空回退公司总机）
+├── migrations/0008_open_apply_landline.sql  # 开通申请增加座机字段
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
@@ -162,7 +163,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/admin/login | 否 | 超管登录（用户名+密码）→ 写 httpOnly Cookie，响应体仅 expiresIn |
 | POST | /api/refresh | 否 | 换发新 access（PC 读 refresh Cookie；小程序 body 传 refreshToken） |
 | POST | /api/logout | 否 | 吊销当前会话 sid（单设备精确吊销）+ 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
-| POST | /api/apply/open | 否 | 员工自助提交开通申请（pending） |
+| POST | /api/apply/open | 否 | 员工自助提交开通申请（pending；可含 landline / avatar） |
+| POST | /api/apply/open/avatar | 否 | 申请开通时上传头像（公开端点，仅图片，供访客在账号创建前设置头像） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息；可含 landline） |
 | GET  | /api/employee/me/stat | employee | 本人访问/拨号/保存统计 |

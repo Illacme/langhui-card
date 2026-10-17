@@ -1,9 +1,12 @@
-<!--
-  注意：本页不放头像上传。/api/employee/upload 需员工 token，访客还没账号，
-  放开匿名上传会成为滥用入口。头像由超管在 PC 后台补（员工管理已支持编辑头像），
-  或员工登录后在「编辑名片」里自己传。
--->
 <view class="form" wx:if="{{!submitted}}">
+  <!-- 头像：默认读取微信头像，也支持上传 -->
+  <view class="form-item avatar-row">
+    <text class="label">头像</text>
+    <image class="avatar-preview" src="{{form.avatar}}" mode="aspectFill" wx:if="{{form.avatar}}" />
+    <view class="avatar-ph" wx:else>未设置</view>
+    <button class="picker-btn" size="mini" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">微信头像</button>
+    <button class="picker-btn" size="mini" bindtap="chooseImage">上传头像</button>
+  </view>
   <view class="form-item">
     <text class="label">姓名</text>
     <input data-field="name" value="{{form.name}}" bindinput="onInput" placeholder="必填" />
@@ -17,12 +20,16 @@
     <input data-field="title" value="{{form.title}}" bindinput="onInput" placeholder="选填" />
   </view>
   <view class="form-item">
+    <text class="label">座机</text>
+    <input data-field="landline" value="{{form.landline}}" bindinput="onInput" placeholder="选填，如 0316-823950" />
+  </view>
+  <view class="form-item">
     <text class="label">邮箱</text>
     <input data-field="email" value="{{form.email}}" bindinput="onInput" placeholder="选填" />
   </view>
   <button class="submit-btn" loading="{{saving}}" bindtap="onSubmit">提交申请</button>
   <view class="tip">
-    提交后由超管在 PC 后台审核，通过即自动创建账号；头像可登录后在「编辑名片」中上传
+    提交后由超管在 PC 后台审核，通过即自动创建账号；头像可在申请时上传，也可登录后在「编辑名片」中修改
   </view>
 </view>
 

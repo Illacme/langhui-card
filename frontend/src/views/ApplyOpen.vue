@@ -23,6 +23,7 @@
       <el-table :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="phone" label="手机" width="120" />
+        <el-table-column prop="landline" label="座机" width="120" show-overflow-tooltip />
         <el-table-column prop="email" label="邮箱" min-width="130" show-overflow-tooltip />
         <el-table-column prop="title" label="职位" width="110" />
         <el-table-column label="头像" width="62" align="center">

@@ -1,11 +1,12 @@
-import { request } from '../../../utils/request'
+import { request, apiBaseUrl } from '../../../utils/request'
 
 // 访客自助提交开通申请（POST /api/apply/open）。
-// 本页刻意不做头像上传：/api/employee/upload 需员工 token，访客还没有账号，
-// 放开匿名上传会成为滥用入口。头像由超管在 PC 后台补，或员工登录后自行上传。
+// 头像：默认读取用户微信头像（按钮 open-type=chooseAvatar 会直接调起微信头像选择器，
+// 默认展示用户当前微信头像），同时支持从相册/拍照上传——两者都拿到本地临时文件后，
+// 经专用公开端点 /api/apply/open/avatar 上传拿回永久 URL 再随表单提交。
 Page({
   data: {
-    form: { name: '', phone: '', title: '', email: '' },
+    form: { name: '', phone: '', title: '', landline: '', email: '', avatar: '' },
     saving: false,
     submitted: false,
   },
@@ -14,6 +15,51 @@ Page({
     const form = this.data.form as any
     form[field] = e.detail.value
     this.setData({ form })
+  },
+  // 「使用微信头像」：open-type=chooseAvatar 回调拿到本地临时文件，直接上传
+  onChooseAvatar(e: any) {
+    const url = e.detail && e.detail.avatarUrl
+    if (url) this.uploadAvatar(url)
+  },
+  // 「上传头像」：从相册/拍照选图后上传
+  chooseImage() {
+    const that = this
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      success(res: any) {
+        const filePath = res.tempFiles[0].tempFilePath
+        that.uploadAvatar(filePath)
+      },
+    })
+  },
+  // 头像上传：调公开端点（无需登录），返回永久 URL 写回表单
+  uploadAvatar(filePath: string) {
+    wx.showLoading({ title: '上传中' })
+    wx.uploadFile({
+      url: apiBaseUrl() + '/api/apply/open/avatar',
+      filePath,
+      name: 'file',
+      success(r: any) {
+        wx.hideLoading()
+        let body: any = {}
+        try {
+          body = JSON.parse(r.data)
+        } catch {}
+        if (body.code === 0 && body.data && body.data.urls && body.data.urls.length) {
+          const form = this.data.form as any
+          form.avatar = body.data.urls[0]
+          this.setData({ form })
+          wx.showToast({ title: '头像已设置' })
+        } else {
+          wx.showToast({ title: body.msg || '上传失败', icon: 'none' })
+        }
+      },
+      fail() {
+        wx.hideLoading()
+        wx.showToast({ title: '上传失败', icon: 'none' })
+      },
+    })
   },
   async onSubmit() {
     const { name, phone } = this.data.form
@@ -34,6 +80,9 @@ Page({
     }
   },
   backMe() {
-    wx.switchTab({ url: '/pages/employee/me/me' })
+    wx.navigateBack({
+      delta: 1,
+      fail: () => wx.reLaunch({ url: '/pages/employee/me/me' }),
+    })
   },
 })

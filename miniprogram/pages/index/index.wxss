@@ -1,0 +1,39 @@
+/* 首页自定义顶栏（navigationStyle=custom）：左上角「我的」入口，固定常驻 */
+.custom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 100;
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+}
+.custom-nav .nav-inner {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 0 24rpx;
+}
+.custom-nav .nav-me {
+  display: flex;
+  align-items: center;
+  padding: 6rpx 20rpx;
+  border: 1rpx solid #1a8cff;
+  border-radius: 28rpx;
+}
+.custom-nav .nav-me-avatar {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 10rpx;
+  background: #eee;
+}
+.custom-nav .nav-me-avatar image {
+  width: 100%;
+  height: 100%;
+}
+.custom-nav .nav-me-text {
+  font-size: 26rpx;
+  color: #1a8cff;
+}
