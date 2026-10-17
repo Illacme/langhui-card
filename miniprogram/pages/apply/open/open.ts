@@ -5,11 +5,28 @@ import { getOpenid, getWechatNickname } from '../../../utils/wechat'
 // 头像：默认读取用户微信头像（按钮 open-type=chooseAvatar 会直接调起微信头像选择器，
 // 默认展示用户当前微信头像），同时支持从相册/拍照上传——两者都拿到本地临时文件后，
 // 经专用公开端点 /api/apply/open/avatar 上传拿回永久 URL 再随表单提交。
+// 多租户：请求层按 utils/tenant.ts 自动带上 companyId（独立版锁定值 / 平台模式粘滞值），
+// 申请即归属该企业，由该企业的管理员审核。
 Page({
   data: {
     form: { name: '', phone: '', title: '', landline: '', email: '', avatar: '', nickname: '' },
+    // 申请目标企业名（GET /api/company）：让访客知道在申请加入哪家企业
+    companyName: '',
     saving: false,
     submitted: false,
+  },
+  onLoad() {
+    this.loadCompany()
+  },
+  // 拉取申请目标企业名；失败（网络/企业停用）时隐藏该行，不阻断申请
+  loadCompany() {
+    request('GET', '/api/company')
+      .then((r: any) => {
+        if (r && r.code === 0 && r.data) {
+          this.setData({ companyName: r.data.shortName || r.data.name || '' })
+        }
+      })
+      .catch(() => {})
   },
   onInput(e: any) {
     const field = e.currentTarget.dataset.field

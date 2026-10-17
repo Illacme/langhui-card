@@ -6,3 +6,10 @@
 .nickname-value.nickname-ph {
   color: #aaa;
 }
+
+/* 申请目标企业行（多租户分发）：企业名加粗展示，让访客确认申请加入的企业 */
+.company-value {
+  flex: 1;
+  color: #2f6bff;
+  font-weight: 600;
+}
