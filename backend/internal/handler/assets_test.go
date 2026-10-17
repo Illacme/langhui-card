@@ -25,13 +25,82 @@ func TestAssetLibrary(t *testing.T) {
 	_, body = anon.do("GET", "/api/admin/assets/library", nil, "")
 	require.EqualValues(t, 401, body["code"])
 
-	// 2. 清单：图标/封面/LOGO/头像 四个分类 + 数十项素材
+	// 2. 清单（默认第一页）：五个分类 + 分页元信息
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library", nil)
 	require.EqualValues(t, 0, body["code"])
 	data := body["data"].(map[string]interface{})
-	require.Len(t, data["categories"].([]interface{}), 4, "图标/封面/LOGO/头像 四个分类")
+	require.Len(t, data["categories"].([]interface{}), 5, "图标/封面/LOGO/头像/首页背景 五个分类")
 	items := data["items"].([]interface{})
-	require.GreaterOrEqual(t, len(items), 60, "素材应覆盖四大类数十项")
+	total := int(data["total"].(float64))
+	require.GreaterOrEqual(t, total, 110, "素材应覆盖五大类上百项")
+	require.EqualValues(t, 1, data["page"])
+	require.EqualValues(t, 24, data["size"], "缺省每页 24 条")
+	require.EqualValues(t, 24, len(items), "第一页按 size 截断")
+	pages := int(data["pages"].(float64))
+	require.GreaterOrEqual(t, pages, 5, "上百项素材应有多页")
+
+	// 2.1 翻页：第 2 页换一批素材，且不与第 1 页重复
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?page=2", nil)
+	require.EqualValues(t, 0, body["code"])
+	page2 := body["data"].(map[string]interface{})
+	require.EqualValues(t, 2, page2["page"])
+	require.EqualValues(t, total, page2["total"], "total 为过滤后的总条数，不随页码变化")
+	firstIDs := map[string]bool{}
+	for _, it := range items {
+		firstIDs[it.(map[string]interface{})["id"].(string)] = true
+	}
+	dup := 0
+	for _, it := range page2["items"].([]interface{}) {
+		if firstIDs[it.(map[string]interface{})["id"].(string)] {
+			dup++
+		}
+	}
+	require.Zero(t, dup, "第 2 页不应与第 1 页重复")
+
+	// 2.2 size 生效（且上限 60 生效：请求 999 只回落 60）
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?size=5", nil)
+	require.EqualValues(t, 5, len(body["data"].(map[string]interface{})["items"].([]interface{})))
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?size=999", nil)
+	require.EqualValues(t, 60, body["data"].(map[string]interface{})["size"])
+
+	// 2.3 非法页码不报错：page=0 → 1；超界页码被夹到末页
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?page=0", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, 1, body["data"].(map[string]interface{})["page"])
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?page=9999", nil)
+	require.EqualValues(t, pages, body["data"].(map[string]interface{})["page"], "超界页码夹到末页")
+	require.NotEmpty(t, body["data"].(map[string]interface{})["items"], "末页仍应有内容")
+
+	// 2.4 分类过滤：只返回首页背景（竖幅 750×1334），total 随之收窄
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=background", nil)
+	require.EqualValues(t, 0, body["code"])
+	bgData := body["data"].(map[string]interface{})
+	bgItems := bgData["items"].([]interface{})
+	bgTotal := int(bgData["total"].(float64))
+	require.GreaterOrEqual(t, bgTotal, 10, "首页背景分类应覆盖十余款")
+	require.Less(t, bgTotal, total, "分类过滤后总数应小于全量")
+	for _, it := range bgItems {
+		m := it.(map[string]interface{})
+		require.Equal(t, "background", m["category"])
+		require.EqualValues(t, 750, m["width"])
+		require.EqualValues(t, 1334, m["height"])
+	}
+
+	// 2.5 关键字过滤：命中名称或标签，且翻页前重置到第 1 页
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=电梯", nil)
+	require.EqualValues(t, 0, body["code"])
+	kwData := body["data"].(map[string]interface{})
+	kwItems := kwData["items"].([]interface{})
+	require.EqualValues(t, 1, kwData["total"])
+	require.Equal(t, "icon-arrow-up-down", kwItems[0].(map[string]interface{})["id"])
+	// 英文标签同样命中（大小写不敏感）
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=ELEVATOR", nil)
+	require.EqualValues(t, 1, body["data"].(map[string]interface{})["total"])
+	// 无命中：空列表且 total=0，不应报错
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=zzz-not-exist", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, 0, body["data"].(map[string]interface{})["total"])
+	require.Empty(t, body["data"].(map[string]interface{})["items"])
 
 	// 3. 采用图标：URL 落进上传存储（/uploads/library/...），静态托管可取到真实 PNG
 	_, body = plat.doWithCookie("POST", "/api/admin/assets/adopt", map[string]interface{}{"id": "icon-house"})
@@ -61,6 +130,18 @@ func TestAssetLibrary(t *testing.T) {
 	r.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Equal(t, "image/jpeg", w.Header().Get("Content-Type"))
+
+	// 5.1 首页背景：竖幅缩略图公开可取，采用后落地为 JPEG（与手动上传同构）
+	req = httptest.NewRequest("GET", "/api/assets/file/thumbs/backgrounds/bg-deepspace.jpg", nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "image/jpeg", w.Header().Get("Content-Type"))
+
+	_, body = plat.doWithCookie("POST", "/api/admin/assets/adopt", map[string]interface{}{"id": "bg-deepspace"})
+	require.EqualValues(t, 0, body["code"])
+	bgURL := body["data"].(map[string]interface{})["url"].(string)
+	require.True(t, strings.HasSuffix(bgURL, "/uploads/library/bg-deepspace.jpg"), "背景采用 URL: %s", bgURL)
 
 	// 6. 异常分支：未知素材 / 空参数 / 路径穿越 / 不存在文件
 	_, body = plat.doWithCookie("POST", "/api/admin/assets/adopt", map[string]interface{}{"id": "not-exist"})

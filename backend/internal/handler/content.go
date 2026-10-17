@@ -252,19 +252,30 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// ===== 首页布局（板块顺序，按租户） =====
+	// ===== 首页布局（板块顺序 + 首页背景，按租户） =====
 	r.GET("/api/admin/home-layout", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var hl model.HomeLayout
 		order := []string{}
-		if db.First(&hl, "company_id = ?", targetCompanyID(c)).Error == nil && hl.Order != "" {
-			_ = json.Unmarshal([]byte(hl.Order), &order)
+		var bgImage string
+		var bgMask int
+		if db.First(&hl, "company_id = ?", targetCompanyID(c)).Error == nil {
+			if hl.Order != "" {
+				_ = json.Unmarshal([]byte(hl.Order), &order)
+			}
+			bgImage, bgMask = hl.BgImage, hl.BgMask
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"order": order}})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
+			"order": order, "bgImage": bgImage, "bgMask": bgMask,
+		}})
 	})
 	r.PUT("/api/admin/home-layout", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		cid := targetCompanyID(c)
 		var req struct {
 			Order []string `json:"order"`
+			// 指针区分「未提供」（保持原值）与「传空串」（清空背景）——
+			// 前端分块保存时可能只提交板块顺序，不能把背景顺手清掉。
+			BgImage *string `json:"bgImage"`
+			BgMask  *int    `json:"bgMask"`
 		}
 		if c.ShouldBindJSON(&req) != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -273,12 +284,37 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		b, _ := json.Marshal(req.Order)
 		var hl model.HomeLayout
 		if db.First(&hl, "company_id = ?", cid).Error != nil {
-			db.Create(&model.HomeLayout{CompanyID: cid, Order: string(b)})
+			created := model.HomeLayout{CompanyID: cid, Order: string(b)}
+			if req.BgImage != nil {
+				created.BgImage = *req.BgImage
+			}
+			if req.BgMask != nil {
+				created.BgMask = clampMask(*req.BgMask)
+			}
+			db.Create(&created)
 		} else {
-			db.Model(&hl).Update("order_col", string(b))
+			upd := map[string]interface{}{"order_col": string(b)}
+			if req.BgImage != nil {
+				upd["bg_image"] = *req.BgImage
+			}
+			if req.BgMask != nil {
+				upd["bg_mask"] = clampMask(*req.BgMask)
+			}
+			db.Model(&hl).Updates(upd)
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
+}
+
+// clampMask 把遮罩浓度钳制到 0~100（前端滑块范围一致，服务端兜底防越界写入）。
+func clampMask(v int) int {
+	if v < 0 {
+		return 0
+	}
+	if v > 100 {
+		return 100
+	}
+	return v
 }
 
 // registerSortRoute 注册「批量排序」接口，项目案例 / 业绩分类 / 业务服务共用。

@@ -1,8 +1,8 @@
 // Package assets 内嵌「常用开源素材库」：PC 后台所有需要图片的位置
-// （分类图标 / 服务图标 / 项目封面 / 相册 / 公司简介封面 / 公司 LOGO）
-// 都可以直接选内置素材，免去四处找图、按尺寸处理图。
+// （分类图标 / 服务图标 / 项目封面 / 相册 / 公司简介封面 / 公司 LOGO /
+// 员工头像 / 小程序首页背景）都可以直接选内置素材，免去四处找图、按尺寸处理图。
 //
-// 素材由同目录 gen_library.py 生成（Lucide ISC 图标 + 程序绘制封面/LOGO），
+// 素材由同目录 gen_library.py 生成（Lucide ISC 图标 + 程序绘制封面/LOGO/背景），
 // 通过 go:embed 编译进二进制——单文件部署（Dockerfile 只 COPY 二进制）无需额外挂载。
 // 重新生成/扩充素材：改 gen_library.py 后运行，再提交 library/ 目录。
 package assets
@@ -32,13 +32,37 @@ type Category struct {
 type Item struct {
 	ID       string   `json:"id"`
 	Name     string   `json:"name"`
-	Category string   `json:"category"` // icon / cover / logo
+	Category string   `json:"category"` // icon / cover / logo / avatar / background
 	File     string   `json:"file"`     // library 内相对路径，如 icons/icon-house.png
-	Thumb    string   `json:"thumb"`    // 预览图路径（缩略版，图标/LOGO 与 File 相同）
+	Thumb    string   `json:"thumb"`    // 预览图路径（缩略版，图标/LOGO/头像与 File 相同）
 	Width    int      `json:"width"`
 	Height   int      `json:"height"`
 	Tags     []string `json:"tags"` // 搜索标签（中文名/别名）
 }
+
+// Query 素材分页查询条件（全部可选，缺省给出安全默认值）
+type Query struct {
+	Page    int    // 1-based，<1 回落 1
+	Size    int    // 每页条数，<1 回落 DefaultPageSize，>MaxPageSize 截断
+	Type    string // 分类过滤："" 全部；icon / cover / logo / avatar / background
+	Keyword string // 关键字：匹配名称或标签（大小写不敏感，中文直接子串匹配）
+}
+
+// Result 分页结果
+type Result struct {
+	Items []Item `json:"items"`
+	Total int    `json:"total"` // 过滤后的总条数（非本页条数）
+	Page  int    `json:"page"`
+	Size  int    `json:"size"`
+	Pages int    `json:"pages"` // 总页数
+}
+
+const (
+	// DefaultPageSize 选择器默认每页条数（6 列 × 4 行网格）
+	DefaultPageSize = 24
+	// MaxPageSize 单页上限，防止一次拉全量
+	MaxPageSize = 60
+)
 
 // Manifest 素材清单（gen_library.py 生成）
 type Manifest struct {
@@ -87,6 +111,76 @@ func Find(id string) (*Item, error) {
 		}
 	}
 	return nil, fmt.Errorf("素材不存在: %s", id)
+}
+
+// List 按条件分页查询素材（纯内存过滤：素材静态内嵌且量级百级，无需索引）。
+// 参数非法时不报错，按安全默认处理（Page<1 → 1；Size<1 → 24；Size>60 → 60）。
+func List(q Query) Result {
+	m, err := Load()
+	if err != nil {
+		return Result{Items: []Item{}, Page: 1, Size: DefaultPageSize}
+	}
+	kw := strings.ToLower(strings.TrimSpace(q.Keyword))
+	typ := strings.TrimSpace(q.Type)
+
+	matched := make([]Item, 0, len(m.Items))
+	for _, it := range m.Items {
+		if typ != "" && it.Category != typ {
+			continue
+		}
+		if kw != "" && !matchKeyword(it, kw) {
+			continue
+		}
+		matched = append(matched, it)
+	}
+	total := len(matched)
+
+	size := q.Size
+	if size < 1 {
+		size = DefaultPageSize
+	}
+	if size > MaxPageSize {
+		size = MaxPageSize
+	}
+	pages := total / size
+	if total%size != 0 {
+		pages++
+	}
+	page := q.Page
+	if page < 1 {
+		page = 1
+	}
+	if pages > 0 && page > pages {
+		page = pages
+	}
+	start := (page - 1) * size
+	end := start + size
+	if start > total {
+		start, end = total, total
+	}
+	if end > total {
+		end = total
+	}
+	return Result{
+		Items: matched[start:end],
+		Total: total,
+		Page:  page,
+		Size:  size,
+		Pages: pages,
+	}
+}
+
+// matchKeyword 关键字匹配：名称或任一标签含关键字即命中（kw 已小写）
+func matchKeyword(it Item, kw string) bool {
+	if strings.Contains(strings.ToLower(it.Name), kw) {
+		return true
+	}
+	for _, t := range it.Tags {
+		if strings.Contains(strings.ToLower(t), kw) {
+			return true
+		}
+	}
+	return false
 }
 
 // ContentType 按扩展名推断素材 MIME（采用时写入存储用）
