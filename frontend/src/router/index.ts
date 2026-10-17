@@ -74,17 +74,19 @@ const routes = [
         meta: { title: '首页布局', group: '企业内容' },
       },
       {
-        path: 'content/cdn-refresh',
-        name: 'cdn-refresh',
-        component: () => import('@/views/content/CdnRefresh.vue'),
-        meta: { title: 'CDN 刷新', group: '企业内容' },
-      },
-      {
         // 企业管理（多租户）：仅平台超级管理员可见可访问
         path: 'companies',
         name: 'companies',
         component: () => import('@/views/Companies.vue'),
         meta: { title: '企业管理', group: '平台管理', platformOnly: true },
+      },
+      {
+        // CDN 刷新：平台级基础设施操作（上传后已自动 purge，此处为覆盖写场景的兜底），
+        // 仅平台超级管理员可见可访问
+        path: 'platform/cdn-refresh',
+        name: 'cdn-refresh',
+        component: () => import('@/views/platform/CdnRefresh.vue'),
+        meta: { title: 'CDN 刷新', group: '平台管理', platformOnly: true },
       },
     ],
   },

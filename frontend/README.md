@@ -93,9 +93,15 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 | 项目案例 | `GET/POST/PUT/DELETE /api/admin/projects` | 详情含 `<wx-video channel-id>` 视频号块；相册为 URL 数组 |
 | 业务服务 | `GET/POST/PUT/DELETE /api/admin/services` | content 含视频号块 |
 | 首页布局 | `GET/PUT /api/admin/home-layout` | order 数组控制板块顺序 |
-| CDN 刷新 | `POST /api/admin/cdn/refresh` | 需 `CDN_ENABLED=1` |
 
 > 富文本编辑器（项目案例.详情 / 业务服务.内容）已接入 wangEditor v5 可视化编辑，并注册「视频号块」自定义节点；详见下方「富文本编辑器（wangEditor）」。
+
+## 平台管理说明（仅平台超级管理员）
+
+| 页面 | 接口 | 备注 |
+|---|---|---|
+| 企业管理 | `GET/POST/PUT /api/admin/companies` 等 | 多租户：开通/停用企业、企业管理员管理、企业简称；企业管理员访问会被后端 403 拒绝 |
+| CDN 刷新 | `POST /api/admin/cdn/refresh` | 平台级基础设施操作，需 `CDN_ENABLED=1`；上传后已自动 purge，此处为覆盖写场景的兜底 |
 
 ## 列表分页 / 搜索
 
