@@ -3,7 +3,6 @@
   <div class="upload-field">
     <el-upload
       :action="action"
-      :headers="headers"
       :multiple="multiple"
       :accept="accept"
       :list-type="multiple ? 'picture-card' : 'picture'"
@@ -38,9 +37,9 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
-// token 来自登录后存储（与 axios 拦截器一致）
-const token = computed(() => localStorage.getItem('token') || '')
-const headers = computed(() => ({ Authorization: 'Bearer ' + token.value }))
+// PC 后台为 httpOnly Cookie 鉴权（withCredentials 自动携带，JS 不接触令牌）；
+// 上传走同源请求，浏览器会自动附带 Cookie，无需手动拼 Bearer。
+// 早期 Bearer 方案已迁移，localStorage 不保存 token，拼空 Bearer 属误导性死代码，已移除。
 
 // 由 action 推导预签名地址：/api/admin/upload -> /api/admin/upload/presign
 const presignAction = computed(() => props.action.replace('/upload', '/upload/presign'))
@@ -86,7 +85,8 @@ async function presign(ext, contentType) {
     presignAction.value +
     '?ext=' + encodeURIComponent(ext) +
     '&contentType=' + encodeURIComponent(contentType)
-  const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token.value } })
+  // 同源请求自动携带 httpOnly Cookie；不附加 Bearer（无 token 可附）
+  const resp = await fetch(url)
   return resp.json()
 }
 
@@ -110,7 +110,7 @@ function serverUpload(option) {
     form.append('file', option.file)
     const xhr = new XMLHttpRequest()
     xhr.open('POST', props.action)
-    xhr.setRequestHeader('Authorization', 'Bearer ' + token.value)
+    // 同源请求自动携带 httpOnly Cookie；不附加 Bearer（无 token 可附）
     xhr.onload = () => {
       try {
         option.onSuccess(JSON.parse(xhr.responseText))
