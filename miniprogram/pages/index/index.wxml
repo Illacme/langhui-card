@@ -36,9 +36,6 @@
           <view class="empty" wx:else>暂无服务内容</view>
         </view>
       </block>
-      <view class="poster-entry">
-        <button class="poster-btn" bindtap="goPoster">生成分享海报</button>
-      </view>
       <view style="height: 120rpx;" />
       <action-bar employee="{{employee}}" company="{{company}}" staffId="{{staffId}}" />
     </block>

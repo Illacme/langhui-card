@@ -1,9 +1,7 @@
 <view class="svc-grid">
   <view class="svc-item" wx:for="{{services}}" wx:key="id" data-id="{{item.id}}" bindtap="onTap">
-    <view class="svc-card">
-      <image class="svc-icon" src="{{item.icon}}" mode="aspectFit" lazy-load wx:if="{{item.icon}}" />
-      <view class="svc-icon-ph" wx:else>服</view>
-      <view class="svc-title">{{item.title}}</view>
-    </view>
+    <image class="svc-icon" src="{{item.icon}}" mode="aspectFit" lazy-load wx:if="{{item.icon}}" />
+    <view class="svc-icon-ph" wx:else>{{item.title ? item.title.slice(0,1) : '服'}}</view>
+    <view class="svc-title">{{item.title}}</view>
   </view>
 </view>
