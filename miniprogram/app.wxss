@@ -12,7 +12,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .emp-card .info { flex: 1; margin-left: 20rpx; }
 .emp-card .name { font-size: 34rpx; font-weight: 600; }
 .emp-card .title { color: #888; margin-top: 6rpx; }
-.emp-card .save-btn { font-size: 24rpx; color: #1a8cff; border: 1rpx solid #1a8cff; padding: 6rpx 16rpx; border-radius: 24rpx; }
+.emp-card .case-btn { flex-shrink: 0; font-size: 24rpx; color: #fff; background: #1a8cff; padding: 10rpx 22rpx; border-radius: 28rpx; }
 .emp-card .company { display: flex; align-items: center; margin-top: 20rpx; }
 .emp-card .logo { width: 48rpx; height: 48rpx; margin-right: 12rpx; }
 .emp-card .cname { font-weight: 600; }
@@ -20,30 +20,30 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .emp-card .row { display: flex; padding: 6rpx 0; }
 .emp-card .label { width: 100rpx; color: #999; }
 
-/* 公司视频 */
-.company-video .cv { width: 100%; height: 360rpx; background: #000; border-radius: 12rpx; }
+/* 公司简介卡片 */
+.company-video .cv { width: 100%; height: 360rpx; border-radius: 12rpx; }
+.company-video .cv-ph { background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 36rpx; }
 .intro { display: block; margin-top: 16rpx; color: #666; line-height: 1.6; }
 
-/* 业绩分类网格 */
+/* 业绩分类网格（设计图：4 列蓝色圆角方块图标 + 双行说明文字） */
 .cat-grid { display: flex; flex-wrap: wrap; }
-.cat-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 16rpx 0; }
-.cat-icon { width: 80rpx; height: 80rpx; }
-.cat-placeholder { width: 80rpx; height: 80rpx; border-radius: 12rpx; background: #eee; display: flex; align-items: center; justify-content: center; color: #aaa; }
-.cat-name { margin-top: 8rpx; font-size: 24rpx; text-align: center; }
+.cat-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 20rpx 0; }
+.cat-icon { width: 120rpx; height: 120rpx; }
+.cat-placeholder { width: 120rpx; height: 120rpx; border-radius: 28rpx; background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 46rpx; }
+.cat-name { margin-top: 12rpx; font-size: 24rpx; text-align: center; color: #333; }
 
-/* 精选项目 */
+/* 精选项目（设计图：2 列蓝色建筑剪影卡片 + 项目名称） */
 .featured { display: flex; flex-wrap: wrap; margin-top: 16rpx; }
 .feat-item { width: 50%; padding: 8rpx; box-sizing: border-box; }
-.feat-cover { width: 100%; height: 180rpx; border-radius: 8rpx; background: #eee; }
-.feat-name { font-size: 24rpx; margin-top: 6rpx; }
+.feat-cover { width: 100%; height: 200rpx; border-radius: 12rpx; background: #eee; }
+.feat-name { font-size: 26rpx; color: #333; margin-top: 10rpx; }
 
-/* 服务网格 */
+/* 服务网格（设计图：2 列，蓝色圆角方块图标 + 标题） */
 .svc-grid { display: flex; flex-wrap: wrap; }
-.svc-item { width: 50%; padding: 12rpx; box-sizing: border-box; }
-.svc-card { background: #fff; border-radius: 12rpx; padding: 20rpx; display: flex; flex-direction: column; align-items: center; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
-.svc-icon { width: 72rpx; height: 72rpx; margin-bottom: 12rpx; }
-.svc-icon-ph { width: 72rpx; height: 72rpx; margin-bottom: 12rpx; border-radius: 12rpx; background: #E8F3FF; color: #1a8cff; display: flex; align-items: center; justify-content: center; font-size: 30rpx; }
-.svc-title { text-align: center; font-size: 26rpx; color: #333; }
+.svc-item { width: 50%; display: flex; flex-direction: column; align-items: center; padding: 20rpx 0; box-sizing: border-box; }
+.svc-icon { width: 120rpx; height: 120rpx; }
+.svc-icon-ph { width: 120rpx; height: 120rpx; border-radius: 28rpx; background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 46rpx; }
+.svc-title { text-align: center; font-size: 26rpx; color: #333; margin-top: 12rpx; }
 
 /* 底部操作栏 */
 .action-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: #fff; border-top: 1rpx solid #eee; padding: 16rpx 24rpx; padding-bottom: calc(16rpx + env(safe-area-inset-bottom)); }
@@ -99,10 +99,6 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 
 /* 详情页元信息行（分类名 / 更新时间） */
 .detail .meta { padding: 0 24rpx 16rpx; color: #999; font-size: 24rpx; }
-
-/* 员工名片区右上双按钮（保存名片 / 案例进入） */
-.emp-card .ops { display: flex; flex-direction: column; }
-.emp-card .case-btn { font-size: 24rpx; color: #1a8cff; border: 1rpx solid #1a8cff; padding: 6rpx 16rpx; border-radius: 24rpx; margin-top: 12rpx; text-align: center; }
 
 /* 通用按钮 */
 .primary-btn { background: #1a8cff; color: #fff; border-radius: 40rpx; font-size: 30rpx; margin-top: 24rpx; }
