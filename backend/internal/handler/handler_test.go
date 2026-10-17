@@ -124,6 +124,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	RegisterAuth(r, db, cfg)
 	RegisterApply(r, db)
 	RegisterContent(r, db)
+	RegisterCompanies(r, db)
 
 	// 静态托管需要目录存在
 	require.NoError(t, os.MkdirAll(cfg.UploadDir, 0755))
@@ -152,7 +153,10 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
+		&model.Company{},
 	))
+	// 1 号租户（朗汇）：公开接口缺省落点；存量行为不随多租户改造而变
+	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", Status: "enabled"}).Error)
 
 	uploadDir, err := os.MkdirTemp("", "langhui-upload-")
 	require.NoError(t, err)
@@ -935,7 +939,9 @@ func newSeedDB(t *testing.T) *gorm.DB {
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
+		&model.Company{},
 	))
+	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", Status: "enabled"}).Error)
 	return db
 }
 
@@ -965,4 +971,180 @@ func TestHealthzDBDown(t *testing.T) {
 	require.Equal(t, http.StatusServiceUnavailable, code)
 	require.Equal(t, "degraded", body["status"])
 	require.Equal(t, "down", body["db"])
+}
+
+// ===== 多租户第一期：数据隔离 + 两级后台 =====
+//
+// 覆盖点：
+//  1. 平台超管登录 → isPlatform=true、companyId=0；可开通企业（一并建企业管理员）；
+//  2. 企业管理员登录 → companyId=企业、isPlatform=false；只能看/改本企业数据；
+//  3. 公开内容接口缺省落 1 号租户（朗汇），?companyId= 可切；企业停用即拒；
+//  4. 越权防护：企业管理员访问企业管理接口 403、改不到别家分类/员工；
+//  5. 申请流按租户归属：默认落朗汇，显式 companyId 落指定企业，审核后员工落到同企业。
+func TestMultiTenantIsolation(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	plat := newTestClient(r, t)
+
+	// ===== 1. 平台超管登录与身份 =====
+	_, body := plat.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "admin", "password": "admin123456",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, true, body["isPlatform"])
+	require.EqualValues(t, 0, body["companyId"])
+
+	_, body = plat.doWithCookie("GET", "/api/admin/me", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, true, body["data"].(map[string]interface{})["isPlatform"])
+
+	// 平台超管在朗汇（缺省目标租户）建一个分类
+	_, body = plat.doWithCookie("POST", "/api/admin/categories", map[string]interface{}{"name": "朗汇分类A"})
+	require.EqualValues(t, 0, body["code"])
+	langhuiCatID := int64(body["data"].(map[string]interface{})["id"].(float64))
+	require.NotZero(t, langhuiCatID)
+
+	// ===== 2. 开通企业 2（一并建企业管理员） =====
+	_, body = plat.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{
+		"name": "测试乙公司", "adminUsername": "comp2", "adminPassword": "comp2pass",
+	})
+	require.EqualValues(t, 0, body["code"])
+	comp2ID := int64(body["data"].(map[string]interface{})["id"].(float64))
+	require.NotZero(t, comp2ID)
+
+	_, body = plat.doWithCookie("GET", "/api/admin/companies", nil)
+	require.EqualValues(t, 0, body["code"])
+	comps := body["data"].([]interface{})
+	require.Len(t, comps, 2, "应有朗汇 + 乙公司两个租户")
+
+	// ===== 3. 企业管理员登录与隔离 =====
+	comp2 := newTestClient(r, t)
+	_, body = comp2.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "comp2", "password": "comp2pass",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, false, body["isPlatform"])
+	require.EqualValues(t, comp2ID, body["companyId"])
+	require.Equal(t, "测试乙公司", body["companyName"])
+
+	// 企业管理员看不到朗汇的分类（空列表），也看不到企业管理入口
+	_, body = comp2.doWithCookie("GET", "/api/admin/categories", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Len(t, body["data"].([]interface{}), 0, "企业管理员不应看到别家分类")
+
+	_, body = comp2.doWithCookie("GET", "/api/admin/companies", nil)
+	require.EqualValues(t, 403, body["code"], "企业管理员不得访问企业管理接口")
+
+	// 企业管理员在自己的租户里建分类 → 仅自己可见
+	_, body = comp2.doWithCookie("POST", "/api/admin/categories", map[string]interface{}{"name": "乙分类"})
+	require.EqualValues(t, 0, body["code"])
+	_, body = comp2.doWithCookie("GET", "/api/admin/categories", nil)
+	list := body["data"].([]interface{})
+	require.Len(t, list, 1)
+	require.Equal(t, "乙分类", list[0].(map[string]interface{})["name"])
+
+	// 平台超管用 ?companyId=2 能看到乙公司的分类
+	_, body = plat.doWithCookie("GET", "/api/admin/categories?companyId=2", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Len(t, body["data"].([]interface{}), 1)
+
+	// ===== 4. 公开内容接口：缺省朗汇，?companyId= 可切 =====
+	_, body = plat.do("GET", "/api/achievements", nil, "")
+	require.EqualValues(t, 0, body["code"])
+	cats := body["categories"].([]interface{})
+	require.Len(t, cats, 1)
+	require.Equal(t, "朗汇分类A", cats[0].(map[string]interface{})["name"])
+
+	_, body = plat.do("GET", "/api/achievements?companyId=2", nil, "")
+	require.EqualValues(t, 0, body["code"])
+	cats = body["categories"].([]interface{})
+	require.Len(t, cats, 1)
+	require.Equal(t, "乙分类", cats[0].(map[string]interface{})["name"])
+
+	// 不存在的租户 → 明确拒绝
+	_, body = plat.do("GET", "/api/achievements?companyId=99", nil, "")
+	require.EqualValues(t, 1, body["code"])
+
+	// ===== 5. 越权修改防护 =====
+	// 企业管理员改不到朗汇的分类
+	_, body = comp2.doWithCookie("PUT", "/api/admin/categories/"+fmt.Sprint(langhuiCatID), map[string]interface{}{"name": "被篡改"})
+	require.EqualValues(t, 1, body["code"])
+	_, body = plat.doWithCookie("GET", "/api/admin/categories", nil)
+	cats = body["data"].([]interface{})
+	require.Equal(t, "朗汇分类A", cats[0].(map[string]interface{})["name"], "别家分类不应被改")
+
+	// 平台超管手动建一个朗汇员工；企业管理员禁不掉他
+	_, body = plat.doWithCookie("POST", "/api/admin/employees", map[string]interface{}{
+		"name": "朗汇员工", "phone": "13900000001", "title": "工程师",
+	})
+	require.EqualValues(t, 0, body["code"])
+	langhuiStaff := int64(body["staffId"].(float64))
+
+	_, body = comp2.doWithCookie("GET", "/api/admin/employees", nil)
+	require.Len(t, body["data"].([]interface{}), 0, "企业管理员不应看到别家员工")
+
+	_, body = comp2.doWithCookie("POST", "/api/admin/employees/"+fmt.Sprint(langhuiStaff)+"/disable", nil)
+	require.EqualValues(t, 0, body["code"]) // 接口不报错，但按租户条件为空操作
+	_, body = plat.doWithCookie("GET", "/api/admin/employees", nil)
+	emps := body["data"].([]interface{})
+	require.Equal(t, "enabled", emps[0].(map[string]interface{})["status"], "越权禁用不应生效")
+
+	// 平台超管 ?companyId=1 只看朗汇员工
+	_, body = plat.doWithCookie("GET", "/api/admin/employees?companyId=1", nil)
+	require.Len(t, body["data"].([]interface{}), 1)
+
+	// ===== 6. 申请流按租户归属 =====
+	// 默认申请 → 落朗汇；企业管理员看不到
+	_, body = plat.do("POST", "/api/apply/open", map[string]interface{}{
+		"name": "默认申请人", "phone": "13800000002", "title": "销售",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	_, body = comp2.doWithCookie("GET", "/api/admin/apply/open", nil)
+	require.Len(t, body["data"].([]interface{}), 0)
+
+	// 显式 companyId=2 的申请 → 企业管理员可见并可审核
+	_, body = plat.do("POST", "/api/apply/open", map[string]interface{}{
+		"name": "乙公司申请人", "phone": "13800000003", "title": "销售", "companyId": comp2ID,
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	_, body = comp2.doWithCookie("GET", "/api/admin/apply/open", nil)
+	applies := body["data"].([]interface{})
+	require.Len(t, applies, 1)
+	applyID := int64(applies[0].(map[string]interface{})["id"].(float64))
+
+	_, body = comp2.doWithCookie("POST", "/api/admin/apply/open/"+fmt.Sprint(applyID)+"/approve", nil)
+	require.EqualValues(t, 0, body["code"])
+	newStaff := int64(body["staffId"].(float64))
+	require.NotZero(t, newStaff)
+
+	// 审核出的员工落在乙公司：企业管理员列表可见，朗汇列表不可见
+	_, body = comp2.doWithCookie("GET", "/api/admin/employees", nil)
+	require.Len(t, body["data"].([]interface{}), 1)
+	_, body = plat.doWithCookie("GET", "/api/admin/employees?companyId=1", nil)
+	require.Len(t, body["data"].([]interface{}), 1, "朗汇仍只有手动建的那个员工")
+
+	// 公开名片按员工归属企业取公司信息（乙公司的 CompanyInfo 为空但可读）
+	_, body = plat.do("GET", "/api/card?staffId="+fmt.Sprint(newStaff), nil, "")
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, comp2ID, body["company"].(map[string]interface{})["companyId"])
+
+	// ===== 7. 企业停用：管理员不能登录 =====
+	_, body = plat.doWithCookie("POST", "/api/admin/companies/"+fmt.Sprint(comp2ID)+"/status", map[string]interface{}{"status": "disabled"})
+	require.EqualValues(t, 0, body["code"])
+
+	_, body = comp2.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "comp2", "password": "comp2pass",
+	}, "")
+	require.EqualValues(t, 2, body["code"], "企业停用后管理员不能登录")
+
+	// 停用企业的公开内容也被拒
+	_, body = plat.do("GET", "/api/achievements?companyId=2", nil, "")
+	require.EqualValues(t, 1, body["code"])
+
+	// 恢复启用 → 可再登录
+	_, body = plat.doWithCookie("POST", "/api/admin/companies/"+fmt.Sprint(comp2ID)+"/status", map[string]interface{}{"status": "enabled"})
+	require.EqualValues(t, 0, body["code"])
+	_, body = comp2.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "comp2", "password": "comp2pass",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
 }
