@@ -938,3 +938,31 @@ func newSeedDB(t *testing.T) *gorm.DB {
 	))
 	return db
 }
+
+// TestHealthzOK 正常 DB 下 /healthz 应返回 200 且声明 db=up。
+// 这是 docker-compose backend healthcheck 与 alert_check.sh R1 的依赖：
+// 仅当 DB 可达才认为就绪，DB 故障时编排/告警才能识别"进程在但不可用"。
+func TestHealthzOK(t *testing.T) {
+	db := newSeedDB(t)
+	r := New(db)
+	code, body := newTestClient(r, t).do("GET", "/healthz", nil, "")
+	require.Equal(t, http.StatusOK, code)
+	require.Equal(t, "ok", body["status"])
+	require.Equal(t, "up", body["db"])
+}
+
+// TestHealthzDBDown DB 不可达时 /healthz 应返回 503 且声明 db=down，
+// 而不是伪装成健康的 200（旧实现的问题：DB 挂了仍返回 200）。
+func TestHealthzDBDown(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	require.NoError(t, err)
+	sqlDB, err := db.DB()
+	require.NoError(t, err)
+	require.NoError(t, sqlDB.Close()) // 关闭底层连接，使后续 Exec 失败
+
+	r := New(db)
+	code, body := newTestClient(r, t).do("GET", "/healthz", nil, "")
+	require.Equal(t, http.StatusServiceUnavailable, code)
+	require.Equal(t, "degraded", body["status"])
+	require.Equal(t, "down", body["db"])
+}

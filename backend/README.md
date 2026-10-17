@@ -227,7 +227,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - **上传内容嗅探**：`storage.checkFile` 在校验扩展名白名单后，进一步按文件头（魔法字节）校验真实类型（PNG / JPG / GIF / WEBP / MP4），防止把可执行文件改名图片上传。`backend/internal/storage/storage_test.go` 覆盖各类型的合法/伪造场景。
 - **登录限流**：`middleware.NewLoginRateLimiter` 按客户端 IP 做固定窗口限流（默认每 IP 每分钟 10 次登录尝试），防爆破；超限返回 `{code:429}`（与现有鉴权约定一致）。`backend/internal/middleware/ratelimit_test.go` 覆盖计数与隔离逻辑。
 - **启动自检告警**：`config.InsecureWarnings()` 在 `JWT_KEY` 为默认值或长度不足 16、或初始超管口令仍为 `admin123456` 时，由 `cmd/server/main.go` 打印 `[SECURITY]` 告警，提醒上线前修改。
-- **健康检查**：`GET /healthz` 返回 `{status:"ok"}`，供容器编排 / 负载均衡探活；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。
+- **健康检查（就绪探针）**：`GET /healthz` 先 `SELECT 1` 探活数据库——正常 `200 {status:"ok",db:"up"}`，DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。详见《运维与部署》。
 - **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
 - **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
 - **PC 管理后台 httpOnly Cookie 鉴权**：`/api/admin/login` 将 access/refresh 写入 `HttpOnly; SameSite=Lax` 的 Cookie（`access_token` / `refresh_token`，见 `handler/cookie.go`），响应体不再回传令牌；`AuthMiddleware` 支持「Authorization 头 或 `access_token` Cookie」两种来源（小程序走 Bearer，PC 走 Cookie）；`POST /api/logout` 清除 Cookie。`COOKIE_SECURE`（生产 HTTPS 置 true）/ `COOKIE_DOMAIN`（跨子域才设）可配。覆盖测试见 `TestCookieAuth`。
@@ -241,7 +241,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
 - 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
-- **最小告警已落地**：仓库根 `scripts/alert_check.sh` 消费 `[ACCESS-5XX]` 访问日志与 `/healthz`（healthz 探活 / 5xx / 备份新鲜度三条规则，零依赖，配 crontab 即可运行，配置见《部署与联调》「最小告警配置」）；待运维侧按需扩展完整监控栈（Prometheus + Alertmanager）、外部拨测与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
+- **最小告警已落地**：仓库根 `scripts/alert_check.sh` 消费 `[ACCESS-5XX]` 访问日志与 `/healthz`（healthz 探活 / 5xx / 备份新鲜度三条规则，零依赖，配 crontab 即可运行，配置见《运维与部署》「最小告警（零依赖）」）；待运维侧按需扩展完整监控栈（Prometheus + Alertmanager）、外部拨测与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
 
 ## 自动化接口测试
 接口层（`/api/*`）已配套 `httptest` 集成测试，覆盖读接口、登录鉴权、审核流、员工管理、分类/项目强校验、业务服务、企业内容、文件上传与存储增强、小程序码等全部主路径，并对「本地驱动不支持预签名→code:1」「CDN 未配置→code:1」「分类下有项目/锁定→删除拦截 code=1」等回退分支做了断言。
@@ -284,6 +284,68 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
     （例：`root:pwd@tcp(host:3306)/langhui_test?charset=utf8mb4&parseTime=true`）。
   - `frontend`：`npm ci` + `npm run build` + `npm run test`（Vitest，含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
   - `frontend-typecheck`（**阻塞门禁**）：`vue-tsc --noEmit`。历史 4 个 `@wangeditor/*` 类型错误已通过 tsconfig `paths` 指向真实 d.ts + 精准断言修复，当前 0 错误。
+
+## 运维与部署
+
+> 本节把 `scripts/backup.sh` / `scripts/alert_check.sh` / 日志落盘 / `docker-compose.yml` 的 `healthcheck` 串成可操作的运维手册。安全加固相关的能力（上传嗅探、限流、JWT 双令牌、会话黑名单、可观测三件套等）见《安全加固》。
+
+### 1. 健康检查（就绪探针）
+`GET /healthz` 现为**就绪探针**：先 `SELECT 1` 探活数据库。
+- DB 正常：`200 {status:"ok", db:"up"}`
+- DB 不可达：`503 {status:"degraded", db:"down", error:"..."}`
+
+> **为什么不是无条件 200**：旧实现只做存活探测，DB 故障时仍返回 200，导致 `docker-compose.yml` 的 backend `healthcheck`（依赖本端点）与 `scripts/alert_check.sh` 的 R1 探活**误判为可用**——实际所有 `/api` 已 5xx。改为 DB 不可达返回 503 后，编排的 `depends_on: service_healthy` 与探活告警才能识别"进程在但不可用"。
+
+`docker-compose.yml` 已为 backend 配置 `healthcheck`（每 15s 探 `/healthz`，连续 5 次失败标记不健康），frontend 的 `depends_on` 升级为 `service_healthy`：MySQL 就绪、backend 探活通过后，frontend 才启动。
+
+### 2. 访问日志落盘（告警 R2 的前置条件，极易踩坑）
+`middleware.AccessLog` 使用 Go 标准 `log` 包，输出到 **stderr**（每行含方法/路径/状态/耗时/IP；5xx 以 `[ACCESS-5XX]` 前缀标出）。`scripts/alert_check.sh` 的 **R2 规则读取日志文件**（`LOG_FILE`，默认 `/var/log/langhui/access.log`）扫描新增 `[ACCESS-5XX]` 行。
+
+⚠️ **必须把后端 stderr 重定向到该文件，否则 R2 永远扫不到 5xx**（这是"明明有 5xx 却没告警"的最常见根因）。两种落地方式：
+
+- 方式 A — 进程管理器（systemd / supervisor）重定向（推荐裸机部署）：
+  ```ini
+  # /etc/systemd/system/langhui-backend.service 片段
+  [Service]
+  ExecStart=/opt/langhui/backend -port 8080
+  StandardOutput=append:/var/log/langhui/access.log
+  StandardError=append:/var/log/langhui/access.log
+  ```
+- 方式 B — 直接重定向（裸跑）：
+  ```bash
+  cd backend && go run ./cmd/server >> /var/log/langhui/access.log 2>&1 &
+  ```
+- Docker 部署：`docker logs langhui-backend` 即可查看；若要在宿主机用 `alert_check.sh` 读文件，可挂卷 + `2>` 重定向，或改用 Docker `json-file` logging driver 配合外部采集（filebeat 等）。**告警脚本假设的是裸机/文件场景**，纯 docker 场景建议改用 `docker logs` 轮询或接入标准监控栈。
+
+### 3. 数据库备份（MySQL）
+`scripts/backup.sh` 做 MySQL 逻辑备份（`docker exec mysqldump --single-transaction --quick` → gzip → 按 `KEEP_DAYS` 轮转）。
+```bash
+# 每天 03:00 全量备份（crontab）
+0 3 * * * cd /path/to/repo && scripts/backup.sh >> /var/log/langhui-backup.log 2>&1
+```
+环境变量：`DB_CONTAINER`(默认 langhui-mysql) / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `BACKUP_DIR`(默认 ./backups) / `KEEP_DAYS`(默认 7)。逻辑备份不含 binlog，需 PITR 时另行开启 binlog 并定期备份。
+
+> 开发态 `cmd/devserver` 用 SQLite 临时库（每次启动全新、自动 seed），本就无需备份；生产走 `cmd/server` + MySQL，用本脚本。
+
+### 4. 最小告警（零依赖）
+`scripts/alert_check.sh` 三条规则，配 crontab **每分钟**运行：
+- **R1 healthz**：`GET /healthz` 非 2xx/超时即告警（依赖第 1 节的真实探针，DB 宕机也能捕获）
+- **R2 5xx**：扫描日志文件新增 `[ACCESS-5XX]`（依赖第 2 节的日志落盘）
+- **R3 备份新鲜度**：`backups/` 最新备份超 `BACKUP_MAX_HOURS`(默认 26h) 即告警（backup.sh 失败时无新文件，本规则兜底）
+```bash
+# 每分钟检查（crontab）
+* * * * * cd /path/to/repo && scripts/alert_check.sh
+```
+配置（环境变量，均有默认值）：`HEALTH_URL` / `LOG_FILE` / `BACKUP_DIR` / `BACKUP_MAX_HOURS` / `STATE_DIR` / `ALERT_WEBHOOK`(企业微信/钉钉机器人，未配置则打到 stderr) / `ALERT_COOLDOWN`(默认 1800s 防轰炸)。本脚本不替代 Prometheus/Alertmanager，是"无监控基建也能跑"的最小闭环。
+
+### 5. 指标（可选）
+`/metrics`（Prometheus 文本格式）默认关闭，**`METRICS_ENABLED=1`** 显式开启。生产建议仅内网/反代白名单可达，避免公网暴露流量规模。
+
+### 6. 日志轮转
+裸机部署建议配 `logrotate`（访问日志 + 备份日志）：
+```
+/var/log/langhui/*.log { daily missingok rotate 14 compress delaycompress }
+```
 
 ## 待补全（下一步，均为可选增强）
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）

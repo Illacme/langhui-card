@@ -53,10 +53,15 @@ paths:
   /healthz:
     get:
       tags: [系统]
-      summary: 健康检查（容器编排 / 负载均衡探活）
+      summary: 健康检查（就绪探针：探活数据库）
+      description: |
+        先 `SELECT 1` 探活数据库：正常 `200 {status:"ok",db:"up"}`；
+        DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`。
+        docker-compose 的 backend healthcheck 与最小告警 R1 依赖本端点，
+        因此 DB 故障时能识别"进程在但不可用"，而非误判为健康。
       responses:
         "200":
-          description: 服务存活
+          description: 服务就绪（DB 可达）
           content:
             application/json:
               schema:
@@ -65,6 +70,24 @@ paths:
                   status:
                     type: string
                     example: ok
+                  db:
+                    type: string
+                    example: up
+        "503":
+          description: 未就绪（DB 不可达）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: degraded
+                  db:
+                    type: string
+                    example: down
+                  error:
+                    type: string
 
   /metrics:
     get:
@@ -422,6 +445,9 @@ paths:
                     $ref: "#/components/schemas/Code"
                   data:
                     $ref: "#/components/schemas/Employee"
+                  pendingModify:
+                    type: boolean
+                    description: 是否有待审的名片修改申请（编辑名片页据此展示"审核中"标签）
     put:
       tags: [员工端]
       summary: 提交名片信息修改申请（审核通过后才生效）
@@ -431,15 +457,21 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                email:
-                  type: string
-                avatar:
-                  type: string
+              schema:
+                type: object
+                properties:
+                  avatar:
+                    type: string
+                  name:
+                    type: string
+                  title:
+                    type: string
+                  phone:
+                    type: string
+                  landline:
+                    type: string
+                  email:
+                    type: string
       responses:
         "200":
           description: code=0 已提交；code=1 参数错误 / 无变更
@@ -463,10 +495,15 @@ paths:
                   data:
                     type: object
                     properties:
-                      total:
+                      visit:
                         type: integer
-                      today:
+                        description: 浏览次数
+                      call:
                         type: integer
+                        description: 拨打次数
+                      save:
+                        type: integer
+                        description: 保存次数
 
   /api/employee/password:
     put:
@@ -491,6 +528,21 @@ paths:
           description: code=0 成功；code=1 原密码错误 / 参数错误
 
   # ───────────────────────── 超管-申请审核 ─────────────────────────
+  /api/apply/open:
+    post:
+      tags: [超管-申请审核]
+      summary: 提交开通申请（公开，员工自助）
+      description: 员工扫码/分享落地后自助提交开通申请，status 置 pending，等待超管审核。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenApply"
+      responses:
+        "200":
+          description: code=0 已提交；code=1 参数错误 / 提交失败
+
   /api/admin/apply/open:
     get:
       tags: [超管-申请审核]
@@ -675,6 +727,8 @@ paths:
                   type: string
                 avatar:
                   type: string
+                landline:
+                  type: string
       responses:
         "200":
           description: code=0 成功；code=1 手机号已存在 / 参数错误
@@ -690,6 +744,45 @@ paths:
                     format: int64
                   initialPassword:
                     type: string
+
+  /api/admin/employees/{id}:
+    put:
+      tags: [超管-员工管理]
+      summary: 编辑员工资料（即时生效，不经过员工端审核流）
+      description: |
+        只开放白名单字段：姓名 / 职位 / 手机 / 座机 / 邮箱 / 头像。
+        状态、密码各有专门端点（disable/enable/reset-password），此处不混写，避免绕过安全戳逻辑。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                title:
+                  type: string
+                phone:
+                  type: string
+                landline:
+                  type: string
+                email:
+                  type: string
+                avatar:
+                  type: string
+      responses:
+        "200":
+          description: code=0 成功；code=1 参数错误（姓名与手机必填）/ 不存在
 
   /api/admin/employees/{id}/disable:
     post:
@@ -772,6 +865,58 @@ paths:
       responses:
         "200":
           description: code=0 成功；code=1 原密码错误 / 参数错误
+
+  /api/admin/stats:
+    get:
+      tags: [超管-员工管理]
+      summary: 全局名片统计（汇总 + 按员工分组）
+      description: |
+        汇总 visit/call/save 总数，并按员工分组（零数据员工补 0）。
+        与 /api/employee/me/stat（仅本人）互补，供 PC 后台"数据统计"页使用。
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: code=0 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: object
+                    properties:
+                      summary:
+                        type: object
+                        properties:
+                          visit:
+                            type: integer
+                          call:
+                            type: integer
+                          save:
+                            type: integer
+                      byStaff:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            staffId:
+                              type: integer
+                              format: int64
+                            name:
+                              type: string
+                            title:
+                              type: string
+                            avatar:
+                              type: string
+                            visit:
+                              type: integer
+                            call:
+                              type: integer
+                            save:
+                              type: integer
 
   # ───────────────────────── 超管-内容管理 ─────────────────────────
   /api/admin/company-info:
@@ -1487,6 +1632,9 @@ components:
           type: string
         phone:
           type: string
+        landline:
+          type: string
+          description: 座机
         email:
           type: string
         status:
