@@ -4,15 +4,18 @@
 生成「常用开源素材库」（输出到 ./library/，由 assets.go 用 go:embed 内嵌进后端二进制）。
 
 素材库目标：PC 后台所有需要图片的位置（分类图标 / 服务图标 / 项目封面 / 相册 /
-公司简介封面 / 公司 LOGO）都能直接选内置素材，免去四处找图、按尺寸处理图的过程。
+公司简介封面 / 公司 LOGO / 员工头像 / 小程序首页背景）都能直接选内置素材，
+免去四处找图、按尺寸处理图的过程。
 
-三类素材：
+四类素材：
   icons/   Lucide（ISC 许可）线形图标，rsvg-convert 光栅化为白色图形后合成到
            渐变圆角方块上——与小程序 .cat-placeholder（120rpx 圆角蓝砖 + 白字）
            的既有观感一致，客户已确认的设计语言。
   covers/  程序生成的通用封面（渐变 + 几何 motif，不含文字，任何企业/项目可复用）。
   logos/   程序生成的通用 LOGO 标识（渐变圆角方块 + 白色几何标记）。
   avatars/ 员工暂无照片时的默认头像（渐变圆角方块 + 白色人形剪影）。
+  backgrounds/ 小程序首页背景图（750×1334 竖幅，深色高端商务渐变 + 几何 motif，
+           白卡片浮层其上，营造层次感；带四角暗角增强质感）。
 
 依赖：Pillow（PIL）+ rsvg-convert（librsvg）。Lucide SVG 首次运行从 jsdelivr 下载，
 留存到 library-src/icons/（附 LICENSE，ISC 许可），之后离线也可再生成。
@@ -21,12 +24,13 @@
   python3 gen_library.py
 """
 import json
+import math
 import os
 import random
 import subprocess
 import tempfile
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "library")
@@ -63,6 +67,14 @@ ICONS = [
     ("leaf", "绿色环保", "cat", ["环保", "绿色", "节能"]),
     ("shield-check", "安防保障", "cat", ["安防", "保障", "安全"]),
     ("truck", "物流配送", "cat", ["物流", "配送", "运输"]),
+    ("plane", "航空机场", "cat", ["航空", "机场", "飞机"]),
+    ("ship", "港口航运", "cat", ["港口", "航运", "船舶"]),
+    ("store", "商铺零售", "cat", ["商铺", "零售", "门店"]),
+    ("library", "文化场馆", "cat", ["文化", "场馆", "图书"]),
+    ("flask-conical", "科研实验", "cat", ["科研", "实验", "检测"]),
+    ("microscope", "生物医疗", "cat", ["生物", "医疗", "显微"]),
+    ("atom", "高新科技", "cat", ["科技", "高新", "原子"]),
+    ("dumbbell", "文体健身", "cat", ["健身", "文体", "运动"]),
     # ── 业务服务 ──
     ("arrow-up-down", "电梯", "svc", ["电梯", "垂直交通", "elevator"]),
     ("activity", "运行平稳", "svc", ["运行", "平稳", "activity"]),
@@ -80,6 +92,14 @@ ICONS = [
     ("life-buoy", "全程保障", "svc", ["保障", "救援", "支持"]),
     ("timer", "限时响应", "svc", ["限时", "计时", "加急"]),
     ("badge-check", "认证合格", "svc", ["认证", "合格", "资质"]),
+    ("shield", "安全防护", "svc", ["安全", "防护", "防卫"]),
+    ("siren", "应急警报", "svc", ["应急", "警报", "突发"]),
+    ("calendar", "排期预约", "svc", ["排期", "预约", "计划"]),
+    ("pen-tool", "设计定制", "svc", ["设计", "定制", "方案"]),
+    ("settings-2", "系统调试", "svc", ["调试", "系统", "参数"]),
+    ("refresh-cw", "循环运维", "svc", ["循环", "运维", "更新"]),
+    ("trending-up", "增效增长", "svc", ["增长", "增效", "提升"]),
+    ("route", "路线规划", "svc", ["路线", "规划", "路径"]),
     # ── 通用 ──
     ("image", "图片", "misc", ["图片", "照片", "image"]),
     ("users", "人群团队", "misc", ["团队", "人群", "用户"]),
@@ -87,6 +107,14 @@ ICONS = [
     ("gem", "精品案例", "misc", ["精品", "案例", "宝石"]),
     ("lightbulb", "方案创意", "misc", ["创意", "方案", "点子"]),
     ("map-pin", "位置服务", "misc", ["位置", "地图", "定位"]),
+    ("globe", "全球业务", "misc", ["全球", "国际", "业务"]),
+    ("qr-code", "扫码入口", "misc", ["扫码", "二维码", "入口"]),
+    ("share-2", "分享传播", "misc", ["分享", "传播", "转发"]),
+    ("message-circle", "消息沟通", "misc", ["消息", "沟通", "对话"]),
+    ("thumbs-up", "口碑好评", "misc", ["好评", "口碑", "点赞"]),
+    ("target", "目标达成", "misc", ["目标", "达成", "聚焦"]),
+    ("compass", "方向指引", "misc", ["方向", "指引", "导航"]),
+    ("layout-grid", "矩阵陈列", "misc", ["矩阵", "陈列", "网格"]),
 ]
 
 # 封面：渐变 + 几何 motif，无文字
@@ -101,6 +129,12 @@ COVERS = [
     ("cover-stars", "星网", ((15, 23, 42), (30, 58, 138))),
     ("cover-waves", "波浪", ((14, 116, 144), (6, 182, 212))),
     ("cover-hex", "蜂巢", ((190, 18, 60), (244, 63, 94))),
+    ("cover-mountain", "山峦", ((30, 41, 59), (71, 85, 105))),
+    ("cover-bokeh", "光斑", ((49, 46, 129), (129, 60, 160))),
+    ("cover-gridline", "格线", ((17, 24, 39), (55, 65, 81))),
+    ("cover-goldline", "金绶", ((20, 24, 33), (120, 53, 15))),
+    ("cover-minimal", "极简", ((71, 85, 105), (148, 163, 184))),
+    ("cover-night", "夜幕", ((2, 6, 23), (30, 27, 75))),
 ]
 
 # LOGO：渐变圆角方块 + 白色几何标记
@@ -113,10 +147,36 @@ LOGOS = [
     ("logo-arrow", "上升", ((20, 184, 166), (15, 118, 110))),
     ("logo-tower", "塔楼", ((91, 108, 255), (61, 79, 224))),
     ("logo-orbit", "环轨", ((244, 63, 94), (190, 18, 60))),
+    ("logo-diamond", "菱钻", ((14, 165, 233), (2, 132, 199))),
+    ("logo-ringstar", "星环", ((234, 179, 8), (180, 83, 9))),
+    ("logo-peak", "山峰", ((16, 122, 87), (6, 78, 59))),
+    ("logo-flow", "流动", ((99, 102, 241), (67, 56, 202))),
+    ("logo-link", "链接", ((100, 116, 139), (51, 65, 85))),
+    ("logo-cube", "立方", ((225, 29, 72), (159, 18, 57))),
 ]
 
 COVER_W, COVER_H = 960, 504
 THUMB_W, THUMB_H = 480, 252
+
+# 小程序首页背景图：750×1334 竖幅（750rpx 设计稿 2x），深色高端商务风
+BG_W, BG_H = 750, 1334
+BG_THUMB_W, BG_THUMB_H = 300, 534
+
+# (id, 名称, 上下渐变色, 搜索标签)
+BACKGROUNDS = [
+    ("bg-deepspace", "深空", ((8, 15, 40), (23, 37, 84)), ["深空", "星空", "商务蓝"]),
+    ("bg-mountain", "山峦", ((15, 32, 46), (30, 66, 82)), ["山峦", "层叠", "沉稳"]),
+    ("bg-citynight", "城市夜景", ((10, 10, 30), (49, 27, 90)), ["城市", "夜景", "楼宇"]),
+    ("bg-bokeh", "光斑", ((30, 27, 75), (76, 29, 110)), ["光斑", "虚化", "梦幻"]),
+    ("bg-waves", "涟漪", ((8, 51, 68), (14, 116, 144)), ["涟漪", "水波", "清新"]),
+    ("bg-grid", "格线", ((15, 23, 42), (30, 41, 59)), ["格线", "科技", "理性"]),
+    ("bg-diagonal", "斜纹", ((23, 37, 84), (30, 58, 138)), ["斜纹", "条纹", "简约"]),
+    ("bg-glow", "光晕", ((30, 27, 75), (67, 56, 202)), ["光晕", "聚焦", "高级"]),
+    ("bg-gold", "金线", ((12, 15, 23), (66, 48, 20)), ["金线", "奢华", "尊贵"]),
+    ("bg-mesh", "星链", ((6, 46, 53), (15, 118, 110)), ["星链", "节点", "网络"]),
+    ("bg-aurora", "极光", ((6, 48, 60), (13, 90, 92)), ["极光", "光带", "灵动"]),
+    ("bg-sand", "流沙", ((41, 37, 36), (87, 73, 60)), ["流沙", "暖沙", "质感"]),
+]
 
 # 头像：员工暂无照片时的默认头像（渐变圆角方块 + 白色人形剪影）
 AVATARS = [
@@ -128,6 +188,10 @@ AVATARS = [
     ("avatar-6", "默认头像 · 橙", ((249, 115, 22), (234, 88, 12))),
     ("avatar-7", "默认头像 · 玫", ((244, 63, 94), (190, 18, 60))),
     ("avatar-8", "默认头像 · 灰", ((100, 116, 139), (51, 65, 85))),
+    ("avatar-9", "默认头像 · 金", ((234, 179, 8), (180, 83, 9))),
+    ("avatar-10", "默认头像 · 深蓝", ((30, 64, 175), (30, 58, 138))),
+    ("avatar-11", "默认头像 · 青碧", ((13, 148, 136), (15, 118, 110))),
+    ("avatar-12", "默认头像 · 绛红", ((190, 24, 93), (157, 23, 77))),
 ]
 
 
@@ -372,11 +436,112 @@ def motif_hex(img):
     img.alpha_composite(ov)
 
 
+def motif_mountain(img):
+    """层叠山脉剪影（远山浅近山深，稳重商务）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    layers = [(0.52, 60, 0.62), (0.66, 90, 0.78), (0.80, 130, 1.0)]
+    random.seed(57)
+    for base_y, alpha, _ in layers:
+        pts = [(0, h)]
+        x = 0
+        peak = h * base_y
+        while x < w:
+            step = random.randint(90, 170)
+            ph = random.randint(40, 130)
+            pts += [(x + step / 2, peak - ph), (x + step, peak)]
+            x += step
+        pts += [(w, h)]
+        d.polygon(pts, fill=(255, 255, 255, alpha))
+    img.alpha_composite(ov)
+
+
+def motif_bokeh(img):
+    """柔和光斑（大小不一的半透明圆，梦幻高级）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(63)
+    for _ in range(26):
+        r = random.randint(26, 96)
+        x = random.randint(-40, w + 40)
+        y = random.randint(-40, int(h * 0.9))
+        a = random.randint(18, 70)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, a))
+        d.ellipse([x - r, y - r, x + r, y + r], outline=(255, 255, 255, a + 40), width=2)
+    img.alpha_composite(ov)
+
+
+def motif_gridline(img):
+    """细网格 + 高亮节点（科技理性）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    step = 72
+    for x in range(0, w + 1, step):
+        d.line([(x, 0), (x, h)], fill=(255, 255, 255, 34), width=1)
+    for y in range(0, h + 1, step):
+        d.line([(0, y), (w, y)], fill=(255, 255, 255, 34), width=1)
+    for cx, cy in ((w * 0.24, h * 0.30), (w * 0.68, h * 0.56), (w * 0.42, h * 0.80)):
+        r = 10
+        d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(255, 255, 255, 150))
+        d.ellipse([cx - 22, cy - 22, cx + 22, cy + 22],
+                  outline=(255, 255, 255, 90), width=2)
+    img.alpha_composite(ov)
+
+
+def motif_goldline(img):
+    """金色装饰线框（奢华尊贵，深底金字）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    gold = (212, 175, 55, 200)
+    m = 44
+    d.rectangle([m, m, w - m, h - m], outline=gold, width=3)
+    d.rectangle([m + 12, m + 12, w - m - 12, h - m - 12],
+                outline=(212, 175, 55, 90), width=1)
+    cx, cy = w / 2, h / 2
+    d.line([(cx - 90, cy), (cx + 90, cy)], fill=gold, width=3)
+    d.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=gold)
+    img.alpha_composite(ov)
+
+
+def motif_minimal(img):
+    """极简：一个大圆环 + 一根细线（大量留白）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy, r = w * 0.5, h * 0.44, min(w, h) * 0.30
+    d.ellipse([cx - r, cy - r, cx + r, cy + r],
+              outline=(255, 255, 255, 170), width=8)
+    d.line([(w * 0.18, h * 0.80), (w * 0.82, h * 0.80)],
+           fill=(255, 255, 255, 110), width=3)
+    img.alpha_composite(ov)
+
+
+def motif_night(img):
+    """夜幕楼宇：黑色楼体剪影 + 窗格灯火。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(71)
+    x = -20
+    while x < w + 20:
+        bw = random.randint(70, 130)
+        bh = random.randint(int(h * 0.28), int(h * 0.62))
+        top = h - bh
+        d.rectangle([x, top, x + bw, h], fill=(0, 0, 0, 120))
+        for wy in range(top + 16, h - 14, 26):
+            for wx in range(x + 12, x + bw - 10, 24):
+                if random.random() < 0.42:
+                    d.rectangle([wx, wy, wx + 10, wy + 12],
+                                fill=(255, 214, 130, random.randint(120, 220)))
+        x += bw + random.randint(10, 30)
+    img.alpha_composite(ov)
+
+
 COVER_MOTIFS = {
     "cover-skyline": motif_skyline, "cover-dots": motif_dots, "cover-beams": motif_beams,
     "cover-arcs": motif_arcs, "cover-blocks": motif_blocks, "cover-shield": motif_shield,
     "cover-motion": motif_motion, "cover-stars": motif_stars, "cover-waves": motif_waves,
-    "cover-hex": motif_hex,
+    "cover-hex": motif_hex, "cover-mountain": motif_mountain, "cover-bokeh": motif_bokeh,
+    "cover-gridline": motif_gridline, "cover-goldline": motif_goldline,
+    "cover-minimal": motif_minimal, "cover-night": motif_night,
 }
 
 
@@ -514,6 +679,95 @@ def mark_orbit(size):
     return lay
 
 
+def mark_diamond(size):
+    """菱钻：双层菱形 + 棱线。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, s = size / 2, size * 0.48, size * 0.30
+    pts = [(cx, cy - s), (cx + s * 0.72, cy), (cx, cy + s), (cx - s * 0.72, cy)]
+    d.line(pts + [pts[0]], fill=(255, 255, 255, 255),
+           width=int(size * 0.05), joint="curve")
+    d.line([(cx, cy - s), (cx, cy + s)], fill=(255, 255, 255, 160),
+           width=int(size * 0.03))
+    d.line([(cx - s * 0.72, cy), (cx + s * 0.72, cy)],
+           fill=(255, 255, 255, 160), width=int(size * 0.03))
+    return lay
+
+
+def mark_ringstar(size):
+    """星环：五角星 + 外圈细环。"""
+    import math
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, r = size / 2, size * 0.48, size * 0.26
+    pts = []
+    for i in range(10):
+        rr = r if i % 2 == 0 else r * 0.42
+        a = math.radians(-90 + i * 36)
+        pts.append((cx + rr * math.cos(a), cy + rr * math.sin(a)))
+    d.polygon(pts, fill=(255, 255, 255, 255))
+    d.ellipse([cx - size * 0.34, cy - size * 0.34, cx + size * 0.34, cy + size * 0.34],
+              outline=(255, 255, 255, 200), width=int(size * 0.035))
+    return lay
+
+
+def mark_peak(size):
+    """山峰：双峰 + 地平线。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    d.line([(size * 0.20, size * 0.76), (size * 0.42, size * 0.34),
+            (size * 0.58, size * 0.62), (size * 0.68, size * 0.48),
+            (size * 0.84, size * 0.76)],
+           fill=(255, 255, 255, 255), width=int(size * 0.05), joint="curve")
+    d.line([(size * 0.16, size * 0.82), (size * 0.86, size * 0.82)],
+           fill=(255, 255, 255, 255), width=int(size * 0.045))
+    return lay
+
+
+def mark_flow(size):
+    """流动：三条错位弧线。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    for i in range(3):
+        y = size * (0.34 + i * 0.16)
+        d.arc([size * 0.22, y - size * 0.10, size * 0.78, y + size * 0.10],
+              200, 340, fill=(255, 255, 255, 255), width=int(size * 0.05))
+    return lay
+
+
+def mark_link(size):
+    """链接：双环相扣。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    r = size * 0.20
+    d.ellipse([size * 0.20, size * 0.30, size * 0.20 + 2 * r, size * 0.30 + 2 * r],
+              outline=(255, 255, 255, 255), width=int(size * 0.055))
+    d.ellipse([size * 0.60 - 2 * r + 2 * r, size * 0.30,
+               size * 0.60 + 2 * r, size * 0.30 + 2 * r],
+              outline=(255, 255, 255, 255), width=int(size * 0.055))
+    return lay
+
+
+def mark_cube(size):
+    """立方：等距立方体线框。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, s = size / 2, size * 0.50, size * 0.26
+    top = [(cx, cy - s), (cx + s, cy - s * 0.5), (cx, cy), (cx - s, cy - s * 0.5)]
+    d.line(top + [top[0]], fill=(255, 255, 255, 255),
+           width=int(size * 0.045), joint="curve")
+    bot = [(cx, cy), (cx + s, cy + s * 0.5), (cx, cy + s), (cx - s, cy + s * 0.5)]
+    d.line(bot + [bot[0]], fill=(255, 255, 255, 255),
+           width=int(size * 0.045), joint="curve")
+    d.line([(cx, cy - s), (cx, cy)], fill=(255, 255, 255, 200),
+           width=int(size * 0.04))
+    d.line([(cx + s, cy - s * 0.5), (cx + s, cy + s * 0.5)],
+           fill=(255, 255, 255, 200), width=int(size * 0.04))
+    d.line([(cx - s, cy - s * 0.5), (cx - s, cy + s * 0.5)],
+           fill=(255, 255, 255, 200), width=int(size * 0.04))
+    return lay
+
+
 def mark_person(size):
     """白色人形剪影（头 + 肩），用于默认头像。"""
     lay = _mark_layer(size)
@@ -537,7 +791,9 @@ def make_avatar(item_id, name, colors):
 LOGO_MARKS = {
     "logo-building": mark_building, "logo-bolt": mark_bolt, "logo-gear": mark_gear,
     "logo-shield": mark_shield, "logo-hex": mark_hex, "logo-arrow": mark_arrow,
-    "logo-tower": mark_tower, "logo-orbit": mark_orbit,
+    "logo-tower": mark_tower, "logo-orbit": mark_orbit, "logo-diamond": mark_diamond,
+    "logo-ringstar": mark_ringstar, "logo-peak": mark_peak, "logo-flow": mark_flow,
+    "logo-link": mark_link, "logo-cube": mark_cube,
 }
 
 
@@ -551,6 +807,252 @@ def make_logo(item_id, name, colors):
     return {"id": item_id, "name": name, "category": "logo",
             "file": "logos/%s.png" % item_id, "thumb": "logos/%s.png" % item_id,
             "width": S, "height": S, "tags": [name, "LOGO", "标识"]}
+
+
+# ── 小程序首页背景图（750×1334 竖幅，深色高端商务风） ───────────────────
+def _radial_fade(size, cx, cy, radius, power=1.7, peak=255):
+    """平滑径向衰减图（L 模式）：(cx,cy) 处 peak，radius 处 0。
+    幂函数缓出保证边缘一阶导为 0（无圆形硬边）；低分辨率计算 + LANCZOS 放大，快且平滑。"""
+    w, h = size
+    sw = 128
+    sh = max(8, int(sw * h / w))
+    px = []
+    for y in range(sh):
+        dy = (y + 0.5) / sh * h - cy
+        for x in range(sw):
+            dx = (x + 0.5) / sw * w - cx
+            t = min(1.0, (dx * dx + dy * dy) ** 0.5 / radius)
+            px.append(int(peak * (1 - t) ** power))
+    small = Image.new("L", (sw, sh))
+    small.putdata(px)
+    return small.resize((w, h), Image.LANCZOS)
+
+
+def _radial_glow(size, center, radius, color=(255, 255, 255), max_alpha=90):
+    """径向光晕层：center 最亮，向边缘平滑消失（无硬边）。"""
+    w, h = size
+    a = _radial_fade(size, center[0], center[1], radius)
+    a = a.point(lambda v: int(v * max_alpha / 255))
+    glow = Image.new("RGBA", (w, h), color + (0,))
+    glow.putalpha(a)
+    return glow
+
+
+def _vignette(img, strength=64):
+    """四角暗角：中心亮、边缘暗，椭圆衰减 + 幂缓出，无环形接缝。"""
+    w, h = img.size
+    a = _radial_fade(img.size, w * 0.5, h * 0.5, max(w, h) * 0.80)
+    a = a.point(lambda v: int((255 - v) * strength / 255))
+    black = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    black.putalpha(a)
+    img.alpha_composite(black)
+
+
+def bg_stars(img):
+    """深空：上段星云光晕 + 随机星点。"""
+    w, h = img.size
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.14), w * 0.95,
+                                     (96, 165, 250), 66))
+    ov, d = overlay(img)
+    random.seed(101)
+    for _ in range(120):
+        x, y = random.randint(0, w), random.randint(0, int(h * 0.75))
+        r = random.choice([1, 1, 2, 2, 3])
+        d.ellipse([x - r, y - r, x + r, y + r],
+                  fill=(255, 255, 255, random.randint(70, 210)))
+    img.alpha_composite(ov)
+
+
+def bg_mountain(img):
+    """山峦：下段三层山脉剪影。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(103)
+    for base, alpha in ((0.66, 70), (0.76, 100), (0.86, 140)):
+        pts = [(0, h)]
+        x, peak = 0, h * base
+        while x < w:
+            step = random.randint(120, 220)
+            ph = random.randint(60, 200)
+            pts += [(x + step / 2, peak - ph), (x + step, peak)]
+            x += step
+        pts += [(w, h)]
+        d.polygon(pts, fill=(255, 255, 255, alpha))
+    img.alpha_composite(ov)
+
+
+def bg_city(img):
+    """城市夜景：底部楼宇剪影 + 暖色窗格灯火。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(107)
+    x = -30
+    while x < w + 30:
+        bw = random.randint(90, 170)
+        bh = random.randint(int(h * 0.20), int(h * 0.46))
+        top = h - bh
+        d.rectangle([x, top, x + bw, h], fill=(0, 0, 0, 130))
+        for wy in range(top + 18, h - 16, 30):
+            for wx in range(x + 14, x + bw - 12, 28):
+                if random.random() < 0.38:
+                    d.rectangle([wx, wy, wx + 12, wy + 14],
+                                fill=(255, 214, 130, random.randint(110, 220)))
+        x += bw + random.randint(12, 34)
+    img.alpha_composite(ov)
+
+
+def bg_bokeh(img):
+    """光斑：大幅面柔光圆斑。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(109)
+    for _ in range(22):
+        r = random.randint(40, 150)
+        x = random.randint(-60, w + 60)
+        y = random.randint(-40, int(h * 0.85))
+        a = random.randint(14, 52)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=(255, 255, 255, a))
+        d.ellipse([x - r, y - r, x + r, y + r],
+                  outline=(255, 255, 255, a + 26), width=3)
+    img.alpha_composite(ov)
+
+
+def bg_waves(img):
+    """涟漪：同心弧线自下而上展开。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy = w * 0.5, h * 1.02
+    for i, r in enumerate(range(140, 1150, 95)):
+        d.arc([cx - r, cy - r, cx + r, cy + r], 200, 340,
+              fill=(255, 255, 255, 46 + (i % 3) * 26), width=6)
+    img.alpha_composite(ov)
+
+
+def bg_grid(img):
+    """格线：下段透视网格 + 地平线。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    horizon = int(h * 0.58)
+    for i in range(-10, 11):
+        d.line([(w / 2 + i * 40, horizon), (w / 2 + i * 300, h)],
+               fill=(255, 255, 255, 40), width=2)
+    for j in range(1, 9):
+        y = horizon + (h - horizon) * (j / 9) ** 1.6
+        d.line([(0, y), (w, y)], fill=(255, 255, 255, 40), width=2)
+    d.line([(0, horizon), (w, horizon)], fill=(255, 255, 255, 110), width=2)
+    img.alpha_composite(ov)
+
+
+def bg_diagonal(img):
+    """斜纹：细密斜线条纹。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    gap, width = 46, 10
+    x = -h
+    while x < w + h:
+        d.line([(x, 0), (x + h, h)], fill=(255, 255, 255, 30), width=width)
+        d.line([(x + gap, 0), (x + gap + h, h)], fill=(255, 255, 255, 14), width=width)
+        x += gap * 2
+    img.alpha_composite(ov)
+
+
+def bg_glow(img):
+    """光晕：中央强径向光 + 底部辅光。"""
+    w, h = img.size
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.32), w * 1.0,
+                                     (165, 180, 252), 96))
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.94), w * 0.8,
+                                     (99, 102, 241), 52))
+
+
+def bg_gold(img):
+    """金线：金色细框 + 竖向金线（奢华）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    gold = (212, 175, 55, 210)
+    m = 40
+    d.rectangle([m, m, w - m, h - m], outline=gold, width=3)
+    d.rectangle([m + 14, m + 14, w - m - 14, h - m - 14],
+                outline=(212, 175, 55, 80), width=1)
+    for x in (w * 0.5,):
+        d.line([(x, m + 40), (x, h - m - 40)], fill=(212, 175, 55, 60), width=2)
+    d.ellipse([w * 0.5 - 10, h * 0.30 - 10, w * 0.5 + 10, h * 0.30 + 10], fill=gold)
+    img.alpha_composite(ov)
+
+
+def bg_mesh(img):
+    """星链：节点 + 邻近连线（网络感）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(127)
+    nodes = [(random.randint(30, w - 30), random.randint(60, int(h * 0.8)))
+             for _ in range(26)]
+    for i, (x1, y1) in enumerate(nodes):
+        for x2, y2 in nodes[i + 1:]:
+            dist2 = (x1 - x2) ** 2 + (y1 - y2) ** 2
+            if dist2 < 260 ** 2:
+                d.line([(x1, y1), (x2, y2)], fill=(255, 255, 255, 54), width=2)
+    for x, y in nodes:
+        r = random.choice([4, 5, 6])
+        d.ellipse([x - r, y - r, x + r, y + r],
+                  fill=(255, 255, 255, random.randint(120, 220)))
+    img.alpha_composite(ov)
+
+
+def bg_aurora(img):
+    """极光：两条斜向柔光带。"""
+    w, h = img.size
+    for cx, cy, color, alpha in (
+        (w * 0.30, h * 0.28, (94, 234, 212), 78),
+        (w * 0.72, h * 0.50, (56, 189, 248), 62),
+    ):
+        band = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        bd = ImageDraw.Draw(band)
+        bd.line([(cx - w * 0.5, cy + h * 0.24), (cx + w * 0.5, cy - h * 0.24)],
+                fill=color + (alpha,), width=int(h * 0.20))
+        band = band.filter(ImageFilter.GaussianBlur(80))
+        img.alpha_composite(band)
+
+
+def bg_sand(img):
+    """流沙：层叠沙丘曲线。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    for base, alpha in ((0.62, 46), (0.74, 70), (0.88, 100)):
+        pts = [(0, h)]
+        x = 0
+        while x <= w:
+            t = x / w
+            y = h * base - math.sin(t * math.pi * 1.6 + base * 9) * h * 0.05
+            pts.append((x, y))
+            x += 30
+        pts += [(w, h)]
+        d.polygon(pts, fill=(255, 255, 255, alpha))
+    img.alpha_composite(ov)
+
+
+BG_MOTIFS = {
+    "bg-deepspace": bg_stars, "bg-mountain": bg_mountain, "bg-citynight": bg_city,
+    "bg-bokeh": bg_bokeh, "bg-waves": bg_waves, "bg-grid": bg_grid,
+    "bg-diagonal": bg_diagonal, "bg-glow": bg_glow, "bg-gold": bg_gold,
+    "bg-mesh": bg_mesh, "bg-aurora": bg_aurora, "bg-sand": bg_sand,
+}
+
+
+def make_background(item_id, name, colors, tags):
+    """首页背景图：竖幅渐变 + motif + 暗角；JPEG 原图 + 缩略图（选择器预览）。"""
+    img = vgrad((BG_W, BG_H), *colors).convert("RGBA")
+    BG_MOTIFS[item_id](img)
+    _vignette(img)
+    path = os.path.join(OUT, "backgrounds", item_id + ".jpg")
+    img.convert("RGB").save(path, "JPEG", quality=87)
+    thumb = img.convert("RGB").resize((BG_THUMB_W, BG_THUMB_H), Image.LANCZOS)
+    tpath = os.path.join(OUT, "thumbs", "backgrounds", item_id + ".jpg")
+    thumb.save(tpath, "JPEG", quality=80)
+    return {"id": item_id, "name": name, "category": "background",
+            "file": "backgrounds/%s.jpg" % item_id,
+            "thumb": "thumbs/backgrounds/%s.jpg" % item_id,
+            "width": BG_W, "height": BG_H, "tags": tags + ["首页背景", "全屏"]}
 
 
 def fetch_lucide_license():
@@ -570,8 +1072,8 @@ CREDITS = """# 常用开源素材库 · 许可与来源
 - **图标（icons/）**：取自 [Lucide](https://lucide.dev) v%s（ISC License），
   经 rsvg-convert 光栅化并合成到渐变圆角方块。ISC 许可全文见
   `../library-src/LICENSE-Lucide.txt`。
-- **封面（covers/）、LOGO（logos/）与头像（avatars/）**：由生成脚本程序绘制
-  （渐变 + 几何图形/人形剪影），无第三方素材，可自由使用。
+- **封面（covers/）、背景（backgrounds/）、LOGO（logos/）与头像（avatars/）**：
+  由生成脚本程序绘制（渐变 + 几何图形/人形剪影），无第三方素材，可自由使用。
 
 重新生成：`python3 gen_library.py`
 （依赖 Pillow 与 rsvg-convert；Lucide SVG 已留存 library-src/icons/，离线可再生成）。
@@ -579,7 +1081,8 @@ CREDITS = """# 常用开源素材库 · 许可与来源
 
 
 def main():
-    for sub in ("icons", "covers", "logos", "avatars", "thumbs/covers"):
+    for sub in ("icons", "covers", "logos", "avatars", "backgrounds",
+                "thumbs/covers", "thumbs/backgrounds"):
         os.makedirs(os.path.join(OUT, sub), exist_ok=True)
     fetch_lucide_license()
 
@@ -596,14 +1099,18 @@ def main():
     print("avatars: %d" % len(AVATARS))
     for aid, name, colors in AVATARS:
         items.append(make_avatar(aid, name, colors))
+    print("backgrounds: %d" % len(BACKGROUNDS))
+    for bid, name, colors, tags in BACKGROUNDS:
+        items.append(make_background(bid, name, colors, tags))
 
     manifest = {
-        "version": 1,
+        "version": 2,
         "categories": [
             {"key": "icon", "name": "图标"},
             {"key": "cover", "name": "封面"},
             {"key": "logo", "name": "LOGO"},
             {"key": "avatar", "name": "头像"},
+            {"key": "background", "name": "首页背景"},
         ],
         "items": items,
     }

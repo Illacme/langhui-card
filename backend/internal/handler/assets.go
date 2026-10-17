@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 
 	"langhui/internal/assets"
@@ -48,17 +49,34 @@ func assetFileHandler(c *gin.Context) {
 	c.Data(http.StatusOK, assets.ContentType(rel), data)
 }
 
-// libraryListHandler 返回素材清单（分类 + 全部素材项）。
+// libraryListHandler 返回素材清单（分页 + 分类/关键字过滤，管理员登录态）。
+//
+// 查询参数：page（缺省 1）/ size（缺省 24，上限 60）/ type（分类，空=全部）/
+// keyword（名称或标签匹配）。素材量级已达百级且会继续扩充，分页避免一次性
+// 返回全部条目；筛选放在服务端，否则「客户端过滤 + 服务端分页」会互相矛盾
+// （翻页时看得见的只是当前页里的匹配项）。
 func libraryListHandler(c *gin.Context) {
 	m, err := assets.Load()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "素材库加载失败"})
 		return
 	}
+	page, _ := strconv.Atoi(c.Query("page"))
+	size, _ := strconv.Atoi(c.Query("size")) // 解析失败→0，由 List 回落默认值
+	res := assets.List(assets.Query{
+		Page:    page,
+		Size:    size,
+		Type:    c.Query("type"),
+		Keyword: c.Query("keyword"),
+	})
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
 		"version":    m.Version,
 		"categories": m.Categories,
-		"items":      m.Items,
+		"items":      res.Items,
+		"total":      res.Total,
+		"page":       res.Page,
+		"size":       res.Size,
+		"pages":      res.Pages,
 	}})
 }
 

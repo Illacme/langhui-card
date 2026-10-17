@@ -111,11 +111,17 @@ type BizService struct {
 	DeletedAt gorm.DeletedAt `gorm:"column:deleted_at" json:"-"`
 }
 
-// HomeLayout 首页板块顺序（JSON 数组，按租户隔离，company_id 唯一）
+// HomeLayout 首页板块顺序 + 首页背景（JSON 数组，按租户隔离，company_id 唯一）
 type HomeLayout struct {
 	ID        int64  `gorm:"primaryKey;column:id" json:"id"`
 	CompanyID int64  `gorm:"column:company_id;uniqueIndex" json:"companyId"`
 	Order     string `gorm:"column:order_col;type:json" json:"order"`
+	// BgImage 小程序首页全屏背景图 URL（可取自内置素材库「首页背景」分类）。
+	// 空串表示不设置背景——保持原有灰底布局（背景是可选增强，不是必填项）。
+	BgImage string `gorm:"column:bg_image" json:"bgImage"`
+	// BgMask 背景遮罩浓度 0~100：背景图上叠加的黑色蒙层不透明度，
+	// 用于压暗花哨的背景、突出白色内容卡片与文字（0=不压暗，默认）。
+	BgMask int `gorm:"column:bg_mask;default:0" json:"bgMask"`
 }
 
 // StatEvent 埋点原始事件

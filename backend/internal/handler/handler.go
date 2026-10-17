@@ -161,17 +161,28 @@ func New(db *gorm.DB) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
 
-	// 首页布局顺序（按租户）
+	// 首页布局：板块顺序 + 首页背景（按租户）
+	//
+	// 背景图是可选增强：bg_image 为空即保持原有灰底布局，小程序端据此决定是否
+	// 铺背景层与遮罩。bg_mask（0~100）为黑色蒙层浓度，用于压暗花哨背景、
+	// 保证白色内容卡片与文字的可读性。
 	r.GET("/api/home-layout", func(c *gin.Context) {
 		cid, ok := publicCompanyID(c, db)
 		if !ok {
 			return
 		}
 		order := []string{"achievement", "service"}
-		if l, err := repository.GetHomeLayout(db, cid); err == nil && l.Order != "" {
-			_ = json.Unmarshal([]byte(l.Order), &order)
+		var bgImage string
+		var bgMask int
+		if l, err := repository.GetHomeLayout(db, cid); err == nil {
+			if l.Order != "" {
+				_ = json.Unmarshal([]byte(l.Order), &order)
+			}
+			bgImage, bgMask = l.BgImage, l.BgMask
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "order": order})
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0, "order": order, "bgImage": bgImage, "bgMask": bgMask,
+		})
 	})
 
 	// 埋点上报

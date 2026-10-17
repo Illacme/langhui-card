@@ -46,6 +46,7 @@ backend/
 ├── migrations/0010_wechat_identity.sql     # 微信身份：openid + 昵称
 ├── migrations/0011_company_tenant.sql      # 多租户第一期：company 租户表 + 各表 company_id + admin 两级
 ├── migrations/0012_company_admin_short_name.sql  # 企业简称（company.short_name）：侧边栏品牌名 + 公司信息简称初始值
+├── migrations/0013_home_layout_background.sql  # 首页背景图（home_layout.bg_image / bg_mask）
 ├── Dockerfile                   # 多阶段构建，单二进制镜像
 └── go.mod
 ```
@@ -155,11 +156,12 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ## 开源素材库（内置，随二进制分发）
 
-后台所有需要图片的位置（分类/服务图标、项目封面、公司简介封面、公司信息 LOGO、员工头像）都支持从**内置开源素材库**直接选用，无需再去各处找图、抠图、调尺寸。
+后台所有需要图片的位置（分类/服务图标、项目封面、公司简介封面、公司信息 LOGO、员工头像、**小程序首页背景**）都支持从**内置开源素材库**直接选用，无需再去各处找图、抠图、调尺寸。
 
-- **资产构成**（`internal/assets/library/`，共 66 项、约 1.1MB，随 `//go:embed` 编译进二进制，Docker 单文件部署零额外挂载）：
-  - 图标 40 个（18 分类 + 16 服务 + 6 通用）：Lucide（ISC 许可证）SVG 经 `rsvg-convert` 光栅化为白色图形，合成渐变圆角方块，与小程序 `.cat-placeholder`（120rpx 蓝砖白字）观感一致；
-  - 封面 10 张（960×504 JPEG + 480×252 缩略图）、LOGO 8 个、头像 8 个：PIL 程序化生成的渐变 + 几何图形，商用无授权风险。
+- **资产构成**（`internal/assets/library/`，共 **118 项**、约 2.4MB，随 `//go:embed` 编译进二进制，Docker 单文件部署零额外挂载）：
+  - 图标 64 个（26 业绩分类 + 24 业务服务 + 14 通用）：Lucide（ISC 许可证）SVG 经 `rsvg-convert` 光栅化为白色图形，合成渐变圆角方块，与小程序 `.cat-placeholder`（120rpx 蓝砖白字）观感一致；
+  - 封面 16 张（960×504 JPEG + 480×252 缩略图）、LOGO 14 个、头像 12 个：PIL 程序化生成的渐变 + 几何图形，商用无授权风险。
+  - **首页背景 12 张（750×1334 竖幅 JPEG + 300×534 缩略图）**：深色高端商务渐变 + 几何 motif + 四角暗角，白卡片浮于其上形成层次，供小程序首页背景直接选用。
   - `manifest.json` 描述分类与素材项；`CREDITS.md` 记录图标来源与许可证。
 - **采用（adopt）模式**：`POST /api/admin/assets/adopt` 把内嵌素材经 `Uploader.SaveBytes` **复制进当前上传存储**（local → `uploads/library/<id>.<ext>`），返回与普通上传完全同构的 URL——下游（小程序 `<image>` / CDN）零感知，不引入新的静态资源域。
 - **预览图公开化**：`GET /api/assets/file/*path` 无鉴权 + `Cache-Control: immutable` 长缓存（通用素材，无租户数据；`<img>` 标签无法带 Authorization 头，故公开）。
@@ -169,8 +171,12 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
 | GET  | /api/assets/file/*path | 否 | 素材预览图（PNG/JPEG），immutable 长缓存 |
-| GET  | /api/admin/assets/library | admin | 素材清单：分类（icon/cover/logo/avatar）+ 每项的 id / 名称 / 文件 / 标签 |
-| POST | /api/admin/assets/adopt | admin | 采用素材：body `{"id":"icon-house"}` → 复制进上传存储，返回 `{url, item}` |
+| GET  | /api/admin/assets/library | admin | 素材清单（**分页**）：`page`（缺省 1）/ `size`（缺省 24，上限 60）/ `type`（分类，空=全部）/ `keyword`（名称或标签匹配）→ `{items,total,page,size,pages,categories}` |
+| POST | /api/admin/assets/adopt | admin | 采用素材：body `{"id":"bg-deepspace"}` → 复制进上传存储，返回 `{url, item}` |
+
+> 分页与筛选都在服务端：素材已达百级且会继续扩充，一次返回全量不合适；
+> 且「客户端过滤 + 服务端分页」语义矛盾（翻页只看得见当前页内的匹配项），
+> 故 `type` / `keyword` 由 `assets.List` 在服务端过滤后再分页。
 
 ## 已实现接口
 
@@ -191,7 +197,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/projects/:id?companyId= | 项目详情（解析 album JSON；含 categoryName 与 updatedAt） |
 | GET  | /api/services?companyId= | 业务服务列表 |
 | GET  | /api/services/:id?companyId= | 业务服务详情（含 updatedAt） |
-| GET  | /api/home-layout?companyId= | 首页板块顺序 |
+| GET  | /api/home-layout?companyId= | 首页板块顺序（根级 `order`）+ 首页背景（根级 `bgImage` / `bgMask`；`bgImage` 为空串即不设背景） |
 | GET  | /api/company?companyId= | 企业公开信息（名称/简称/LOGO/状态）：小程序申请页展示申请目标、企业独立版自检配置用 |
 | POST | /api/stat/track | 埋点上报（staffId + eventType） |
 
@@ -242,8 +248,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/admin/services | 新增业务服务 |
 | PUT  | /api/admin/services/:id | 编辑业务服务 |
 | DELETE | /api/admin/services/:id | 删除业务服务 |
-| GET  | /api/admin/home-layout?companyId= | 首页板块顺序 |
-| PUT  | /api/admin/home-layout | 更新板块顺序 |
+| GET  | /api/admin/home-layout?companyId= | 首页布局：板块顺序 + **背景图** `bgImage` + 遮罩浓度 `bgMask`（0~100） |
+| PUT  | /api/admin/home-layout | 更新板块顺序 + 背景（`bgImage`/`bgMask` 用指针语义：未提供=保持原值，传空串=清除背景；`bgMask` 服务端钳制 0~100） |
 | POST | /api/admin/upload | 文件上传（图片/mp4），返回可访问 URL（填回封面/相册/头像/LOGO） |
 | POST | /api/employee/upload | 员工上传头像（员工鉴权），返回可访问 URL |
 | GET  | /api/admin/upload/presign | 直传预签名：返回 `putUrl`（直接 PUT 到对象存储）+ 最终 `url`（仅 minio/oss；local 返回 code=1 由前端回退普通上传） |
@@ -309,7 +315,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   - `TestAPIFlow`（默认）：SQLite 跑完整流程，按「公开接口 → 超管登录 → 审核流 → 员工管理 → 强校验 → 服务 → 内容 → 上传存储 → 改密」分段执行。
   - `TestStorageEnhanceSuccess`：用 fake `Presigner`/`Signer`/`CDNRefresher` 覆盖存储增强**成功分支**（预签名返回 `putUrl/url/key`、私有签名返回 `signed` 映射、CDN 刷新被调用）。
   - `TestTokenRefresh` / `TestCookieAuth` / `TestSingleDeviceRevocation`：分别覆盖 refresh 换发与账号级吊销、PC 端 httpOnly Cookie 鉴权与登出、单设备精确吊销（会话黑名单）。
-  - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、清单 4 分类 ≥60 项、采用后落盘（`/uploads/library/...` 静态托管可取）、预览图公开 + immutable、封面缩略图 JPEG、未知素材/空参/路径穿越 404。
+  - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、**分页（翻页不重复 / size 与上限 / 非法页码回落与末页夹取 / 分类与关键字过滤 / 无命中空结果）**、采用落盘（含首页背景 JPEG）、预览图公开 + immutable、封面与背景缩略图、未知素材/空参/路径穿越 404。
   - `TestAPIFlowMySQL`（生产契约 parity）：设置 `TEST_MYSQL_DSN` 后，连真实 MySQL、应用 `migrations/*.sql`，再跑与 SQLite **完全相同的断言**，用以校验 AutoMigrate 与生产建表 SQL 行为一致。
 - 运行：
   ```bash
