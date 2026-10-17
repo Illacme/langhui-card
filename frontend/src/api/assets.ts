@@ -13,23 +13,44 @@ export interface LibraryCategory {
 export interface LibraryItem {
   id: string
   name: string
-  category: string // icon / cover / logo
+  category: string // icon / cover / logo / avatar / background
   file: string
-  thumb: string // 预览图相对路径（封面为缩略版）
+  thumb: string // 预览图相对路径（封面/背景为缩略版）
   width: number
   height: number
   tags: string[]
 }
 
+// 分页查询条件（全部可选，服务端有安全默认值）
+export interface LibraryQuery {
+  page?: number // 1-based，缺省 1
+  size?: number // 每页条数，缺省 24，上限 60
+  type?: string // 分类过滤：空/'all' = 全部
+  keyword?: string // 名称或标签匹配
+}
+
+// 分页结果：items 为本页条目，total 为过滤后的总条数
 export interface LibraryData {
   version: number
   categories: LibraryCategory[]
   items: LibraryItem[]
+  total: number
+  page: number
+  size: number
+  pages: number
 }
 
-// 素材清单（管理员登录态）
-export function listLibrary() {
-  return http.get<{ code: number; data?: LibraryData }>('/admin/assets/library')
+// 素材清单（分页，管理员登录态）
+export function listLibrary(params: LibraryQuery = {}) {
+  const q: Record<string, string | number> = {}
+  if (params.page) q.page = params.page
+  if (params.size) q.size = params.size
+  // 前端 tab 用 'all' 表示全部，服务端按空值处理
+  if (params.type && params.type !== 'all') q.type = params.type
+  if (params.keyword) q.keyword = params.keyword
+  return http.get<{ code: number; data?: LibraryData }>('/admin/assets/library', {
+    params: q,
+  })
 }
 
 // 采用素材：返回可直接填入表单的 URL

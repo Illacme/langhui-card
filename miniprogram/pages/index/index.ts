@@ -11,6 +11,11 @@ Page({
     featured: [],
     services: [],
     homeOrder: ['achievement', 'service'],
+    // 首页背景（商业化美化包装，可选）：bgImage 为空即保持灰底布局。
+    // bgMask 为遮罩浓度 0~100，转成 0~1 的黑色蒙层透明度，压暗背景突出白卡片。
+    bgImage: '',
+    bgMask: 0,
+    bgMaskAlpha: 0,
     disabled: false,
     notFound: false,
     loading: true,
@@ -148,6 +153,10 @@ Page({
         featured: ach.featured || [],
         services: svc.data || [],
         homeOrder: layout.order && layout.order.length ? layout.order : ['achievement', 'service'],
+        // 首页背景：后端在响应根级下发（与 order 同级），缺省即不设背景
+        bgImage: layout.bgImage || '',
+        bgMask: layout.bgMask || 0,
+        bgMaskAlpha: (layout.bgMask || 0) / 100,
         disabled: false,
         notFound: false,
         loading: false,

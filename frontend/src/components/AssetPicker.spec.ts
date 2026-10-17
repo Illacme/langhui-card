@@ -34,6 +34,7 @@ const ElDialog = defineComponent({
 const ElRadioGroup = defineComponent({
   name: 'ElRadioGroup',
   props: ['modelValue'],
+  emits: ['update:modelValue', 'change'],
   template: `<div class="el-radio-group"><slot /></div>`,
 })
 const ElRadioButton = defineComponent({
@@ -57,6 +58,16 @@ const ElEmpty = defineComponent({
   props: ['description', 'imageSize'],
   template: `<div class="el-empty" />`,
 })
+// 分页器：只关心 current-change 事件，桩成上一页/下一页两个按钮
+const ElPagination = defineComponent({
+  name: 'ElPagination',
+  props: ['layout', 'currentPage', 'pageSize', 'total', 'pagerCount'],
+  emits: ['current-change'],
+  template: `<div class="el-pagination">
+    <button class="pg-prev" @click="$emit('current-change', currentPage - 1)">上一页</button>
+    <button class="pg-next" @click="$emit('current-change', currentPage + 1)">下一页</button>
+  </div>`,
+})
 
 const mountOpts = {
   global: {
@@ -67,56 +78,109 @@ const mountOpts = {
       'el-input': ElInput,
       'el-button': ElButton,
       'el-empty': ElEmpty,
+      'el-pagination': ElPagination,
     },
     directives: { loading: {} },
   },
 }
 
+function item(id: string, name: string, category: string, tags: string[] = []) {
+  return {
+    id,
+    name,
+    category,
+    file: `${category}s/${id}.png`,
+    thumb: `${category}s/${id}.png`,
+    width: 256,
+    height: 256,
+    tags,
+  }
+}
+
+// 30 项（26 图标 + 封面/LOGO/头像/背景各若干）→ size=24 时共 2 页，可测翻页
 const LIB_ITEMS = [
-  { id: 'icon-house', name: '居住住宅', category: 'icon', file: 'icons/icon-house.png', thumb: 'icons/icon-house.png', width: 256, height: 256, tags: ['住宅', 'home'] },
-  { id: 'icon-wrench', name: '维修服务', category: 'icon', file: 'icons/icon-wrench.png', thumb: 'icons/icon-wrench.png', width: 256, height: 256, tags: ['维修'] },
-  { id: 'cover-skyline', name: '天际线', category: 'cover', file: 'covers/cover-skyline.jpg', thumb: 'thumbs/covers/cover-skyline.jpg', width: 960, height: 504, tags: ['封面'] },
-  { id: 'logo-building', name: '建筑', category: 'logo', file: 'logos/logo-building.png', thumb: 'logos/logo-building.png', width: 512, height: 512, tags: ['LOGO'] },
+  ...Array.from({ length: 26 }, (_, i) =>
+    item(`icon-${i + 1}`, `图标${i + 1}`, 'icon', ['图标'])
+  ),
+  item('cover-skyline', '天际线', 'cover', ['封面']),
+  item('logo-building', '建筑', 'logo', ['LOGO']),
+  item('bg-deepspace', '深空', 'background', ['首页背景']),
+  item('bg-glow', '光晕', 'background', ['首页背景']),
 ]
 
-function mockList(items = LIB_ITEMS) {
-  listLibrary.mockResolvedValue({
+const CATEGORIES = [
+  { key: 'icon', name: '图标' },
+  { key: 'cover', name: '封面' },
+  { key: 'logo', name: 'LOGO' },
+  { key: 'avatar', name: '头像' },
+  { key: 'background', name: '首页背景' },
+]
+
+// 模拟服务端：按 type / keyword 过滤后分页（与 backend assets.List 行为一致）
+function fakeList(params: Record<string, any> = {}) {
+  const page = Number(params?.page) || 1
+  const size = Number(params?.size) || 24
+  const type = params?.type && params.type !== 'all' ? params.type : ''
+  const kw = String(params?.keyword || '').trim().toLowerCase()
+  let matched = LIB_ITEMS.filter((it) => {
+    if (type && it.category !== type) return false
+    if (kw) {
+      const hay = [it.name, ...it.tags].join(' ').toLowerCase()
+      if (!hay.includes(kw)) return false
+    }
+    return true
+  })
+  const total = matched.length
+  const pages = Math.max(1, Math.ceil(total / size))
+  const start = (page - 1) * size
+  return Promise.resolve({
     code: 0,
     data: {
-      version: 1,
-      categories: [
-        { key: 'icon', name: '图标' },
-        { key: 'cover', name: '封面' },
-        { key: 'logo', name: 'LOGO' },
-      ],
-      items,
+      version: 2,
+      categories: CATEGORIES,
+      items: matched.slice(start, start + size),
+      total,
+      page,
+      size,
+      pages,
     },
   })
 }
 
 describe('AssetPicker', () => {
   beforeEach(() => {
-    mockList()
-    adoptAsset.mockResolvedValue({ code: 0, data: { url: 'http://cdn/uploads/library/icon-house.png' } })
+    mocks.listLibrary.mockReset()
+    mocks.adoptAsset.mockReset()
+    mocks.listLibrary.mockImplementation(fakeList as any)
+    mocks.adoptAsset.mockResolvedValue({
+      code: 0,
+      data: { url: 'http://cdn/uploads/library/icon-1.png' },
+    })
   })
 
-  it('打开时拉取清单并渲染素材卡片', async () => {
+  it('打开时拉取第一页并渲染素材卡片（页码与总数回填）', async () => {
     const w = mount(AssetPicker, { props: { modelValue: true }, ...mountOpts })
-    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalledTimes(1))
-    await nextTick()
-    await nextTick()
-    expect(w.findAll('.asset-card')).toHaveLength(4)
-    expect(w.text()).toContain('居住住宅')
-    expect(w.text()).toContain('天际线')
-  })
-
-  it('defaultCategory 定位到对应分类（只渲染该分类素材）', async () => {
-    const w = mount(AssetPicker, { props: { modelValue: true, defaultCategory: 'cover' }, ...mountOpts })
     await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
     await nextTick()
     await nextTick()
-    expect(w.findAll('.asset-card')).toHaveLength(1)
-    expect(w.text()).toContain('天际线')
+    // 首页按 size=24 截断，footer 显示总数 30
+    expect(w.findAll('.asset-card')).toHaveLength(24)
+    expect(w.text()).toContain('共 30 项')
+    expect(listLibrary).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }))
+  })
+
+  it('defaultCategory 定位到对应分类（请求带 type，渲染该分类素材）', async () => {
+    const w = mount(AssetPicker, {
+      props: { modelValue: true, defaultCategory: 'background' },
+      ...mountOpts,
+    })
+    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
+    await nextTick()
+    await nextTick()
+    expect(listLibrary).toHaveBeenCalledWith(expect.objectContaining({ type: 'background' }))
+    expect(w.findAll('.asset-card')).toHaveLength(2)
+    expect(w.text()).toContain('深空')
+    expect(w.text()).toContain('光晕')
   })
 
   it('单选：点卡片即采用并回传 URL、关闭弹窗', async () => {
@@ -125,11 +189,8 @@ describe('AssetPicker', () => {
     await nextTick()
     await nextTick()
     await w.findAll('.asset-card')[0].trigger('click')
-    await vi.waitFor(() => expect(adoptAsset).toHaveBeenCalledWith('icon-house'))
-    expect(w.emitted('picked')).toBeTruthy()
-    expect(w.emitted('picked')![0]).toEqual(['http://cdn/uploads/library/icon-house.png'])
-    // 采用后自动关闭
-    expect(w.emitted('update:modelValue')).toBeTruthy()
+    await vi.waitFor(() => expect(adoptAsset).toHaveBeenCalledWith('icon-1'))
+    expect(w.emitted('picked')![0]).toEqual(['http://cdn/uploads/library/icon-1.png'])
     expect(w.emitted('update:modelValue')![0]).toEqual([false])
   })
 
@@ -144,21 +205,22 @@ describe('AssetPicker', () => {
     await w.findAll('.asset-card')[0].trigger('click')
     await w.findAll('.asset-card')[1].trigger('click')
     await nextTick()
-    // 两张卡进入选中态（含角标），未触发采用
     expect(w.findAll('.asset-card.selected')).toHaveLength(2)
     expect(adoptAsset).not.toHaveBeenCalled()
-    // footer 按钮批量采用
     const addBtn = w.findAll('.el-button').find((b) => b.text().includes('添加所选'))
     expect(addBtn).toBeTruthy()
     await addBtn!.trigger('click')
     await vi.waitFor(() => expect(adoptAsset).toHaveBeenCalledTimes(2))
-    expect(adoptAsset).toHaveBeenCalledWith('icon-house')
-    expect(adoptAsset).toHaveBeenCalledWith('icon-wrench')
+    expect(adoptAsset).toHaveBeenCalledWith('icon-1')
+    expect(adoptAsset).toHaveBeenCalledWith('icon-2')
     expect(w.emitted('picked')![0]).toEqual([['http://cdn/a.png', 'http://cdn/b.png']])
   })
 
   it('多选超限：第 limit+1 次点选被拦截并提示', async () => {
-    const w = mount(AssetPicker, { props: { modelValue: true, multiple: true, limit: 1 }, ...mountOpts })
+    const w = mount(AssetPicker, {
+      props: { modelValue: true, multiple: true, limit: 1 },
+      ...mountOpts,
+    })
     await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
     await nextTick()
     await nextTick()
@@ -169,20 +231,38 @@ describe('AssetPicker', () => {
     expect(ElMessage.warning).toHaveBeenCalledWith('最多选择 1 个')
   })
 
-  it('搜索关键字按名称/标签过滤', async () => {
+  it('翻页：触发分页器后带新页码重新请求', async () => {
     const w = mount(AssetPicker, { props: { modelValue: true }, ...mountOpts })
     await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
     await nextTick()
     await nextTick()
-    expect(w.findAll('.asset-card')).toHaveLength(4)
-    await w.find('.el-input').setValue('维修')
+    await w.find('.pg-next').trigger('click')
+    await vi.waitFor(() =>
+      expect(listLibrary).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }))
+    )
+    await nextTick()
+    await nextTick()
+    // 第二页只剩 6 项（30 - 24）
+    expect(w.findAll('.asset-card')).toHaveLength(6)
+  })
+
+  it('搜索关键字（防抖）走服务端过滤：请求带 keyword 并回填结果', async () => {
+    const w = mount(AssetPicker, { props: { modelValue: true }, ...mountOpts })
+    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
+    await nextTick()
+    await nextTick()
+    await w.find('.el-input').setValue('深空')
+    // 300ms 防抖：等待期间不应立即请求，防抖后再断言
+    await vi.waitFor(
+      () =>
+        expect(listLibrary).toHaveBeenCalledWith(
+          expect.objectContaining({ keyword: '深空', page: 1 })
+        ),
+      { timeout: 2000 }
+    )
+    await nextTick()
     await nextTick()
     expect(w.findAll('.asset-card')).toHaveLength(1)
-    expect(w.text()).toContain('维修服务')
-    // 标签也可命中（home 是 icon-house 的标签）
-    await w.find('.el-input').setValue('home')
-    await nextTick()
-    expect(w.findAll('.asset-card')).toHaveLength(1)
-    expect(w.text()).toContain('居住住宅')
+    expect(w.text()).toContain('深空')
   })
 })

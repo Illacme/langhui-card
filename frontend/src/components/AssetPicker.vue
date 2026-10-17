@@ -1,6 +1,7 @@
 <template>
   <!-- 常用素材库选择器：点一下即采用并填入（单选），或多选后批量添加。
-       素材由后端内嵌（Lucide 图标 + 通用封面/LOGO），采用后与普通上传同构。 -->
+       素材由后端内嵌（Lucide 图标 + 通用封面/LOGO/头像/首页背景），采用后与普通上传同构。
+       列表走服务端分页（page/size/type/keyword），素材扩充到百级也不会一次拉全量。 -->
   <el-dialog
     v-model="visible"
     title="素材库"
@@ -11,7 +12,7 @@
   >
     <div class="asset-picker">
       <div class="picker-bar">
-        <el-radio-group v-model="tab" size="default">
+        <el-radio-group v-model="tab" size="default" @change="onTabChange">
           <el-radio-button label="all">全部</el-radio-button>
           <el-radio-button v-for="c in categories" :key="c.key" :label="c.key">{{ c.name }}</el-radio-button>
         </el-radio-group>
@@ -21,15 +22,17 @@
           :prefix-icon="Search"
           clearable
           class="picker-search"
+          @input="onKeywordInput"
+          @clear="onKeywordInput"
         />
       </div>
 
       <div v-loading="loading" class="picker-grid">
         <div
-          v-for="it in filteredItems"
+          v-for="it in items"
           :key="it.id"
           class="asset-card"
-          :class="{ selected: isSelected(it.id) }"
+          :class="[it.category, { selected: isSelected(it.id) }]"
           @click="onCardClick(it)"
         >
           <img class="asset-img" :src="libraryFileUrl(it.thumb)" :alt="it.name" loading="lazy" />
@@ -40,11 +43,22 @@
           <div v-else-if="isSelected(it.id)" class="asset-check"><el-icon><Check /></el-icon></div>
         </div>
       </div>
-      <el-empty v-if="!loading && !filteredItems.length" description="没有匹配的素材" :image-size="60" />
+      <el-empty v-if="!loading && !items.length" description="没有匹配的素材" :image-size="60" />
+
+      <div v-if="pages > 1" class="picker-pager">
+        <el-pagination
+          layout="prev, pager, next"
+          :current-page="page"
+          :page-size="size"
+          :total="total"
+          :pager-count="7"
+          @current-change="onPageChange"
+        />
+      </div>
     </div>
 
     <template #footer>
-      <span class="picker-count">共 {{ filteredItems.length }} 项{{ multiple ? `，已选 ${selected.length} 个` : '' }}</span>
+      <span class="picker-count">共 {{ total }} 项{{ multiple ? `，已选 ${selected.length} 个` : '' }}</span>
       <span class="picker-actions">
         <el-button @click="visible = false">取消</el-button>
         <el-button
@@ -62,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Loading, Search } from '@element-plus/icons-vue'
 import {
@@ -77,7 +91,8 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   multiple: { type: Boolean, default: false },
   limit: { type: Number, default: 9 },
-  // 打开时定位到的分类（icon 图标 / cover 封面 / logo LOGO），由调用方按字段语义传入
+  // 打开时定位到的分类（icon 图标 / cover 封面 / logo LOGO / avatar 头像 /
+  // background 首页背景），由调用方按字段语义传入
   defaultCategory: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue', 'picked'])
@@ -88,35 +103,37 @@ const visible = computed({
 })
 
 const loading = ref(false)
-const loaded = ref(false)
 const categories = ref<LibraryCategory[]>([])
 const items = ref<LibraryItem[]>([])
 const tab = ref('all')
 const keyword = ref('')
+const page = ref(1)
+const size = ref(24)
+const total = ref(0)
+const pages = ref(0)
 const selected = ref<string[]>([])
 const adoptingId = ref('')
 const batchAdopting = ref(false)
 
-const filteredItems = computed(() => {
-  const kw = keyword.value.trim().toLowerCase()
-  return items.value.filter((it) => {
-    if (tab.value !== 'all' && it.category !== tab.value) return false
-    if (kw && !(it.name.toLowerCase().includes(kw) || it.tags.some((t) => t.toLowerCase().includes(kw))))
-      return false
-    return true
-  })
-})
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-// 清单只拉一次（素材静态内嵌，不会变），之后每次打开复用
-async function load() {
-  if (loaded.value) return
+// 服务端分页：条件（分类/关键字/页码）变化即重新拉取；分类清单随响应带回，无需单独接口
+async function fetchPage() {
   loading.value = true
   try {
-    const resp = await listLibrary()
+    const resp = await listLibrary({
+      page: page.value,
+      size: size.value,
+      type: tab.value,
+      keyword: keyword.value.trim(),
+    })
     if (resp.code === 0 && resp.data) {
       categories.value = resp.data.categories || []
       items.value = resp.data.items || []
-      loaded.value = true
+      total.value = resp.data.total || 0
+      page.value = resp.data.page || page.value
+      size.value = resp.data.size || size.value
+      pages.value = resp.data.pages || 0
     }
   } catch {
     // 拦截器已提示
@@ -125,23 +142,49 @@ async function load() {
   }
 }
 
+// 打开时定位到调用方指定的分类，重置检索条件后拉第一页。
+// immediate：挂载时即以 modelValue=true 打开的场景（父组件直接 v-model=true）也要拉数据。
 watch(
   visible,
   (v) => {
     if (!v) return
     tab.value = props.defaultCategory || 'all'
     keyword.value = ''
+    page.value = 1
     selected.value = []
-    load()
+    fetchPage()
   },
   { immediate: true }
 )
+
+function onTabChange() {
+  page.value = 1
+  fetchPage()
+}
+
+// 搜索防抖：避免逐字请求
+function onKeywordInput() {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    fetchPage()
+  }, 300)
+}
+
+function onPageChange(p: number) {
+  page.value = p
+  fetchPage()
+}
+
+onBeforeUnmount(() => {
+  if (searchTimer) clearTimeout(searchTimer)
+})
 
 function isSelected(id: string) {
   return selected.value.includes(id)
 }
 
-// 单选：点卡片 = 采用 + 填入 + 关闭（一步到位）；多选：点卡片累计选择
+// 单选：点卡片 = 采用 + 填入 + 关闭（一步到位）；多选：点卡片累计选择（跨页保留）
 async function onCardClick(it: LibraryItem) {
   if (props.multiple) {
     if (isSelected(it.id)) {
@@ -212,7 +255,7 @@ function onClosed() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
-  max-height: 56vh;
+  max-height: 52vh;
   overflow-y: auto;
   padding: 2px;
 }
@@ -239,6 +282,11 @@ function onClosed() {
   height: 110px;
   object-fit: contain;
   background: #f7f8fa;
+}
+/* 首页背景为竖幅（750×1334）：卡片内放大并裁切，避免大片留白看不清样式 */
+.asset-card.background .asset-img {
+  height: 190px;
+  object-fit: cover;
 }
 .asset-name {
   padding: 6px 8px;
@@ -272,6 +320,11 @@ function onClosed() {
   align-items: center;
   justify-content: center;
   font-size: 14px;
+}
+.picker-pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
 }
 .picker-count {
   font-size: 13px;
