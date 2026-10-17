@@ -109,6 +109,14 @@ def main():
     make_cover("cover-company.png", "朗汇机电 · 企业宣传")
     make_cover("cover-daxing.png", "大兴临空服务中心")
     make_cover("cover-hospital.png", "某医院电梯项目")
+    # 其余分类的项目封面占位（让客户验收时点开任意分类都有内容）
+    make_cover("cover-p1b.png", "高层住宅电梯")
+    make_cover("cover-p2.png", "市民服务中心")
+    make_cover("cover-p3b.png", "学校电梯项目")
+    make_cover("cover-p4.png", "商业综合体")
+    make_cover("cover-p5.png", "地铁站点")
+    make_cover("cover-p6.png", "智能仓储货梯")
+    make_cover("cover-p7.png", "别墅家用电梯")
     svcs = [
         ("svc-1.png", "销售"), ("svc-2.png", "安装"),
         ("svc-3.png", "维保"), ("svc-4.png", "改造"),
