@@ -8,6 +8,12 @@
     <button class="picker-btn" size="mini" bindtap="chooseImage">上传头像</button>
   </view>
   <view class="form-item">
+    <text class="label">微信昵称</text>
+    <text class="nickname-value" wx:if="{{form.nickname}}">{{form.nickname}}</text>
+    <text class="nickname-value nickname-ph" wx:else>未授权（选填）</text>
+    <button class="picker-btn" size="mini" bindtap="authorizeNickname">授权获取</button>
+  </view>
+  <view class="form-item">
     <text class="label">姓名</text>
     <input data-field="name" value="{{form.name}}" bindinput="onInput" placeholder="必填" />
   </view>
@@ -29,7 +35,7 @@
   </view>
   <button class="submit-btn" loading="{{saving}}" bindtap="onSubmit">提交申请</button>
   <view class="tip">
-    提交后由超管在 PC 后台审核，通过即自动创建账号；头像可在申请时上传，也可登录后在「编辑名片」中修改
+    提交后由超管在 PC 后台审核，通过即自动创建账号；头像与微信昵称为选填，便于管理员核实身份，头像也可登录后在「编辑名片」中修改
   </view>
 </view>
 
