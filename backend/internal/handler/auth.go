@@ -50,12 +50,17 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码错误"})
 			return
 		}
-		// 记录本次登录的微信身份（openid / 昵称），供后台核实；为空（未授权/未配置）则不覆盖已有值
-		if req.OpenID != "" || req.Nickname != "" {
-			db.Model(&e).Updates(map[string]interface{}{
-				"openid":   req.OpenID,
-				"nickname": req.Nickname,
-			})
+		// 记录本次登录的微信身份，供后台核实；逐字段判空，空值不覆盖已有值
+		// （例如登录只静默拿到 openid 时，不能把申请阶段填好的昵称清空）。
+		loginUpdates := map[string]interface{}{}
+		if req.OpenID != "" {
+			loginUpdates["openid"] = req.OpenID
+		}
+		if req.Nickname != "" {
+			loginUpdates["nickname"] = req.Nickname
+		}
+		if len(loginUpdates) > 0 {
+			db.Model(&e).Updates(loginUpdates)
 		}
 		access, refresh, expiresIn, err := auth.IssueTokens(e.StaffID, "employee", e.TokenVersion)
 		if err != nil {
