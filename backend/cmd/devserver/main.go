@@ -141,7 +141,7 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	assets := writeSeedAssets(cfg.UploadDir, cfg.UploadBaseURL)
 
 	// 1 号租户：朗汇机电（存量演示数据全部归属；多租户第一期的小程序缺省也落这里）
-	db.Where("id = ?", 1).FirstOrCreate(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", Status: "enabled"})
+	db.Where("id = ?", 1).FirstOrCreate(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"})
 
 	// 公司信息 / 简介（company_id=1）
 	db.Where("company_id = ?", 1).FirstOrCreate(&model.CompanyInfo{

@@ -34,6 +34,7 @@ type Employee struct {
 type Company struct {
 	ID        int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
 	Name      string    `gorm:"column:name" json:"name"`
+	ShortName string    `gorm:"column:short_name" json:"shortName"` // 企业简称：PC 后台侧边栏品牌名 + 公司信息简称的初始值；公司信息里的简称仅用于小程序展示，两者相互独立
 	Status    string    `gorm:"column:status;default:enabled" json:"status"`
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
 }

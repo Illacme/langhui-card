@@ -156,7 +156,7 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 		&model.Company{},
 	))
 	// 1 号租户（朗汇）：公开接口缺省落点；存量行为不随多租户改造而变
-	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", Status: "enabled"}).Error)
+	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 
 	uploadDir, err := os.MkdirTemp("", "langhui-upload-")
 	require.NoError(t, err)
@@ -941,7 +941,7 @@ func newSeedDB(t *testing.T) *gorm.DB {
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
 		&model.Company{},
 	))
-	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", Status: "enabled"}).Error)
+	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 	return db
 }
 
@@ -1003,18 +1003,25 @@ func TestMultiTenantIsolation(t *testing.T) {
 	langhuiCatID := int64(body["data"].(map[string]interface{})["id"].(float64))
 	require.NotZero(t, langhuiCatID)
 
-	// ===== 2. 开通企业 2（一并建企业管理员） =====
+	// ===== 2. 开通企业 2（一并建企业管理员；简称种子公司信息 + 侧边栏品牌名） =====
 	_, body = plat.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{
-		"name": "测试乙公司", "adminUsername": "comp2", "adminPassword": "comp2pass",
+		"name": "测试乙公司", "shortName": "乙公司简称", "adminUsername": "comp2", "adminPassword": "comp2pass",
 	})
 	require.EqualValues(t, 0, body["code"])
 	comp2ID := int64(body["data"].(map[string]interface{})["id"].(float64))
 	require.NotZero(t, comp2ID)
+	require.Equal(t, "乙公司简称", body["data"].(map[string]interface{})["shortName"], "创建响应应回显企业简称")
 
 	_, body = plat.doWithCookie("GET", "/api/admin/companies", nil)
 	require.EqualValues(t, 0, body["code"])
 	comps := body["data"].([]interface{})
 	require.Len(t, comps, 2, "应有朗汇 + 乙公司两个租户")
+	for _, item := range comps {
+		m := item.(map[string]interface{})
+		if int64(m["id"].(float64)) == comp2ID {
+			require.Equal(t, "乙公司简称", m["shortName"], "企业列表应返回简称")
+		}
+	}
 
 	// ===== 3. 企业管理员登录与隔离 =====
 	comp2 := newTestClient(r, t)
@@ -1025,6 +1032,17 @@ func TestMultiTenantIsolation(t *testing.T) {
 	require.EqualValues(t, false, body["isPlatform"])
 	require.EqualValues(t, comp2ID, body["companyId"])
 	require.Equal(t, "测试乙公司", body["companyName"])
+	require.Equal(t, "乙公司简称", body["companyShortName"], "登录响应应带企业简称（侧边栏品牌名）")
+
+	// /api/admin/me 同样返回简称（页面刷新 hydration 用）
+	_, body = comp2.doWithCookie("GET", "/api/admin/me", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "乙公司简称", body["data"].(map[string]interface{})["companyShortName"])
+
+	// 开通时填写的简称种子为公司信息简称的初始值（企业管理员登录后在此基础上完善）
+	_, body = comp2.doWithCookie("GET", "/api/admin/company-info", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "乙公司简称", body["data"].(map[string]interface{})["shortName"])
 
 	// 企业管理员看不到朗汇的分类（空列表），也看不到企业管理入口
 	_, body = comp2.doWithCookie("GET", "/api/admin/categories", nil)
@@ -1157,4 +1175,32 @@ func TestMultiTenantIsolation(t *testing.T) {
 		"username": "comp2", "password": "comp2pass",
 	}, "")
 	require.EqualValues(t, 0, body["code"])
+
+	// ===== 8. 编辑企业（名称/简称）与简称解耦 =====
+	_, body = plat.doWithCookie("PUT", "/api/admin/companies/"+fmt.Sprint(comp2ID), map[string]interface{}{
+		"name": "测试乙公司改名后", "shortName": "乙司",
+	})
+	require.EqualValues(t, 0, body["code"])
+
+	_, body = plat.doWithCookie("GET", "/api/admin/companies", nil)
+	require.EqualValues(t, 0, body["code"])
+	for _, item := range body["data"].([]interface{}) {
+		m := item.(map[string]interface{})
+		if int64(m["id"].(float64)) == comp2ID {
+			require.Equal(t, "测试乙公司改名后", m["name"])
+			require.Equal(t, "乙司", m["shortName"], "编辑后列表应返回新简称")
+		}
+	}
+
+	// 公司信息里的简称不随编辑变化（两个简称相互独立：公司信息简称仅小程序展示）
+	_, body = comp2.doWithCookie("GET", "/api/admin/company-info", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "乙公司简称", body["data"].(map[string]interface{})["shortName"], "编辑企业不应回写公司信息简称")
+
+	// 企业管理员重新登录：侧边栏品牌名取改后的简称
+	_, body = comp2.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "comp2", "password": "comp2pass",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "乙司", body["companyShortName"])
 }
