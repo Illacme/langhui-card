@@ -40,4 +40,51 @@ describe('useAuthStore 登录态', () => {
     expect(localStorage.getItem('admin_user')).toBeNull()
     expect(localStorage.getItem('admin_loggedin')).toBeNull()
   })
+
+  it('setAuth：记录企业简称（侧边栏品牌名）并持久化', () => {
+    const s = useAuthStore()
+    s.setAuth('comp2', {
+      companyId: 2,
+      companyName: '测试乙公司',
+      companyShortName: '乙司',
+      isPlatform: false,
+    })
+    expect(s.companyId).toBe(2)
+    expect(s.companyShortName).toBe('乙司')
+    expect(localStorage.getItem('admin_company_short_name')).toBe('乙司')
+  })
+
+  it('hydrate：以服务端身份覆盖本地缓存（含企业简称）', () => {
+    const s = useAuthStore()
+    s.setAuth('comp2', {
+      companyId: 2,
+      companyName: '旧公司名',
+      companyShortName: '旧简称',
+      isPlatform: false,
+    })
+    s.hydrate({
+      adminId: 9,
+      username: 'comp2',
+      companyId: 2,
+      companyName: '测试乙公司',
+      companyShortName: '新简称',
+      isPlatform: false,
+    })
+    expect(s.companyName).toBe('测试乙公司')
+    expect(s.companyShortName).toBe('新简称')
+    expect(localStorage.getItem('admin_company_short_name')).toBe('新简称')
+  })
+
+  it('logout：清空企业简称', () => {
+    const s = useAuthStore()
+    s.setAuth('comp2', {
+      companyId: 2,
+      companyName: '测试乙公司',
+      companyShortName: '乙司',
+      isPlatform: false,
+    })
+    s.logout()
+    expect(s.companyShortName).toBe('')
+    expect(localStorage.getItem('admin_company_short_name')).toBeNull()
+  })
 })

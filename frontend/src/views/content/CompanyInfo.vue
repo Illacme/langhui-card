@@ -11,6 +11,7 @@
       </el-form-item>
       <el-form-item label="企业简称">
         <el-input v-model="form.shortName" placeholder="小程序顶栏居中展示，留空则显示企业全称" />
+        <div class="field-tip">仅作为小程序中的显示值使用，和后台左边栏顶部标识没有关联</div>
       </el-form-item>
       <el-form-item label="地址">
         <el-input v-model="form.address" placeholder="名片首页地址" />
@@ -81,5 +82,10 @@ onMounted(load)
 }
 .page-bar h3 {
   margin: 0;
+}
+.field-tip {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.6;
 }
 </style>
