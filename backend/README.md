@@ -23,6 +23,10 @@ backend/
 │   ├── handler/cookie.go        # httpOnly Cookie 读写（PC 后台鉴权）
 │   ├── handler/seed.go          # 首次启动自动创建初始平台超管（SeedAdmin，company_id=0）
 │   ├── handler/wechat.go        # 小程序码生成 + 缓存（写入当前存储驱动）
+│   ├── handler/assets.go        # 开源素材库：清单 / 采用 / 预览（go:embed 内置，免外部找图）
+│   ├── assets/assets.go         # 素材库加载器：embed library/ + manifest.json 解析 + 安全读取
+│   ├── assets/library/          # 内置素材资产（生成物，勿手改）：manifest.json + CREDITS.md + 图标/封面/LOGO/头像
+│   ├── assets/gen_library.py    # 素材生成器（Lucide 图标 + PIL 程序化图形 → PNG/JPEG + manifest）
 │   ├── storage/storage.go        # Uploader 接口 + LocalUploader（默认）
 │   ├── storage/minio.go          # MinIO / S3 兼容实现
 │   ├── storage/oss.go            # 阿里云 OSS 实现
@@ -148,6 +152,25 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 访问：前端在需要展示私有文件时，调用 `POST /api/admin/storage/sign`（员工用 `/api/employee/...`）提交已存 URL 列表，后端按 `BaseURL` 前缀反推对象 key，返回 **30 分钟有效**的限时签名 URL（`SignGetURL`），前端用签名 URL 取图。
 - 本地私有：若 `local` 驱动 + `STORAGE_PUBLIC=false`，文件不再经 `/uploads` 静态公开，改用 `GET /api/storage/file?key=...`（鉴权后流式返回，防目录穿越）。
 - 小程序码已接入私有桶签名通道：`STORAGE_PUBLIC=false` 且存储支持签名时，`/api/wechat/wxacode` 返回 **1 小时有效**的限时签名 URL（每次请求重新签发），二维码内容本身仍按 `WXACODE_TTL_HOURS` 缓存、到期才重新调微信生成；公开桶/本地驱动仍返回公开 URL。
+
+## 开源素材库（内置，随二进制分发）
+
+后台所有需要图片的位置（分类/服务图标、项目封面、公司简介封面、公司信息 LOGO、员工头像）都支持从**内置开源素材库**直接选用，无需再去各处找图、抠图、调尺寸。
+
+- **资产构成**（`internal/assets/library/`，共 66 项、约 1.1MB，随 `//go:embed` 编译进二进制，Docker 单文件部署零额外挂载）：
+  - 图标 40 个（18 分类 + 16 服务 + 6 通用）：Lucide（ISC 许可证）SVG 经 `rsvg-convert` 光栅化为白色图形，合成渐变圆角方块，与小程序 `.cat-placeholder`（120rpx 蓝砖白字）观感一致；
+  - 封面 10 张（960×504 JPEG + 480×252 缩略图）、LOGO 8 个、头像 8 个：PIL 程序化生成的渐变 + 几何图形，商用无授权风险。
+  - `manifest.json` 描述分类与素材项；`CREDITS.md` 记录图标来源与许可证。
+- **采用（adopt）模式**：`POST /api/admin/assets/adopt` 把内嵌素材经 `Uploader.SaveBytes` **复制进当前上传存储**（local → `uploads/library/<id>.<ext>`），返回与普通上传完全同构的 URL——下游（小程序 `<image>` / CDN）零感知，不引入新的静态资源域。
+- **预览图公开化**：`GET /api/assets/file/*path` 无鉴权 + `Cache-Control: immutable` 长缓存（通用素材，无租户数据；`<img>` 标签无法带 Authorization 头，故公开）。
+- **素材更新**：增删素材只需重新跑 `python3 internal/assets/gen_library.py`（需联网拉取 Lucide 图标 + 本机 `rsvg-convert`/Pillow），产物目录提交入库即可，接口与前端零改动。
+
+### 素材库接口
+| 方法 | 路径 | 鉴权 | 说明 |
+|---|---|---|---|
+| GET  | /api/assets/file/*path | 否 | 素材预览图（PNG/JPEG），immutable 长缓存 |
+| GET  | /api/admin/assets/library | admin | 素材清单：分类（icon/cover/logo/avatar）+ 每项的 id / 名称 / 文件 / 标签 |
+| POST | /api/admin/assets/adopt | admin | 采用素材：body `{"id":"icon-house"}` → 复制进上传存储，返回 `{url, item}` |
 
 ## 已实现接口
 
@@ -286,6 +309,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   - `TestAPIFlow`（默认）：SQLite 跑完整流程，按「公开接口 → 超管登录 → 审核流 → 员工管理 → 强校验 → 服务 → 内容 → 上传存储 → 改密」分段执行。
   - `TestStorageEnhanceSuccess`：用 fake `Presigner`/`Signer`/`CDNRefresher` 覆盖存储增强**成功分支**（预签名返回 `putUrl/url/key`、私有签名返回 `signed` 映射、CDN 刷新被调用）。
   - `TestTokenRefresh` / `TestCookieAuth` / `TestSingleDeviceRevocation`：分别覆盖 refresh 换发与账号级吊销、PC 端 httpOnly Cookie 鉴权与登出、单设备精确吊销（会话黑名单）。
+  - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、清单 4 分类 ≥60 项、采用后落盘（`/uploads/library/...` 静态托管可取）、预览图公开 + immutable、封面缩略图 JPEG、未知素材/空参/路径穿越 404。
   - `TestAPIFlowMySQL`（生产契约 parity）：设置 `TEST_MYSQL_DSN` 后，连真实 MySQL、应用 `migrations/*.sql`，再跑与 SQLite **完全相同的断言**，用以校验 AutoMigrate 与生产建表 SQL 行为一致。
 - 运行：
   ```bash

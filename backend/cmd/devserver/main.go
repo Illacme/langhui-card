@@ -106,6 +106,7 @@ func main() {
 	r.Static("/uploads", cfg.UploadDir)
 	handler.RegisterUpload(r, db, up, refresher)
 	handler.RegisterStorage(r, db, up, refresher, cfg)
+	handler.RegisterAssets(r, db, up) // 常用素材库（内嵌图标/封面/LOGO）
 	handler.RegisterWechat(r, cfg, up)
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)

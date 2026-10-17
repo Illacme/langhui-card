@@ -1,0 +1,947 @@
+{
+ "version": 1,
+ "categories": [
+  {
+   "key": "icon",
+   "name": "图标"
+  },
+  {
+   "key": "cover",
+   "name": "封面"
+  },
+  {
+   "key": "logo",
+   "name": "LOGO"
+  },
+  {
+   "key": "avatar",
+   "name": "头像"
+  }
+ ],
+ "items": [
+  {
+   "id": "icon-house",
+   "name": "居住住宅",
+   "category": "icon",
+   "file": "icons/icon-house.png",
+   "thumb": "icons/icon-house.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "住宅",
+    "楼宇",
+    "home"
+   ]
+  },
+  {
+   "id": "icon-landmark",
+   "name": "政务办公",
+   "category": "icon",
+   "file": "icons/icon-landmark.png",
+   "thumb": "icons/icon-landmark.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "政务",
+    "government",
+    "机关"
+   ]
+  },
+  {
+   "id": "icon-hospital",
+   "name": "医院",
+   "category": "icon",
+   "file": "icons/icon-hospital.png",
+   "thumb": "icons/icon-hospital.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "医疗",
+    "hospital",
+    "卫生"
+   ]
+  },
+  {
+   "id": "icon-school",
+   "name": "学校",
+   "category": "icon",
+   "file": "icons/icon-school.png",
+   "thumb": "icons/icon-school.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "school",
+    "校园"
+   ]
+  },
+  {
+   "id": "icon-shopping-bag",
+   "name": "商业综合体",
+   "category": "icon",
+   "file": "icons/icon-shopping-bag.png",
+   "thumb": "icons/icon-shopping-bag.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商业",
+    "购物",
+    "商场"
+   ]
+  },
+  {
+   "id": "icon-train-front",
+   "name": "地铁站点",
+   "category": "icon",
+   "file": "icons/icon-train-front.png",
+   "thumb": "icons/icon-train-front.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "地铁",
+    "交通",
+    "轨道"
+   ]
+  },
+  {
+   "id": "icon-factory",
+   "name": "生产制造",
+   "category": "icon",
+   "file": "icons/icon-factory.png",
+   "thumb": "icons/icon-factory.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "工厂",
+    "制造",
+    "车间"
+   ]
+  },
+  {
+   "id": "icon-warehouse",
+   "name": "仓储物流",
+   "category": "icon",
+   "file": "icons/icon-warehouse.png",
+   "thumb": "icons/icon-warehouse.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "物流",
+    "仓库"
+   ]
+  },
+  {
+   "id": "icon-building-2",
+   "name": "楼宇建筑",
+   "category": "icon",
+   "file": "icons/icon-building-2.png",
+   "thumb": "icons/icon-building-2.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "楼宇",
+    "建筑",
+    "building"
+   ]
+  },
+  {
+   "id": "icon-briefcase",
+   "name": "商务办公",
+   "category": "icon",
+   "file": "icons/icon-briefcase.png",
+   "thumb": "icons/icon-briefcase.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商务",
+    "办公",
+    "写字楼"
+   ]
+  },
+  {
+   "id": "icon-graduation-cap",
+   "name": "教育培训",
+   "category": "icon",
+   "file": "icons/icon-graduation-cap.png",
+   "thumb": "icons/icon-graduation-cap.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "培训",
+    "高校"
+   ]
+  },
+  {
+   "id": "icon-hotel",
+   "name": "酒店住宿",
+   "category": "icon",
+   "file": "icons/icon-hotel.png",
+   "thumb": "icons/icon-hotel.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "酒店",
+    "住宿",
+    "宾馆"
+   ]
+  },
+  {
+   "id": "icon-utensils",
+   "name": "餐饮美食",
+   "category": "icon",
+   "file": "icons/icon-utensils.png",
+   "thumb": "icons/icon-utensils.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "餐饮",
+    "美食",
+    "餐厅"
+   ]
+  },
+  {
+   "id": "icon-bus",
+   "name": "公共交通",
+   "category": "icon",
+   "file": "icons/icon-bus.png",
+   "thumb": "icons/icon-bus.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公交",
+    "交通",
+    "客运"
+   ]
+  },
+  {
+   "id": "icon-zap",
+   "name": "能源电力",
+   "category": "icon",
+   "file": "icons/icon-zap.png",
+   "thumb": "icons/icon-zap.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "能源",
+    "电力",
+    "电气"
+   ]
+  },
+  {
+   "id": "icon-leaf",
+   "name": "绿色环保",
+   "category": "icon",
+   "file": "icons/icon-leaf.png",
+   "thumb": "icons/icon-leaf.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环保",
+    "绿色",
+    "节能"
+   ]
+  },
+  {
+   "id": "icon-shield-check",
+   "name": "安防保障",
+   "category": "icon",
+   "file": "icons/icon-shield-check.png",
+   "thumb": "icons/icon-shield-check.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安防",
+    "保障",
+    "安全"
+   ]
+  },
+  {
+   "id": "icon-truck",
+   "name": "物流配送",
+   "category": "icon",
+   "file": "icons/icon-truck.png",
+   "thumb": "icons/icon-truck.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "物流",
+    "配送",
+    "运输"
+   ]
+  },
+  {
+   "id": "icon-arrow-up-down",
+   "name": "电梯",
+   "category": "icon",
+   "file": "icons/icon-arrow-up-down.png",
+   "thumb": "icons/icon-arrow-up-down.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电梯",
+    "垂直交通",
+    "elevator"
+   ]
+  },
+  {
+   "id": "icon-activity",
+   "name": "运行平稳",
+   "category": "icon",
+   "file": "icons/icon-activity.png",
+   "thumb": "icons/icon-activity.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "运行",
+    "平稳",
+    "activity"
+   ]
+  },
+  {
+   "id": "icon-wrench",
+   "name": "维修服务",
+   "category": "icon",
+   "file": "icons/icon-wrench.png",
+   "thumb": "icons/icon-wrench.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维修",
+    "检修",
+    "wrench"
+   ]
+  },
+  {
+   "id": "icon-cog",
+   "name": "维保服务",
+   "category": "icon",
+   "file": "icons/icon-cog.png",
+   "thumb": "icons/icon-cog.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维保",
+    "保养",
+    "运维"
+   ]
+  },
+  {
+   "id": "icon-clipboard-check",
+   "name": "检测验收",
+   "category": "icon",
+   "file": "icons/icon-clipboard-check.png",
+   "thumb": "icons/icon-clipboard-check.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "检测",
+    "验收",
+    "质检"
+   ]
+  },
+  {
+   "id": "icon-ruler",
+   "name": "测量定制",
+   "category": "icon",
+   "file": "icons/icon-ruler.png",
+   "thumb": "icons/icon-ruler.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "测量",
+    "定制",
+    "勘察"
+   ]
+  },
+  {
+   "id": "icon-hard-hat",
+   "name": "安装施工",
+   "category": "icon",
+   "file": "icons/icon-hard-hat.png",
+   "thumb": "icons/icon-hard-hat.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安装",
+    "施工",
+    "工程"
+   ]
+  },
+  {
+   "id": "icon-phone",
+   "name": "咨询预约",
+   "category": "icon",
+   "file": "icons/icon-phone.png",
+   "thumb": "icons/icon-phone.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "咨询",
+    "预约",
+    "电话"
+   ]
+  },
+  {
+   "id": "icon-clock",
+   "name": "快速响应",
+   "category": "icon",
+   "file": "icons/icon-clock.png",
+   "thumb": "icons/icon-clock.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "响应",
+    "时效",
+    "时钟"
+   ]
+  },
+  {
+   "id": "icon-headset",
+   "name": "售后客服",
+   "category": "icon",
+   "file": "icons/icon-headset.png",
+   "thumb": "icons/icon-headset.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "售后",
+    "客服",
+    "支持"
+   ]
+  },
+  {
+   "id": "icon-package",
+   "name": "交付配送",
+   "category": "icon",
+   "file": "icons/icon-package.png",
+   "thumb": "icons/icon-package.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "交付",
+    "配送",
+    "发货"
+   ]
+  },
+  {
+   "id": "icon-handshake",
+   "name": "合作共赢",
+   "category": "icon",
+   "file": "icons/icon-handshake.png",
+   "thumb": "icons/icon-handshake.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合作",
+    "共赢",
+    "签约"
+   ]
+  },
+  {
+   "id": "icon-star",
+   "name": "品质服务",
+   "category": "icon",
+   "file": "icons/icon-star.png",
+   "thumb": "icons/icon-star.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品质",
+    "优质",
+    "星级"
+   ]
+  },
+  {
+   "id": "icon-life-buoy",
+   "name": "全程保障",
+   "category": "icon",
+   "file": "icons/icon-life-buoy.png",
+   "thumb": "icons/icon-life-buoy.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "保障",
+    "救援",
+    "支持"
+   ]
+  },
+  {
+   "id": "icon-timer",
+   "name": "限时响应",
+   "category": "icon",
+   "file": "icons/icon-timer.png",
+   "thumb": "icons/icon-timer.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "限时",
+    "计时",
+    "加急"
+   ]
+  },
+  {
+   "id": "icon-badge-check",
+   "name": "认证合格",
+   "category": "icon",
+   "file": "icons/icon-badge-check.png",
+   "thumb": "icons/icon-badge-check.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "认证",
+    "合格",
+    "资质"
+   ]
+  },
+  {
+   "id": "icon-image",
+   "name": "图片",
+   "category": "icon",
+   "file": "icons/icon-image.png",
+   "thumb": "icons/icon-image.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "图片",
+    "照片",
+    "image"
+   ]
+  },
+  {
+   "id": "icon-users",
+   "name": "人群团队",
+   "category": "icon",
+   "file": "icons/icon-users.png",
+   "thumb": "icons/icon-users.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团队",
+    "人群",
+    "用户"
+   ]
+  },
+  {
+   "id": "icon-award",
+   "name": "荣誉奖项",
+   "category": "icon",
+   "file": "icons/icon-award.png",
+   "thumb": "icons/icon-award.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "荣誉",
+    "奖项",
+    "奖杯"
+   ]
+  },
+  {
+   "id": "icon-gem",
+   "name": "精品案例",
+   "category": "icon",
+   "file": "icons/icon-gem.png",
+   "thumb": "icons/icon-gem.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精品",
+    "案例",
+    "宝石"
+   ]
+  },
+  {
+   "id": "icon-lightbulb",
+   "name": "方案创意",
+   "category": "icon",
+   "file": "icons/icon-lightbulb.png",
+   "thumb": "icons/icon-lightbulb.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "创意",
+    "方案",
+    "点子"
+   ]
+  },
+  {
+   "id": "icon-map-pin",
+   "name": "位置服务",
+   "category": "icon",
+   "file": "icons/icon-map-pin.png",
+   "thumb": "icons/icon-map-pin.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "位置",
+    "地图",
+    "定位"
+   ]
+  },
+  {
+   "id": "cover-skyline",
+   "name": "天际线",
+   "category": "cover",
+   "file": "covers/cover-skyline.jpg",
+   "thumb": "thumbs/covers/cover-skyline.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "天际线",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-dots",
+   "name": "点阵",
+   "category": "cover",
+   "file": "covers/cover-dots.jpg",
+   "thumb": "thumbs/covers/cover-dots.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "点阵",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-beams",
+   "name": "光束",
+   "category": "cover",
+   "file": "covers/cover-beams.jpg",
+   "thumb": "thumbs/covers/cover-beams.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "光束",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-arcs",
+   "name": "弧光",
+   "category": "cover",
+   "file": "covers/cover-arcs.jpg",
+   "thumb": "thumbs/covers/cover-arcs.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "弧光",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-blocks",
+   "name": "矩阵",
+   "category": "cover",
+   "file": "covers/cover-blocks.jpg",
+   "thumb": "thumbs/covers/cover-blocks.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "矩阵",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-shield",
+   "name": "守护",
+   "category": "cover",
+   "file": "covers/cover-shield.jpg",
+   "thumb": "thumbs/covers/cover-shield.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "守护",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-motion",
+   "name": "疾驰",
+   "category": "cover",
+   "file": "covers/cover-motion.jpg",
+   "thumb": "thumbs/covers/cover-motion.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "疾驰",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-stars",
+   "name": "星网",
+   "category": "cover",
+   "file": "covers/cover-stars.jpg",
+   "thumb": "thumbs/covers/cover-stars.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "星网",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-waves",
+   "name": "波浪",
+   "category": "cover",
+   "file": "covers/cover-waves.jpg",
+   "thumb": "thumbs/covers/cover-waves.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "波浪",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "cover-hex",
+   "name": "蜂巢",
+   "category": "cover",
+   "file": "covers/cover-hex.jpg",
+   "thumb": "thumbs/covers/cover-hex.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "蜂巢",
+    "封面",
+    "背景"
+   ]
+  },
+  {
+   "id": "logo-building",
+   "name": "建筑",
+   "category": "logo",
+   "file": "logos/logo-building.png",
+   "thumb": "logos/logo-building.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "建筑",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-bolt",
+   "name": "闪电",
+   "category": "logo",
+   "file": "logos/logo-bolt.png",
+   "thumb": "logos/logo-bolt.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "闪电",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-gear",
+   "name": "齿轮",
+   "category": "logo",
+   "file": "logos/logo-gear.png",
+   "thumb": "logos/logo-gear.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "齿轮",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-shield",
+   "name": "盾牌",
+   "category": "logo",
+   "file": "logos/logo-shield.png",
+   "thumb": "logos/logo-shield.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "盾牌",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-hex",
+   "name": "六边",
+   "category": "logo",
+   "file": "logos/logo-hex.png",
+   "thumb": "logos/logo-hex.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "六边",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-arrow",
+   "name": "上升",
+   "category": "logo",
+   "file": "logos/logo-arrow.png",
+   "thumb": "logos/logo-arrow.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "上升",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-tower",
+   "name": "塔楼",
+   "category": "logo",
+   "file": "logos/logo-tower.png",
+   "thumb": "logos/logo-tower.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "塔楼",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "logo-orbit",
+   "name": "环轨",
+   "category": "logo",
+   "file": "logos/logo-orbit.png",
+   "thumb": "logos/logo-orbit.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "环轨",
+    "LOGO",
+    "标识"
+   ]
+  },
+  {
+   "id": "avatar-1",
+   "name": "默认头像 · 蓝",
+   "category": "avatar",
+   "file": "avatars/avatar-1.png",
+   "thumb": "avatars/avatar-1.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 蓝",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-2",
+   "name": "默认头像 · 靛",
+   "category": "avatar",
+   "file": "avatars/avatar-2.png",
+   "thumb": "avatars/avatar-2.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 靛",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-3",
+   "name": "默认头像 · 青",
+   "category": "avatar",
+   "file": "avatars/avatar-3.png",
+   "thumb": "avatars/avatar-3.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 青",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-4",
+   "name": "默认头像 · 紫",
+   "category": "avatar",
+   "file": "avatars/avatar-4.png",
+   "thumb": "avatars/avatar-4.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 紫",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-5",
+   "name": "默认头像 · 绿",
+   "category": "avatar",
+   "file": "avatars/avatar-5.png",
+   "thumb": "avatars/avatar-5.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 绿",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-6",
+   "name": "默认头像 · 橙",
+   "category": "avatar",
+   "file": "avatars/avatar-6.png",
+   "thumb": "avatars/avatar-6.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 橙",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-7",
+   "name": "默认头像 · 玫",
+   "category": "avatar",
+   "file": "avatars/avatar-7.png",
+   "thumb": "avatars/avatar-7.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 玫",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-8",
+   "name": "默认头像 · 灰",
+   "category": "avatar",
+   "file": "avatars/avatar-8.png",
+   "thumb": "avatars/avatar-8.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 灰",
+    "头像",
+    "默认"
+   ]
+  }
+ ]
+}
