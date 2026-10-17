@@ -7,7 +7,7 @@ import { getOpenid, getWechatNickname } from '../../../utils/wechat'
 // 经专用公开端点 /api/apply/open/avatar 上传拿回永久 URL 再随表单提交。
 Page({
   data: {
-    form: { name: '', phone: '', title: '', landline: '', email: '', avatar: '' },
+    form: { name: '', phone: '', title: '', landline: '', email: '', avatar: '', nickname: '' },
     saving: false,
     submitted: false,
   },
@@ -62,6 +62,21 @@ Page({
       },
     })
   },
+  // 「授权获取」微信昵称：getUserProfile 弹窗（需在点击手势内调用），成功后展示在「微信昵称」行，
+  // 提交时随表单带上。用户可跳过——昵称仅作后台核实用途，不填也能提交。
+  authorizeNickname() {
+    wx.showLoading({ title: '获取中' })
+    getWechatNickname().then((nickname) => {
+      wx.hideLoading()
+      if (nickname) {
+        const form = this.data.form as any
+        form.nickname = nickname
+        this.setData({ form })
+      } else {
+        wx.showToast({ title: '未获取到昵称（可跳过）', icon: 'none' })
+      }
+    })
+  },
   async onSubmit() {
     const { name, phone } = this.data.form
     if (!name || !phone) {
@@ -69,12 +84,11 @@ Page({
       return
     }
     this.setData({ saving: true })
-    // 采集微信身份（openid 静默 + 昵称授权弹窗），随申请提交供后台核实。
-    // 两个函数在此同步触发，保证 getWechatNickname 的 wx.getUserProfile 处于点击手势上下文。
-    // 任一失败都降级为空串，不阻塞提交。
-    const [openid, nickname] = await Promise.all([getOpenid(), getWechatNickname()])
+    // openid 静默采集（wx.login 换取，无需弹窗）；昵称由用户点「授权获取」显式授权后已在 form.nickname，
+    // 此处只补 openid，不再触发昵称弹窗（避免提交时盲弹）。
+    const openid = await getOpenid()
     try {
-      const r = await request('POST', '/api/apply/open', { ...this.data.form, openid, nickname })
+      const r = await request('POST', '/api/apply/open', { ...this.data.form, openid })
       if (r.code === 0) {
         this.setData({ submitted: true })
       } else {
