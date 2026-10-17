@@ -52,9 +52,13 @@ func New(db *gorm.DB) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "employee": e, "company": ci, "profile": cp})
 	})
 
-	// 经典业绩：分类 + 精选项目
+	// 经典业绩：分类 + 精选项目（按租户：?companyId= 缺省朗汇）
 	r.GET("/api/achievements", func(c *gin.Context) {
-		cats, featured, err := repository.GetAchievements(db)
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
+		cats, featured, err := repository.GetAchievements(db, cid)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
@@ -62,10 +66,14 @@ func New(db *gorm.DB) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "categories": cats, "featured": featured})
 	})
 
-	// 项目列表（按分类）
+	// 项目列表（按分类，按租户）
 	r.GET("/api/projects", func(c *gin.Context) {
-		cid, _ := strconv.ParseInt(c.Query("categoryId"), 10, 64)
-		ps, err := repository.ListProjects(db, cid)
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
+		catID, _ := strconv.ParseInt(c.Query("categoryId"), 10, 64)
+		ps, err := repository.ListProjects(db, cid, catID)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
@@ -73,10 +81,14 @@ func New(db *gorm.DB) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": ps})
 	})
 
-	// 项目详情（解析 album JSON）
+	// 项目详情（解析 album JSON，按租户）
 	r.GET("/api/projects/:id", func(c *gin.Context) {
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		p, err := repository.GetProject(db, id)
+		p, err := repository.GetProject(db, cid, id)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "案例不存在或已下架"})
 			return
@@ -99,9 +111,13 @@ func New(db *gorm.DB) *gin.Engine {
 		}})
 	})
 
-	// 业务服务列表
+	// 业务服务列表（按租户）
 	r.GET("/api/services", func(c *gin.Context) {
-		s, err := repository.ListServices(db)
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
+		s, err := repository.ListServices(db, cid)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
@@ -109,10 +125,14 @@ func New(db *gorm.DB) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
 
-	// 业务服务详情
+	// 业务服务详情（按租户）
 	r.GET("/api/services/:id", func(c *gin.Context) {
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		s, err := repository.GetService(db, id)
+		s, err := repository.GetService(db, cid, id)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "服务不存在"})
 			return
@@ -120,10 +140,14 @@ func New(db *gorm.DB) *gin.Engine {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
 
-	// 首页布局顺序
+	// 首页布局顺序（按租户）
 	r.GET("/api/home-layout", func(c *gin.Context) {
+		cid, ok := publicCompanyID(c, db)
+		if !ok {
+			return
+		}
 		order := []string{"achievement", "service"}
-		if l, err := repository.GetHomeLayout(db); err == nil && l.Order != "" {
+		if l, err := repository.GetHomeLayout(db, cid); err == nil && l.Order != "" {
 			_ = json.Unmarshal([]byte(l.Order), &order)
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "order": order})

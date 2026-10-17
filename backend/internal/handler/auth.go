@@ -46,6 +46,11 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			c.JSON(http.StatusOK, gin.H{"code": 2, "msg": "账号已停用"})
 			return
 		}
+		// 租户校验：企业停用后其员工一并不能登录
+		if !companyEnabled(db, e.CompanyID) {
+			c.JSON(http.StatusOK, gin.H{"code": 2, "msg": "所属企业已停用"})
+			return
+		}
 		if !auth.CheckPassword(e.PasswordHash, req.Password) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码错误"})
 			return
@@ -62,7 +67,7 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		if len(loginUpdates) > 0 {
 			db.Model(&e).Updates(loginUpdates)
 		}
-		access, refresh, expiresIn, err := auth.IssueTokens(e.StaffID, "employee", e.TokenVersion)
+		access, refresh, expiresIn, err := auth.IssueTokens(e.StaffID, "employee", e.TokenVersion, e.CompanyID)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "登录失败"})
 			return
@@ -89,13 +94,30 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码错误"})
 			return
 		}
-		access, refresh, expiresIn, err := auth.IssueTokens(a.ID, "admin", a.TokenVersion)
+		// 租户校验：企业管理员所属企业停用后不能登录（平台超管 company_id=0 不受限）
+		if a.CompanyID > 0 && !companyEnabled(db, a.CompanyID) {
+			c.JSON(http.StatusOK, gin.H{"code": 2, "msg": "所属企业已停用"})
+			return
+		}
+		access, refresh, expiresIn, err := auth.IssueTokens(a.ID, "admin", a.TokenVersion, a.CompanyID)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "登录失败"})
 			return
 		}
 		setAuthCookies(c, access, refresh, auth.AccessTokenTTL, auth.RefreshTokenTTL, cfg)
-		c.JSON(http.StatusOK, gin.H{"code": 0, "expiresIn": expiresIn})
+		// 回显身份（非敏感）：PC 后台据此区分平台超管 / 企业管理员并展示当前企业
+		companyName := ""
+		if a.CompanyID > 0 {
+			var comp model.Company
+			if db.First(&comp, "id = ?", a.CompanyID).Error == nil {
+				companyName = comp.Name
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"code": 0, "expiresIn": expiresIn,
+			"companyId": a.CompanyID, "companyName": companyName,
+			"isPlatform": a.CompanyID == 0,
+		})
 	})
 
 	// 刷新 access 令牌：Cookie 流（PC 后台，读 refresh_token Cookie）或 Body 流（小程序，传 refreshToken）。
@@ -137,7 +159,7 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			return
 		}
 		// 刷新不换 sid：一次登录始终同一个会话，登出吊销该 sid 即终结整条令牌链
-		access, refresh, expiresIn, err := auth.IssueTokensWithSID(claims.StaffID, claims.Role, currentVersion, claims.SID)
+		access, refresh, expiresIn, err := auth.IssueTokensWithSID(claims.StaffID, claims.Role, currentVersion, claims.CompanyID, claims.SID)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "签发失败"})
 			return
