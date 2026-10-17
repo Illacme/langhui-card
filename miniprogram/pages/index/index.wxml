@@ -18,6 +18,7 @@
           <view class="nav-me-avatar" wx:if="{{meAvatar}}"><image src="{{meAvatar}}" mode="aspectFill" /></view>
           <text class="nav-me-text">{{meName || '我的'}}</text>
         </view>
+        <view class="nav-title">{{company.shortName || company.fullName || '朗汇机电'}}</view>
       </view>
     </view>
     <view class="nav-spacer" style="height: {{navHeight}}px;" />

@@ -9,6 +9,9 @@
       <el-form-item label="企业全称">
         <el-input v-model="form.fullName" placeholder="名片首页公司名" />
       </el-form-item>
+      <el-form-item label="企业简称">
+        <el-input v-model="form.shortName" placeholder="小程序顶栏居中展示，留空则显示企业全称" />
+      </el-form-item>
       <el-form-item label="地址">
         <el-input v-model="form.address" placeholder="名片首页地址" />
       </el-form-item>
@@ -34,7 +37,7 @@ import UploadField from '@/components/UploadField.vue'
 
 const loading = ref(false)
 const saving = ref(false)
-const form = reactive({ id: 1, fullName: '', address: '', tel: '', logo: '' })
+const form = reactive({ id: 1, fullName: '', shortName: '', address: '', tel: '', logo: '' })
 
 async function load() {
   loading.value = true
@@ -53,6 +56,7 @@ async function save() {
   try {
     await saveCompanyInfo({
       fullName: form.fullName,
+      shortName: form.shortName,
       address: form.address,
       tel: form.tel,
       logo: form.logo,

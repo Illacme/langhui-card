@@ -4,7 +4,13 @@ import http from './request'
 export function getCompanyInfo() {
   return http.get('/admin/company-info').then((r: any) => (r.data ?? { id: 1 }) as any)
 }
-export function saveCompanyInfo(p: { fullName: string; address: string; tel: string; logo: string }) {
+export function saveCompanyInfo(p: {
+  fullName: string
+  shortName: string
+  address: string
+  tel: string
+  logo: string
+}) {
   return http.put('/admin/company-info', p).then((r: any) => r.data as any)
 }
 
