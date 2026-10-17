@@ -141,7 +141,7 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 
 	// 公司信息 / 简介
 	db.Where("id = ?", 1).FirstOrCreate(&model.CompanyInfo{
-		ID: 1, FullName: "廊坊市朗汇机电设备有限公司", Address: "廊坊市广阳区紫金城商住楼1-2-1911",
+		ID: 1, FullName: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Address: "廊坊市广阳区紫金城商住楼1-2-1911",
 		Tel: "0316-823950", Logo: assets["logo.png"],
 	})
 	db.Where("id = ?", 1).FirstOrCreate(&model.CompanyProfile{

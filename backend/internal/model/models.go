@@ -25,11 +25,12 @@ type Employee struct {
 
 // CompanyInfo 企业基础信息（首页固定展示）
 type CompanyInfo struct {
-	ID       int64  `gorm:"primaryKey;column:id" json:"id"`
-	FullName string `gorm:"column:full_name" json:"fullName"`
-	Address  string `gorm:"column:address" json:"address"`
-	Tel      string `gorm:"column:tel" json:"tel"`
-	Logo     string `gorm:"column:logo" json:"logo"`
+	ID        int64  `gorm:"primaryKey;column:id" json:"id"`
+	FullName  string `gorm:"column:full_name" json:"fullName"`
+	ShortName string `gorm:"column:short_name" json:"shortName"` // 企业简称（小程序顶栏居中展示）
+	Address   string `gorm:"column:address" json:"address"`
+	Tel       string `gorm:"column:tel" json:"tel"`
+	Logo      string `gorm:"column:logo" json:"logo"`
 }
 
 // CompanyProfile 公司简介 + 视频号 + 备用 MP4

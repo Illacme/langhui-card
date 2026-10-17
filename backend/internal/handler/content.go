@@ -26,10 +26,11 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 	})
 	r.PUT("/api/admin/company-info", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req struct {
-			FullName string `json:"fullName"`
-			Address  string `json:"address"`
-			Tel      string `json:"tel"`
-			Logo     string `json:"logo"`
+			FullName  string `json:"fullName"`
+			ShortName string `json:"shortName"`
+			Address   string `json:"address"`
+			Tel       string `json:"tel"`
+			Logo      string `json:"logo"`
 		}
 		if c.ShouldBindJSON(&req) != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -37,10 +38,10 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		}
 		var ci model.CompanyInfo
 		if db.First(&ci, "id = ?", 1).Error != nil {
-			ci = model.CompanyInfo{ID: 1, FullName: req.FullName, Address: req.Address, Tel: req.Tel, Logo: req.Logo}
+			ci = model.CompanyInfo{ID: 1, FullName: req.FullName, ShortName: req.ShortName, Address: req.Address, Tel: req.Tel, Logo: req.Logo}
 			db.Create(&ci)
 		} else {
-			db.Model(&ci).Updates(map[string]interface{}{"full_name": req.FullName, "address": req.Address, "tel": req.Tel, "logo": req.Logo})
+			db.Model(&ci).Updates(map[string]interface{}{"full_name": req.FullName, "short_name": req.ShortName, "address": req.Address, "tel": req.Tel, "logo": req.Logo})
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": ci})
 	})

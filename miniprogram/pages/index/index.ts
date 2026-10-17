@@ -176,8 +176,9 @@ Page({
     wx.navigateTo({ url })
   },
   onShareAppMessage() {
+    const c = this.data.company
     return {
-      title: this.data.company ? this.data.company.fullName : '朗汇机电',
+      title: (c && (c.shortName || c.fullName)) || '朗汇机电',
       path: '/pages/index/index?staffId=' + this.data.staffId,
     }
   },
