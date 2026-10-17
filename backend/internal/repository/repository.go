@@ -8,7 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// GetCard 聚合员工 + 企业信息 + 公司简介（首页一次拉齐）
+// GetCard 聚合员工 + 企业信息 + 公司简介（首页一次拉齐）。
+// 企业信息按员工归属租户取（employee.company_id），天然支持多租户。
 func GetCard(db *gorm.DB, staffID int64) (model.Employee, model.CompanyInfo, model.CompanyProfile, error) {
 	var e model.Employee
 	var c model.CompanyInfo
@@ -16,27 +17,27 @@ func GetCard(db *gorm.DB, staffID int64) (model.Employee, model.CompanyInfo, mod
 	if err := db.First(&e, "staff_id = ?", staffID).Error; err != nil {
 		return e, c, p, err
 	}
-	db.First(&c, 1) // 企业信息单行
-	db.First(&p, 1) // 公司简介单行
+	db.First(&c, "company_id = ?", e.CompanyID) // 企业信息按租户
+	db.First(&p, "company_id = ?", e.CompanyID) // 公司简介按租户
 	return e, c, p, nil
 }
 
-// GetAchievements 分类（按 sort）+ 首页精选项目
-func GetAchievements(db *gorm.DB) ([]model.AchievementCategory, []model.ProjectCase, error) {
+// GetAchievements 分类（按 sort）+ 首页精选项目（按租户隔离）
+func GetAchievements(db *gorm.DB, companyID int64) ([]model.AchievementCategory, []model.ProjectCase, error) {
 	var cats []model.AchievementCategory
 	var featured []model.ProjectCase
-	if err := db.Order("sort asc").Find(&cats).Error; err != nil {
+	if err := db.Where("company_id = ?", companyID).Order("sort asc").Find(&cats).Error; err != nil {
 		return nil, nil, err
 	}
-	if err := db.Where("is_home_featured = ? AND enabled = ?", true, true).Order("sort asc").Find(&featured).Error; err != nil {
+	if err := db.Where("company_id = ? AND is_home_featured = ? AND enabled = ?", companyID, true, true).Order("sort asc").Find(&featured).Error; err != nil {
 		return nil, nil, err
 	}
 	return cats, featured, nil
 }
 
-func ListProjects(db *gorm.DB, categoryID int64) ([]model.ProjectCase, error) {
+func ListProjects(db *gorm.DB, companyID int64, categoryID int64) ([]model.ProjectCase, error) {
 	var ps []model.ProjectCase
-	q := db.Order("sort asc")
+	q := db.Where("company_id = ?", companyID).Order("sort asc")
 	if categoryID > 0 {
 		q = q.Where("category_id = ? AND enabled = ?", categoryID, true)
 	} else {
@@ -50,9 +51,9 @@ func ListProjects(db *gorm.DB, categoryID int64) ([]model.ProjectCase, error) {
 	return ps, nil
 }
 
-func GetProject(db *gorm.DB, id int64) (model.ProjectCase, error) {
+func GetProject(db *gorm.DB, companyID int64, id int64) (model.ProjectCase, error) {
 	var p model.ProjectCase
-	err := db.First(&p, "id = ? AND enabled = ?", id, true).Error
+	err := db.First(&p, "company_id = ? AND id = ? AND enabled = ?", companyID, id, true).Error
 	if err != nil {
 		return p, err
 	}
@@ -93,21 +94,21 @@ func fillCategoryNames(db *gorm.DB, ps []model.ProjectCase) {
 	}
 }
 
-func ListServices(db *gorm.DB) ([]model.BizService, error) {
+func ListServices(db *gorm.DB, companyID int64) ([]model.BizService, error) {
 	var s []model.BizService
-	err := db.Order("sort asc").Find(&s).Error
+	err := db.Where("company_id = ?", companyID).Order("sort asc").Find(&s).Error
 	return s, err
 }
 
-func GetService(db *gorm.DB, id int64) (model.BizService, error) {
+func GetService(db *gorm.DB, companyID int64, id int64) (model.BizService, error) {
 	var s model.BizService
-	err := db.First(&s, "id = ?", id).Error
+	err := db.First(&s, "company_id = ? AND id = ?", companyID, id).Error
 	return s, err
 }
 
-func GetHomeLayout(db *gorm.DB) (model.HomeLayout, error) {
+func GetHomeLayout(db *gorm.DB, companyID int64) (model.HomeLayout, error) {
 	var l model.HomeLayout
-	err := db.First(&l, 1).Error
+	err := db.First(&l, "company_id = ?", companyID).Error
 	return l, err
 }
 

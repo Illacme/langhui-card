@@ -15,13 +15,24 @@ import (
 	"gorm.io/gorm"
 )
 
-// RegisterApply 注册写操作：开通申请 / 名片修改审核 / 员工管理 / 统计
+// RegisterApply 注册写操作：开通申请 / 名片修改审核 / 员工管理 / 统计。
+// 多租户：所有 /api/admin 端点按 tenantScope 收窄（企业管理员只见本企业）；
+// 公开申请端点按请求体 companyId 归属租户（缺省 1 号租户朗汇）。
 func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	// 员工自助提交开通申请（公开）
 	r.POST("/api/apply/open", func(c *gin.Context) {
 		var req model.OpenApply
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
+			return
+		}
+		// 租户归属：客户端可传 companyId（第二期按企业分发用）；缺省落朗汇。
+		// 以服务端白名单为准——只接受已存在且启用的租户，防越权申请到别家。
+		if req.CompanyID <= 0 {
+			req.CompanyID = defaultCompanyID
+		}
+		if !companyEnabled(db, req.CompanyID) {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "申请目标企业不存在或已停用"})
 			return
 		}
 		req.Status = "pending"
@@ -63,8 +74,13 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
 			return
 		}
+		var me model.Employee
+		if db.First(&me, "staff_id = ?", staffID).Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
+			return
+		}
 		snap, _ := json.Marshal(patch)
-		apply := model.CardModifyApply{StaffID: staffID, Snapshot: string(snap), Status: "pending"}
+		apply := model.CardModifyApply{CompanyID: me.CompanyID, StaffID: staffID, Snapshot: string(snap), Status: "pending"}
 		if err := db.Create(&apply).Error; err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "提交失败"})
 			return
@@ -105,21 +121,31 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// ===== 超管端 =====
+	// ===== 超管端（多租户：按 tenantScope 收窄） =====
 
-	// 开通申请列表
+	// inScope 判断某租户 id 是否在当前用户可见范围内（平台超管恒真）。
+	inScope := func(c *gin.Context, cid int64) bool {
+		scid, all := tenantScope(c)
+		return all || scid == cid
+	}
+
+	// 开通申请列表（按租户）
 	r.GET("/api/admin/apply/open", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.OpenApply
-		db.Order("created_at desc").Find(&list)
+		db.Scopes(scopeCond(c)).Order("created_at desc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
 
-	// 开通申请通过 → 自动建员工账号
+	// 开通申请通过 → 自动建员工账号（员工落到申请所属租户）
 	r.POST("/api/admin/apply/open/:id/approve", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var a model.OpenApply
 		if db.First(&a, "id = ?", id).Error != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
+			return
+		}
+		if !inScope(c, a.CompanyID) {
+			c.JSON(http.StatusOK, gin.H{"code": 403, "msg": "无权操作其他企业的申请"})
 			return
 		}
 		if a.Status != "pending" {
@@ -128,41 +154,50 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		emp := model.Employee{Name: a.Name, Phone: a.Phone, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, OpenID: a.OpenID, Nickname: a.Nickname, PasswordHash: hash, Status: "enabled"}
+		emp := model.Employee{CompanyID: a.CompanyID, Name: a.Name, Phone: a.Phone, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, OpenID: a.OpenID, Nickname: a.Nickname, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		a.Status = "approved"
 		db.Save(&a)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "staffId": emp.StaffID, "initialPassword": pwd})
 	})
 
-	// 开通申请驳回
+	// 开通申请驳回（按租户）
 	r.POST("/api/admin/apply/open/:id/reject", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var body struct {
 			Reason string `json:"reason"`
 		}
 		c.ShouldBindJSON(&body)
-		if db.Model(&model.OpenApply{}).Where("id = ? AND status = ?", id, "pending").
-			Updates(map[string]interface{}{"status": "rejected", "reject_reason": body.Reason}).RowsAffected == 0 {
+		q := db.Model(&model.OpenApply{}).Where("id = ? AND status = ?", id, "pending").Scopes(scopeCond(c))
+		if q.Updates(map[string]interface{}{"status": "rejected", "reject_reason": body.Reason}).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到或已处理"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 名片修改申请列表
+	// 名片修改申请列表（按租户：company_id 冗余自员工归属）
 	r.GET("/api/admin/apply/modify", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.CardModifyApply
-		db.Order("created_at desc").Find(&list)
+		db.Scopes(scopeCond(c)).Order("created_at desc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
 
-	// 名片修改通过 → 应用快照到员工
+	// 名片修改通过 → 应用快照到员工（按租户校验）
 	r.POST("/api/admin/apply/modify/:id/approve", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var a model.CardModifyApply
 		if db.First(&a, "id = ?", id).Error != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
+			return
+		}
+		var e model.Employee
+		if db.First(&e, "staff_id = ?", a.StaffID).Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "员工不存在"})
+			return
+		}
+		if !inScope(c, e.CompanyID) {
+			c.JSON(http.StatusOK, gin.H{"code": 403, "msg": "无权操作其他企业的申请"})
 			return
 		}
 		if a.Status != "pending" {
@@ -171,8 +206,6 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		var patch map[string]string
 		_ = json.Unmarshal([]byte(a.Snapshot), &patch)
-		var e model.Employee
-		db.First(&e, "staff_id = ?", a.StaffID)
 		updates := map[string]interface{}{}
 		if v, ok := patch["avatar"]; ok {
 			updates["avatar"] = v
@@ -198,31 +231,40 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 名片修改驳回
+	// 名片修改驳回（按租户）
 	r.POST("/api/admin/apply/modify/:id/reject", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var body struct {
 			Reason string `json:"reason"`
 		}
 		c.ShouldBindJSON(&body)
-		if db.Model(&model.CardModifyApply{}).Where("id = ? AND status = ?", id, "pending").
-			Updates(map[string]interface{}{"status": "rejected", "reject_reason": body.Reason}).RowsAffected == 0 {
+		q := db.Model(&model.CardModifyApply{}).Where("id = ? AND status = ?", id, "pending").Scopes(scopeCond(c))
+		if q.Updates(map[string]interface{}{"status": "rejected", "reject_reason": body.Reason}).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到或已处理"})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 超管手动新增员工（自动生成账号 + 初始密码）
+	// 超管手动新增员工（自动生成账号 + 初始密码）。
+	// 租户归属：企业管理员 → 本企业；平台超管 → ?companyId=（缺省朗汇）。
 	r.POST("/api/admin/employees", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var req model.Employee
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
 			return
 		}
+		cid, _ := tenantScope(c)
+		if cid == 0 {
+			cid = targetCompanyID(c)
+		}
+		if !companyEnabled(db, cid) {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "目标企业不存在或已停用"})
+			return
+		}
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		emp := model.Employee{Name: req.Name, Phone: req.Phone, Email: req.Email, Title: req.Title, Landline: req.Landline, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
+		emp := model.Employee{CompanyID: cid, Name: req.Name, Phone: req.Phone, Email: req.Email, Title: req.Title, Landline: req.Landline, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "staffId": emp.StaffID, "initialPassword": pwd})
 	})
@@ -230,6 +272,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	// 超管编辑员工资料（即时生效，不经过员工端审核流）。
 	// 只开放白名单字段：姓名 / 职位 / 手机 / 座机 / 邮箱 / 头像。
 	// 状态、密码各有专门端点（disable/enable/reset-password），此处不混写，避免绕过安全戳逻辑。
+	// 租户条件进 Where：企业管理员编辑不到别家员工。
 	r.PUT("/api/admin/employees/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
@@ -248,7 +291,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "姓名与手机为必填"})
 			return
 		}
-		if db.Model(&model.Employee{}).Where("staff_id = ?", id).
+		if db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{
 				"name": req.Name, "title": req.Title, "phone": req.Phone,
 				"landline": req.Landline, "email": req.Email, "avatar": req.Avatar,
@@ -259,34 +302,34 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 员工列表（超管）
+	// 员工列表（按租户）
 	r.GET("/api/admin/employees", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		var list []model.Employee
-		db.Order("staff_id asc").Find(&list)
+		db.Scopes(scopeCond(c)).Order("staff_id asc").Find(&list)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
 	})
 
-	// 启用 / 禁用（禁用同时自增安全戳 → 该员工在线会话立即失效）
+	// 启用 / 禁用（禁用同时自增安全戳 → 该员工在线会话立即失效；按租户）
 	r.POST("/api/admin/employees/:id/disable", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		db.Model(&model.Employee{}).Where("staff_id = ?", id).
+		db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{"status": "disabled", "token_version": gorm.Expr("token_version + 1")})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 	r.POST("/api/admin/employees/:id/enable", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		db.Model(&model.Employee{}).Where("staff_id = ?", id).
+		db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{"status": "enabled", "token_version": gorm.Expr("token_version + 1")})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 重置密码（返回新初始密码）
+	// 重置密码（返回新初始密码；按租户）
 	r.POST("/api/admin/employees/:id/reset-password", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
 		// 重置密码同时自增安全戳 → 该员工所有旧会话立即失效
-		if db.Model(&model.Employee{}).Where("staff_id = ?", id).
+		if db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{"password_hash": hash, "token_version": gorm.Expr("token_version + 1")}).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
 			return
@@ -344,7 +387,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 
 		var emps []model.Employee
-		db.Order("staff_id asc").Find(&emps)
+		db.Scopes(scopeCond(c)).Order("staff_id asc").Find(&emps)
 		list := make([]gin.H, 0, len(emps))
 		var sumVisit, sumCall, sumSave int64
 		for _, e := range emps {
