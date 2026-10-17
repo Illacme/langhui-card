@@ -20,7 +20,7 @@
         <el-input v-model="form.tel" placeholder="名片首页座机" />
       </el-form-item>
       <el-form-item label="LOGO">
-        <UploadField v-model="form.logo" :multiple="false" accept="image/*" />
+        <UploadField v-model="form.logo" :multiple="false" accept="image/*" library-type="logo" />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" :loading="saving" @click="save">保存</el-button>

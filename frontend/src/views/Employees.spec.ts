@@ -29,8 +29,8 @@ vi.mock('element-plus', () => ({
   ElMessage: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
   ElMessageBox: { confirm: vi.fn(async () => 'confirm') },
 }))
-// 图标仅作为 prop 值传递（:prefix-icon），不会真正渲染，桩成普通对象即可
-vi.mock('@element-plus/icons-vue', () => ({ Refresh: {}, Plus: {}, Search: {} }))
+// 图标仅作为 prop 值传递（:prefix-icon）或模板渲染（UploadField 的「从素材库选择」），桩成普通对象即可
+vi.mock('@element-plus/icons-vue', () => ({ Refresh: {}, Plus: {}, Search: {}, Picture: {} }))
 
 import { ElMessageBox } from 'element-plus'
 

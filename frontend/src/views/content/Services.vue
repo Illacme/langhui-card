@@ -83,7 +83,7 @@
           <el-input v-model="form.title" />
         </el-form-item>
         <el-form-item label="图标">
-          <UploadField v-model="form.icon" :multiple="false" accept="image/*" />
+          <UploadField v-model="form.icon" :multiple="false" accept="image/*" library-type="icon" />
         </el-form-item>
         <el-form-item label="内容">
           <RichEditor v-model="form.content" :height="320" />
