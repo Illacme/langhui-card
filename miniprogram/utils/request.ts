@@ -1,6 +1,13 @@
 // 统一的 API 请求封装：自动注入员工 token、统一错误码处理。
 // 401 时先用 refresh 令牌静默换发新 access 并重试原请求一次（单飞锁），
 // 无 refreshToken 或刷新失败则清 token 由调用方引导重新登录。
+//
+// 多租户（见 utils/tenant.ts）：企业内容类 GET 与自助申请 POST 自动带上
+// companyId——企业独立版恒带锁定值，平台模式带扫码/分享粘滞值，
+// 都没有则不传（后端缺省落 1 号租户朗汇）。/api/card 按员工归属企业取，
+// /api/employee/*、/api/wechat/*、登录刷新等与租户无关，一律不注入。
+import { getCompanyId } from './tenant'
+
 const app = getApp() as any
 
 function baseUrl(): string {
@@ -58,6 +65,30 @@ function clearAuth() {
   wx.removeStorageSync('empRefreshToken')
 }
 
+// 需要带 companyId 的内容类 GET 前缀（业绩/服务/项目/布局/企业公开信息）。
+// 白名单式而非黑名单式：新增与租户无关的公开端点时不会意外带上参数。
+function tenantAwarePath(path: string): boolean {
+  return (
+    path.indexOf('/api/achievements') === 0 ||
+    path.indexOf('/api/services') === 0 ||
+    path.indexOf('/api/projects') === 0 ||
+    path.indexOf('/api/home-layout') === 0 ||
+    path.indexOf('/api/company') === 0
+  )
+}
+
+// 按租户语义为请求补 companyId（>0 才补；0 = 不传，走后端缺省）。
+// 独立版恒为锁定值；平台模式为粘滞值；申请提交按 body 归属租户。
+function withCompanyId(method: 'GET' | 'POST' | 'PUT', path: string, data: any): any {
+  const isApply = path.indexOf('/api/apply/open') === 0
+  if (!(method === 'GET' && tenantAwarePath(path)) && !(method !== 'GET' && isApply)) {
+    return data
+  }
+  const cid = getCompanyId()
+  if (cid <= 0) return data
+  return { ...(data || {}), companyId: cid }
+}
+
 // method 支持 GET/POST/PUT；GET 的 data 会拼成 query string
 export function request<T = any>(method: 'GET' | 'POST' | 'PUT', path: string, data?: any): Promise<ApiResult<T>> {
   return doRequest<T>(method, path, data, wx.getStorageSync('empToken'), false)
@@ -71,6 +102,7 @@ function doRequest<T>(
   retried: boolean
 ): Promise<ApiResult<T>> {
   return new Promise((resolve, reject) => {
+    data = withCompanyId(method, path, data)
     let url = baseUrl() + path
     let body: any = data
     if (method === 'GET' && data) {

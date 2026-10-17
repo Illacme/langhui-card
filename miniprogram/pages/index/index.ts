@@ -1,4 +1,5 @@
 import { request } from '../../utils/request'
+import { bindCompanyFromScene, getCompanyId } from '../../utils/tenant'
 
 Page({
   data: {
@@ -34,6 +35,11 @@ Page({
       if (info && info.statusBarHeight) sb = info.statusBarHeight
     } catch {}
     this.setData({ statusBarHeight: sb, navHeight: sb + 44 })
+
+    // 租户绑定（平台模式）：扫企业小程序码 / 分享链接带 companyId 时粘滞本机，
+    // 企业内容（业绩/服务/布局）随之落该企业。独立版在此调用内被忽略（锁定）。
+    // app.ts onLaunch 已做过一次（冷启动），这里覆盖热启动直接进页面的路径，幂等。
+    bindCompanyFromScene(query.scene, query.companyId)
 
     let staffId = parseInt(query.staffId || '0', 10)
     // 从小程序码 scene 解析（形如 "staffId=12"）
@@ -177,9 +183,15 @@ Page({
   },
   onShareAppMessage() {
     const c = this.data.company
+    // 分享链接带上 companyId（平台模式）：对方设备首次打开即落到同一企业，
+    // 不依赖本机粘滞。独立版恒带锁定值，无害。
+    const cid = getCompanyId()
     return {
       title: (c && (c.shortName || c.fullName)) || '朗汇机电',
-      path: '/pages/index/index?staffId=' + this.data.staffId,
+      path:
+        '/pages/index/index?staffId=' +
+        this.data.staffId +
+        (cid > 0 ? '&companyId=' + cid : ''),
     }
   },
   // 左上角「我的」入口：底部 tabBar 已移除，改由 navigateTo 进入「我的」页

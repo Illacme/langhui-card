@@ -1,6 +1,7 @@
 import { request } from '../../../utils/request'
 import { parseRich } from '../../../utils/richtext'
 import { formatDateTime } from '../../../utils/datetime'
+import { getCompanyId } from '../../../utils/tenant'
 
 Page({
   data: {
@@ -40,15 +41,18 @@ Page({
       this.setData({ loading: false, error: true })
     }
   },
-  // 分享带回 staffId：从分享入口进来的访客仍落在对应员工名片链上
+  // 分享带回 staffId 与 companyId：从分享入口进来的访客仍落在对应员工名片链、
+  // 对应企业的内容上（不依赖本机粘滞）
   onShareAppMessage() {
     const p = this.data.project
+    const cid = getCompanyId()
     return {
       title: p ? p.name : '项目案例',
       path:
         '/pages/project/detail/detail?id=' +
         this.data.id +
-        (this.data.staffId ? '&staffId=' + this.data.staffId : ''),
+        (this.data.staffId ? '&staffId=' + this.data.staffId : '') +
+        (cid > 0 ? '&companyId=' + cid : ''),
     }
   },
   preview(e: any) {
