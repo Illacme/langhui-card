@@ -87,10 +87,10 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 ## 开源素材库（减少找图/处理图成本）
 
-所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像、**小程序首页背景**）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：分类 tab（全部 + 图标/封面/LOGO/头像/首页背景）+ 关键字搜索 + 卡片网格 + **底部分页器**，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
+所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像、**小程序首页背景**）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：分类 tab（全部 + 图标/封面/LOGO/头像/背景）+ 关键字搜索 + 卡片网格 + **底部分页器**，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
 
 - 素材清单走**服务端分页**：`GET /api/admin/assets/library?page=&size=&type=&keyword=`，返回 `{items,total,page,size,pages}`；翻页 / 切分类 / 搜索（300ms 防抖）都会重新请求并重置到第 1 页，已选中的素材跨页保留。
-- 当前内置 **118 项**（64 图标 / 16 封面 / 14 LOGO / 12 头像 / 12 首页背景），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
+- 当前内置 **212 项**（104 图标 / 32 封面 / 26 LOGO / 20 头像 / 30 背景，含深浅两色系），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
 - 采用走 `POST /api/admin/assets/adopt`：后端把内嵌素材复制进当前上传存储，返回与手动上传**完全同构**的 URL，后续展示/CDN 链路零差异。
 - 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar` / `background`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
 
@@ -110,7 +110,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 | 业绩分类 | `GET/POST/PUT/DELETE /api/admin/categories` | 删除强校验：锁定或存在关联项目拦截 |
 | 项目案例 | `GET/POST/PUT/DELETE /api/admin/projects` | 详情含 `<wx-video channel-id>` 视频号块；相册为 URL 数组 |
 | 业务服务 | `GET/POST/PUT/DELETE /api/admin/services` | content 含视频号块 |
-| 首页布局 | `GET/PUT /api/admin/home-layout` | 板块顺序 + **首页背景图**（可从素材库「首页背景」直接选用）+ 遮罩浓度滑块与效果预览 |
+| 首页布局 | `GET/PUT /api/admin/home-layout` | 板块顺序 + **首页背景图**（可从素材库「背景」分类直接选用）+ 遮罩浓度滑块与效果预览 |
 
 > 富文本编辑器（项目案例.详情 / 业务服务.内容）已接入 wangEditor v5 可视化编辑，并注册「视频号块」自定义节点；详见下方「富文本编辑器（wangEditor）」。
 

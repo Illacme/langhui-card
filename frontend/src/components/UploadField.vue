@@ -49,7 +49,7 @@ const props = defineProps({
   tip: { type: String, default: '支持图片，单文件 ≤10MB' },
   maxMB: { type: Number, default: 10 },
   // 素材库打开时定位的分类：icon（分类/服务图标）/ cover（封面/相册）/
-  // logo（LOGO）/ avatar（员工头像）/ background（小程序首页背景）
+  // logo（LOGO）/ avatar（员工头像）/ background（背景）
   libraryType: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue'])

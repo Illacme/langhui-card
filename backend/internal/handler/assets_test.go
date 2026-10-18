@@ -29,15 +29,15 @@ func TestAssetLibrary(t *testing.T) {
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library", nil)
 	require.EqualValues(t, 0, body["code"])
 	data := body["data"].(map[string]interface{})
-	require.Len(t, data["categories"].([]interface{}), 5, "图标/封面/LOGO/头像/首页背景 五个分类")
+	require.Len(t, data["categories"].([]interface{}), 5, "图标/封面/LOGO/头像/背景 五个分类")
 	items := data["items"].([]interface{})
 	total := int(data["total"].(float64))
-	require.GreaterOrEqual(t, total, 110, "素材应覆盖五大类上百项")
+	require.GreaterOrEqual(t, total, 200, "素材应覆盖五大类两百项以上")
 	require.EqualValues(t, 1, data["page"])
 	require.EqualValues(t, 24, data["size"], "缺省每页 24 条")
 	require.EqualValues(t, 24, len(items), "第一页按 size 截断")
 	pages := int(data["pages"].(float64))
-	require.GreaterOrEqual(t, pages, 5, "上百项素材应有多页")
+	require.GreaterOrEqual(t, pages, 8, "两百项素材应有多页")
 
 	// 2.1 翻页：第 2 页换一批素材，且不与第 1 页重复
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?page=2", nil)
@@ -71,13 +71,13 @@ func TestAssetLibrary(t *testing.T) {
 	require.EqualValues(t, pages, body["data"].(map[string]interface{})["page"], "超界页码夹到末页")
 	require.NotEmpty(t, body["data"].(map[string]interface{})["items"], "末页仍应有内容")
 
-	// 2.4 分类过滤：只返回首页背景（竖幅 750×1334），total 随之收窄
+	// 2.4 分类过滤：只返回背景（竖幅 750×1334，含深浅两色系），total 随之收窄
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=background", nil)
 	require.EqualValues(t, 0, body["code"])
 	bgData := body["data"].(map[string]interface{})
 	bgItems := bgData["items"].([]interface{})
 	bgTotal := int(bgData["total"].(float64))
-	require.GreaterOrEqual(t, bgTotal, 10, "首页背景分类应覆盖十余款")
+	require.GreaterOrEqual(t, bgTotal, 30, "背景分类应覆盖三十款")
 	require.Less(t, bgTotal, total, "分类过滤后总数应小于全量")
 	for _, it := range bgItems {
 		m := it.(map[string]interface{})
@@ -96,6 +96,15 @@ func TestAssetLibrary(t *testing.T) {
 	// 英文标签同样命中（大小写不敏感）
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=ELEVATOR", nil)
 	require.EqualValues(t, 1, body["data"].(map[string]interface{})["total"])
+	// 背景分类 + 关键字组合过滤：分类内再按关键字收窄
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=background&keyword=金", nil)
+	require.EqualValues(t, 0, body["code"])
+	combo := body["data"].(map[string]interface{})
+	require.GreaterOrEqual(t, int(combo["total"].(float64)), 1, "背景内应有命中「金」的素材")
+	require.LessOrEqual(t, int(combo["total"].(float64)), bgTotal, "组合过滤不应超出分类总数")
+	for _, it := range combo["items"].([]interface{}) {
+		require.Equal(t, "background", it.(map[string]interface{})["category"])
+	}
 	// 无命中：空列表且 total=0，不应报错
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=zzz-not-exist", nil)
 	require.EqualValues(t, 0, body["code"])

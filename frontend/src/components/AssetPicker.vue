@@ -1,6 +1,6 @@
 <template>
   <!-- 常用素材库选择器：点一下即采用并填入（单选），或多选后批量添加。
-       素材由后端内嵌（Lucide 图标 + 通用封面/LOGO/头像/首页背景），采用后与普通上传同构。
+       素材由后端内嵌（Lucide 图标 + 通用封面/LOGO/头像/背景），采用后与普通上传同构。
        列表走服务端分页（page/size/type/keyword），素材扩充到百级也不会一次拉全量。 -->
   <el-dialog
     v-model="visible"
@@ -92,7 +92,7 @@ const props = defineProps({
   multiple: { type: Boolean, default: false },
   limit: { type: Number, default: 9 },
   // 打开时定位到的分类（icon 图标 / cover 封面 / logo LOGO / avatar 头像 /
-  // background 首页背景），由调用方按字段语义传入
+  // background 背景），由调用方按字段语义传入
   defaultCategory: { type: String, default: '' },
 })
 const emit = defineEmits(['update:modelValue', 'picked'])
