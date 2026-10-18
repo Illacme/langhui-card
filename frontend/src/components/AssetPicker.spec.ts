@@ -104,8 +104,8 @@ const LIB_ITEMS = [
   ),
   item('cover-skyline', '天际线', 'cover', ['封面']),
   item('logo-building', '建筑', 'logo', ['LOGO']),
-  item('bg-deepspace', '深空', 'background', ['首页背景']),
-  item('bg-glow', '光晕', 'background', ['首页背景']),
+  item('bg-deepspace', '深空', 'background', ['背景']),
+  item('bg-glow', '光晕', 'background', ['背景']),
 ]
 
 const CATEGORIES = [
@@ -113,7 +113,7 @@ const CATEGORIES = [
   { key: 'cover', name: '封面' },
   { key: 'logo', name: 'LOGO' },
   { key: 'avatar', name: '头像' },
-  { key: 'background', name: '首页背景' },
+  { key: 'background', name: '背景' },
 ]
 
 // 模拟服务端：按 type / keyword 过滤后分页（与 backend assets.List 行为一致）

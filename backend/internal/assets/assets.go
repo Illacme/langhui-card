@@ -3,6 +3,7 @@
 // 员工头像 / 小程序首页背景）都可以直接选内置素材，免去四处找图、按尺寸处理图。
 //
 // 素材由同目录 gen_library.py 生成（Lucide ISC 图标 + 程序绘制封面/LOGO/背景），
+// 按「构图 motif + 配色」解耦——同款换色即可派生新款式，扩充成本低。
 // 通过 go:embed 编译进二进制——单文件部署（Dockerfile 只 COPY 二进制）无需额外挂载。
 // 重新生成/扩充素材：改 gen_library.py 后运行，再提交 library/ 目录。
 package assets

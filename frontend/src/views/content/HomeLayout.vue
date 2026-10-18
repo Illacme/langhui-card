@@ -23,7 +23,7 @@
       <el-form-item label="背景图">
         <UploadField v-model="bgImage" library-type="background" :multiple="false" tip="建议竖幅 750×1334 以上，JPG/PNG，≤10MB" />
         <div class="bg-hint">
-          从素材库「首页背景」分类可直接选用内置高端商务背景；留空则保持小程序默认灰底。
+          从素材库「背景」分类可直接选用内置高端商务背景；留空则保持小程序默认灰底。
         </div>
       </el-form-item>
 
