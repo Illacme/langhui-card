@@ -32,12 +32,12 @@ func TestAssetLibrary(t *testing.T) {
 	require.Len(t, data["categories"].([]interface{}), 5, "图标/封面/LOGO/头像/背景 五个分类")
 	items := data["items"].([]interface{})
 	total := int(data["total"].(float64))
-	require.GreaterOrEqual(t, total, 340, "素材应覆盖五大类三百项以上")
+	require.GreaterOrEqual(t, total, 700, "素材应覆盖五大类七百项以上（含图标配色变体）")
 	require.EqualValues(t, 1, data["page"])
 	require.EqualValues(t, 24, data["size"], "缺省每页 24 条")
 	require.EqualValues(t, 24, len(items), "第一页按 size 截断")
 	pages := int(data["pages"].(float64))
-	require.GreaterOrEqual(t, pages, 14, "三百项素材应有多页")
+	require.GreaterOrEqual(t, pages, 29, "七百项素材应有多页")
 
 	// 2.1 翻页：第 2 页换一批素材，且不与第 1 页重复
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?page=2", nil)
@@ -86,16 +86,18 @@ func TestAssetLibrary(t *testing.T) {
 		require.EqualValues(t, 1334, m["height"])
 	}
 
-	// 2.5 关键字过滤：命中名称或标签，且翻页前重置到第 1 页
+	// 2.5 关键字过滤：命中名称或标签，且翻页前重置到第 1 页。
+	// 同一图标有 原版/暖阳/鎏金 三个配色变体，故命中 3 项；排序按生成顺序，
+	// 原版（clean 无后缀）在最前。
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=电梯", nil)
 	require.EqualValues(t, 0, body["code"])
 	kwData := body["data"].(map[string]interface{})
 	kwItems := kwData["items"].([]interface{})
-	require.EqualValues(t, 1, kwData["total"])
+	require.EqualValues(t, 3, kwData["total"], "同一图标应有三个配色变体")
 	require.Equal(t, "icon-arrow-up-down", kwItems[0].(map[string]interface{})["id"])
 	// 英文标签同样命中（大小写不敏感）
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=ELEVATOR", nil)
-	require.EqualValues(t, 1, body["data"].(map[string]interface{})["total"])
+	require.EqualValues(t, 3, body["data"].(map[string]interface{})["total"])
 	// 背景分类 + 关键字组合过滤：分类内再按关键字收窄
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=background&keyword=金", nil)
 	require.EqualValues(t, 0, body["code"])
@@ -154,19 +156,27 @@ func TestAssetLibrary(t *testing.T) {
 		require.Equal(t, "nature", m["style"])
 	}
 
-	// 2.6.3 图标分类下只有一个调性有素材（其余 count=0，前端据此隐藏该档位）
+	// 2.6.3 图标分类：三档配色变体齐全（冷色原版 / 暖阳 / 鎏金）。
+	// soft 与 vivid 两档刻意不做——浅色底/高饱和底配白色线形图标对比度差，
+	// 小尺寸下糊成一团，做出来是劣质素材；count=0 的档位由前端自动隐藏。
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=icon", nil)
 	require.EqualValues(t, 0, body["code"])
-	iconCounts := body["data"].(map[string]interface{})["styleCounts"].([]interface{})
-	nonZero := 0
-	for _, c := range iconCounts {
+	iconData := body["data"].(map[string]interface{})
+	got := map[string]int{}
+	for _, c := range iconData["styleCounts"].([]interface{}) {
 		m := c.(map[string]interface{})
-		if int(m["count"].(float64)) > 0 {
-			nonZero++
-			require.Equal(t, "clean", m["key"], "图标视觉语言统一，只应落在简约清晰")
-		}
+		got[m["key"].(string)] = int(m["count"].(float64))
 	}
-	require.Equal(t, 1, nonZero)
+	require.Equal(t, 187, got["clean"], "图标冷色原版")
+	require.Equal(t, 187, got["nature"], "图标暖阳变体")
+	require.Equal(t, 187, got["luxury"], "图标鎏金变体")
+	require.Zero(t, got["soft"], "浅底白线对比度差，不做")
+	require.Zero(t, got["vivid"], "高饱和底白线刺眼，不做")
+	// 同一图标应能按调性挑到三个配色变体
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=icon&keyword=居住住宅", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, 3, int(body["data"].(map[string]interface{})["total"].(float64)),
+		"同一图标应有 原版/暖阳/鎏金 三个变体")
 
 	// 2.6.4 调性中文名并入搜索标签：搜「轻奢」能命中该档素材
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=轻奢", nil)

@@ -43,11 +43,35 @@ LUCIDE_BASE = "https://unpkg.com/lucide-static@%s/icons" % LUCIDE_VERSION
 
 # ── 配色 ──────────────────────────────────────────────────────────────
 # 分组配色：分类=品牌蓝（与已确认的设计稿一致）、服务=靛蓝、通用=青
-GROUP_COLORS = {
-    "cat": ((26, 140, 255), (14, 111, 224)),    # #1A8CFF → #0E6FE0
-    "svc": ((91, 108, 255), (61, 79, 224)),     # #5B6CFF → #3D4FE0
-    "misc": ((20, 184, 166), (13, 148, 136)),   # #14B8A6 → #0D9488
+# 图标底色：同一套白色线形图标，按企业气质换底色，使图标也能参与调性筛选。
+#
+# 只做 clean / nature / luxury 三档——这是白色线形图标的物理限制：
+# soft（浅色底）与 vivid（高饱和底）会让白色线条对比度不足、小尺寸下糊成一团，
+# 做出来反而是劣质素材，故不提供。
+ICON_PALETTES = {
+    "clean": {  # 冷色科技（原版）：蓝 / 靛 / 青
+        "cat": ((26, 140, 255), (14, 111, 224)),
+        "svc": ((91, 108, 255), (61, 79, 224)),
+        "misc": ((20, 184, 166), (13, 148, 136)),
+    },
+    "nature": {  # 暖色大地：橙 / 琥珀 / 橄榄，适配农林牧渔、食品、家居、园林
+        "cat": ((234, 88, 12), (194, 65, 12)),
+        "svc": ((217, 119, 6), (180, 83, 9)),
+        "misc": ((132, 204, 22), (101, 163, 13)),
+    },
+    "luxury": {  # 金铜：金 / 古铜 / 深青铜，适配高端制造、金融、珠宝、酒店
+        "cat": ((234, 179, 8), (161, 98, 7)),
+        "svc": ((180, 83, 9), (120, 53, 15)),
+        "misc": ((146, 64, 14), (69, 26, 3)),
+    },
 }
+
+# 图标调性变体：(风格 key, id 后缀, 名称后缀)
+ICON_VARIANTS = [
+    ("clean", "", ""),
+    ("nature", "-warm", " · 暖阳"),
+    ("luxury", "-gold", " · 鎏金"),
+]
 
 # (lucide 名, 中文名, 分组, 搜索标签)
 ICONS = [
@@ -610,20 +634,16 @@ def render_glyph(svg_path, size, stroke_scale=0.75):
         return Image.open(png).convert("RGBA")
 
 
-def make_icon(item_id, name, lucide, group, tags):
+def make_icon(item_id, name, lucide, group, tags, colors, style):
     S = 256
-    tile = rounded_tile(S, *GROUP_COLORS[group])
+    tile = rounded_tile(S, *colors)
     glyph = render_glyph(fetch_lucide(lucide), int(S * 0.62))
     tile.alpha_composite(glyph, ((S - glyph.width) // 2, (S - glyph.height) // 2))
     path = os.path.join(OUT, "icons", item_id + ".png")
     tile.save(path, "PNG")
-    # 图标当前只有 cat/svc/misc 三组冷色配色（见 GROUP_COLORS），客观上不存在
-    # 调性差异，故全部落 clean——选择器的风格行在图标分类下会自动隐藏。
-    # 若要让暖色/金色调性的企业也能配上同调图标，需给图标加配色变体
-    # （数量 ×N、体积线性增长），属于另一项产品决策。
-    return {"id": item_id, "name": name, "category": "icon", "style": "clean",
+    return {"id": item_id, "name": name, "category": "icon", "style": style,
             "file": "icons/%s.png" % item_id, "thumb": "icons/%s.png" % item_id,
-            "width": S, "height": S, "tags": tags + ["简约清晰"]}
+            "width": S, "height": S, "tags": tags + [STYLE_NAMES[style]]}
 
 
 # ── 封面 motif ────────────────────────────────────────────────────────
@@ -2238,9 +2258,12 @@ def main():
     fetch_lucide_license()
 
     items = []
-    print("icons: %d" % len(ICONS))
+    print("icons: %d 个 × %d 配色档" % (len(ICONS), len(ICON_VARIANTS)))
     for lucide, name, group, tags in ICONS:
-        items.append(make_icon("icon-" + lucide, name, lucide, group, tags))
+        for style, suffix, name_suffix in ICON_VARIANTS:
+            items.append(make_icon(
+                "icon-" + lucide + suffix, name + name_suffix, lucide, group, tags,
+                ICON_PALETTES[style][group], style))
     print("covers: %d" % len(COVERS))
     for cid, name, colors, motif in COVERS:
         items.append(make_cover(cid, name, colors, motif))
@@ -2270,7 +2293,7 @@ def main():
             raise RuntimeError("调性 %s 没有任何素材，检查 _STYLE_GROUPS 的 id" % sk)
 
     manifest = {
-        "version": 5,
+        "version": 6,
         "styles": [{"key": k, "name": n} for k, n in STYLES],
         "categories": [
             {"key": "icon", "name": "图标"},

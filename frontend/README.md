@@ -91,7 +91,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 - **两个筛选维度正交**：分类 tab = "用在哪"，风格行 = "什么气质"。风格行只渲染当前条件下 `count>0` 的档位（服务端回传 `styleCounts`），只有一档可选时整行隐藏——例如图标分类下视觉语言统一，不会摆一排点不出东西的筛选项。已选调性在新条件下无素材时（如切分类、搜索收窄）自动回落「全部」，不会停在空结果页。
 - 素材清单走**服务端分页**：`GET /api/admin/assets/library?page=&size=&type=&style=&keyword=`，返回 `{items,total,page,size,pages,styleCounts}`；翻页 / 切分类 / 切风格 / 搜索（300ms 防抖）都会重新请求并重置到第 1 页，已选中的素材跨页保留。
-- 当前内置 **347 项**（187 图标 / 48 封面 / 40 LOGO / 24 头像 / 48 背景，含深浅两色系），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
+- 当前内置 **721 项**（图标 187 图形 × 3 档配色 = 561 / 封面 48 / LOGO 40 / 头像 24 / 背景 48，含深浅两色系），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
 - 采用走 `POST /api/admin/assets/adopt`：后端把内嵌素材复制进当前上传存储，返回与手动上传**完全同构**的 URL，后续展示/CDN 链路零差异。
 - 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar` / `background`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
 

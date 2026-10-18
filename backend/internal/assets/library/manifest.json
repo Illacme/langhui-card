@@ -1,5 +1,5 @@
 {
- "version": 5,
+ "version": 6,
  "styles": [
   {
    "key": "clean",
@@ -62,6 +62,38 @@
    ]
   },
   {
+   "id": "icon-house-warm",
+   "name": "居住住宅 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-house-warm.png",
+   "thumb": "icons/icon-house-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "住宅",
+    "楼宇",
+    "home",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-house-gold",
+   "name": "居住住宅 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-house-gold.png",
+   "thumb": "icons/icon-house-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "住宅",
+    "楼宇",
+    "home",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-landmark",
    "name": "政务办公",
    "category": "icon",
@@ -75,6 +107,38 @@
     "government",
     "机关",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-landmark-warm",
+   "name": "政务办公 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-landmark-warm.png",
+   "thumb": "icons/icon-landmark-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "政务",
+    "government",
+    "机关",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-landmark-gold",
+   "name": "政务办公 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-landmark-gold.png",
+   "thumb": "icons/icon-landmark-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "政务",
+    "government",
+    "机关",
+    "轻奢尊贵"
    ]
   },
   {
@@ -94,6 +158,38 @@
    ]
   },
   {
+   "id": "icon-hospital-warm",
+   "name": "医院 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-hospital-warm.png",
+   "thumb": "icons/icon-hospital-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "医疗",
+    "hospital",
+    "卫生",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-hospital-gold",
+   "name": "医院 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-hospital-gold.png",
+   "thumb": "icons/icon-hospital-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "医疗",
+    "hospital",
+    "卫生",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-school",
    "name": "学校",
    "category": "icon",
@@ -107,6 +203,38 @@
     "school",
     "校园",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-school-warm",
+   "name": "学校 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-school-warm.png",
+   "thumb": "icons/icon-school-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "school",
+    "校园",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-school-gold",
+   "name": "学校 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-school-gold.png",
+   "thumb": "icons/icon-school-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "school",
+    "校园",
+    "轻奢尊贵"
    ]
   },
   {
@@ -126,6 +254,38 @@
    ]
   },
   {
+   "id": "icon-shopping-bag-warm",
+   "name": "商业综合体 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-shopping-bag-warm.png",
+   "thumb": "icons/icon-shopping-bag-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商业",
+    "购物",
+    "商场",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-shopping-bag-gold",
+   "name": "商业综合体 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-shopping-bag-gold.png",
+   "thumb": "icons/icon-shopping-bag-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商业",
+    "购物",
+    "商场",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-train-front",
    "name": "地铁站点",
    "category": "icon",
@@ -139,6 +299,38 @@
     "交通",
     "轨道",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-train-front-warm",
+   "name": "地铁站点 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-train-front-warm.png",
+   "thumb": "icons/icon-train-front-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "地铁",
+    "交通",
+    "轨道",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-train-front-gold",
+   "name": "地铁站点 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-train-front-gold.png",
+   "thumb": "icons/icon-train-front-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "地铁",
+    "交通",
+    "轨道",
+    "轻奢尊贵"
    ]
   },
   {
@@ -158,6 +350,38 @@
    ]
   },
   {
+   "id": "icon-factory-warm",
+   "name": "生产制造 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-factory-warm.png",
+   "thumb": "icons/icon-factory-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "工厂",
+    "制造",
+    "车间",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-factory-gold",
+   "name": "生产制造 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-factory-gold.png",
+   "thumb": "icons/icon-factory-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "工厂",
+    "制造",
+    "车间",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-warehouse",
    "name": "仓储物流",
    "category": "icon",
@@ -171,6 +395,38 @@
     "物流",
     "仓库",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-warehouse-warm",
+   "name": "仓储物流 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-warehouse-warm.png",
+   "thumb": "icons/icon-warehouse-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "物流",
+    "仓库",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-warehouse-gold",
+   "name": "仓储物流 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-warehouse-gold.png",
+   "thumb": "icons/icon-warehouse-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "物流",
+    "仓库",
+    "轻奢尊贵"
    ]
   },
   {
@@ -190,6 +446,38 @@
    ]
   },
   {
+   "id": "icon-building-2-warm",
+   "name": "楼宇建筑 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-building-2-warm.png",
+   "thumb": "icons/icon-building-2-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "楼宇",
+    "建筑",
+    "building",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-building-2-gold",
+   "name": "楼宇建筑 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-building-2-gold.png",
+   "thumb": "icons/icon-building-2-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "楼宇",
+    "建筑",
+    "building",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-briefcase",
    "name": "商务办公",
    "category": "icon",
@@ -203,6 +491,38 @@
     "办公",
     "写字楼",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-briefcase-warm",
+   "name": "商务办公 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-briefcase-warm.png",
+   "thumb": "icons/icon-briefcase-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商务",
+    "办公",
+    "写字楼",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-briefcase-gold",
+   "name": "商务办公 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-briefcase-gold.png",
+   "thumb": "icons/icon-briefcase-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商务",
+    "办公",
+    "写字楼",
+    "轻奢尊贵"
    ]
   },
   {
@@ -222,6 +542,38 @@
    ]
   },
   {
+   "id": "icon-graduation-cap-warm",
+   "name": "教育培训 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-graduation-cap-warm.png",
+   "thumb": "icons/icon-graduation-cap-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "培训",
+    "高校",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-graduation-cap-gold",
+   "name": "教育培训 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-graduation-cap-gold.png",
+   "thumb": "icons/icon-graduation-cap-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "培训",
+    "高校",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-hotel",
    "name": "酒店住宿",
    "category": "icon",
@@ -235,6 +587,38 @@
     "住宿",
     "宾馆",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-hotel-warm",
+   "name": "酒店住宿 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-hotel-warm.png",
+   "thumb": "icons/icon-hotel-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "酒店",
+    "住宿",
+    "宾馆",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-hotel-gold",
+   "name": "酒店住宿 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-hotel-gold.png",
+   "thumb": "icons/icon-hotel-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "酒店",
+    "住宿",
+    "宾馆",
+    "轻奢尊贵"
    ]
   },
   {
@@ -254,6 +638,38 @@
    ]
   },
   {
+   "id": "icon-utensils-warm",
+   "name": "餐饮美食 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-utensils-warm.png",
+   "thumb": "icons/icon-utensils-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "餐饮",
+    "美食",
+    "餐厅",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-utensils-gold",
+   "name": "餐饮美食 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-utensils-gold.png",
+   "thumb": "icons/icon-utensils-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "餐饮",
+    "美食",
+    "餐厅",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-bus",
    "name": "公共交通",
    "category": "icon",
@@ -267,6 +683,38 @@
     "交通",
     "客运",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-bus-warm",
+   "name": "公共交通 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-bus-warm.png",
+   "thumb": "icons/icon-bus-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公交",
+    "交通",
+    "客运",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-bus-gold",
+   "name": "公共交通 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-bus-gold.png",
+   "thumb": "icons/icon-bus-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公交",
+    "交通",
+    "客运",
+    "轻奢尊贵"
    ]
   },
   {
@@ -286,6 +734,38 @@
    ]
   },
   {
+   "id": "icon-zap-warm",
+   "name": "能源电力 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-zap-warm.png",
+   "thumb": "icons/icon-zap-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "能源",
+    "电力",
+    "电气",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-zap-gold",
+   "name": "能源电力 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-zap-gold.png",
+   "thumb": "icons/icon-zap-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "能源",
+    "电力",
+    "电气",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-leaf",
    "name": "绿色环保",
    "category": "icon",
@@ -299,6 +779,38 @@
     "绿色",
     "节能",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-leaf-warm",
+   "name": "绿色环保 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-leaf-warm.png",
+   "thumb": "icons/icon-leaf-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环保",
+    "绿色",
+    "节能",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-leaf-gold",
+   "name": "绿色环保 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-leaf-gold.png",
+   "thumb": "icons/icon-leaf-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环保",
+    "绿色",
+    "节能",
+    "轻奢尊贵"
    ]
   },
   {
@@ -318,6 +830,38 @@
    ]
   },
   {
+   "id": "icon-shield-check-warm",
+   "name": "安防保障 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-shield-check-warm.png",
+   "thumb": "icons/icon-shield-check-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安防",
+    "保障",
+    "安全",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-shield-check-gold",
+   "name": "安防保障 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-shield-check-gold.png",
+   "thumb": "icons/icon-shield-check-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安防",
+    "保障",
+    "安全",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-truck",
    "name": "物流配送",
    "category": "icon",
@@ -331,6 +875,38 @@
     "配送",
     "运输",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-truck-warm",
+   "name": "物流配送 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-truck-warm.png",
+   "thumb": "icons/icon-truck-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "物流",
+    "配送",
+    "运输",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-truck-gold",
+   "name": "物流配送 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-truck-gold.png",
+   "thumb": "icons/icon-truck-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "物流",
+    "配送",
+    "运输",
+    "轻奢尊贵"
    ]
   },
   {
@@ -350,6 +926,38 @@
    ]
   },
   {
+   "id": "icon-plane-warm",
+   "name": "航空机场 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-plane-warm.png",
+   "thumb": "icons/icon-plane-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "航空",
+    "机场",
+    "飞机",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-plane-gold",
+   "name": "航空机场 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-plane-gold.png",
+   "thumb": "icons/icon-plane-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "航空",
+    "机场",
+    "飞机",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-ship",
    "name": "港口航运",
    "category": "icon",
@@ -363,6 +971,38 @@
     "航运",
     "船舶",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-ship-warm",
+   "name": "港口航运 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-ship-warm.png",
+   "thumb": "icons/icon-ship-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "港口",
+    "航运",
+    "船舶",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-ship-gold",
+   "name": "港口航运 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-ship-gold.png",
+   "thumb": "icons/icon-ship-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "港口",
+    "航运",
+    "船舶",
+    "轻奢尊贵"
    ]
   },
   {
@@ -382,6 +1022,38 @@
    ]
   },
   {
+   "id": "icon-store-warm",
+   "name": "商铺零售 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-store-warm.png",
+   "thumb": "icons/icon-store-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商铺",
+    "零售",
+    "门店",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-store-gold",
+   "name": "商铺零售 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-store-gold.png",
+   "thumb": "icons/icon-store-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商铺",
+    "零售",
+    "门店",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-library",
    "name": "文化场馆",
    "category": "icon",
@@ -395,6 +1067,38 @@
     "场馆",
     "图书",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-library-warm",
+   "name": "文化场馆 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-library-warm.png",
+   "thumb": "icons/icon-library-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文化",
+    "场馆",
+    "图书",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-library-gold",
+   "name": "文化场馆 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-library-gold.png",
+   "thumb": "icons/icon-library-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文化",
+    "场馆",
+    "图书",
+    "轻奢尊贵"
    ]
   },
   {
@@ -414,6 +1118,38 @@
    ]
   },
   {
+   "id": "icon-flask-conical-warm",
+   "name": "科研实验 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-flask-conical-warm.png",
+   "thumb": "icons/icon-flask-conical-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "科研",
+    "实验",
+    "检测",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-flask-conical-gold",
+   "name": "科研实验 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-flask-conical-gold.png",
+   "thumb": "icons/icon-flask-conical-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "科研",
+    "实验",
+    "检测",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-microscope",
    "name": "生物医疗",
    "category": "icon",
@@ -427,6 +1163,38 @@
     "医疗",
     "显微",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-microscope-warm",
+   "name": "生物医疗 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-microscope-warm.png",
+   "thumb": "icons/icon-microscope-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医疗",
+    "显微",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-microscope-gold",
+   "name": "生物医疗 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-microscope-gold.png",
+   "thumb": "icons/icon-microscope-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医疗",
+    "显微",
+    "轻奢尊贵"
    ]
   },
   {
@@ -446,6 +1214,38 @@
    ]
   },
   {
+   "id": "icon-atom-warm",
+   "name": "高新科技 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-atom-warm.png",
+   "thumb": "icons/icon-atom-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "科技",
+    "高新",
+    "原子",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-atom-gold",
+   "name": "高新科技 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-atom-gold.png",
+   "thumb": "icons/icon-atom-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "科技",
+    "高新",
+    "原子",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-dumbbell",
    "name": "文体健身",
    "category": "icon",
@@ -459,6 +1259,38 @@
     "文体",
     "运动",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-dumbbell-warm",
+   "name": "文体健身 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-dumbbell-warm.png",
+   "thumb": "icons/icon-dumbbell-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "健身",
+    "文体",
+    "运动",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-dumbbell-gold",
+   "name": "文体健身 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-dumbbell-gold.png",
+   "thumb": "icons/icon-dumbbell-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "健身",
+    "文体",
+    "运动",
+    "轻奢尊贵"
    ]
   },
   {
@@ -478,6 +1310,38 @@
    ]
   },
   {
+   "id": "icon-trees-warm",
+   "name": "园林绿化 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-trees-warm.png",
+   "thumb": "icons/icon-trees-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "园林",
+    "绿化",
+    "景观",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-trees-gold",
+   "name": "园林绿化 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-trees-gold.png",
+   "thumb": "icons/icon-trees-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "园林",
+    "绿化",
+    "景观",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-wind",
    "name": "风力新能源",
    "category": "icon",
@@ -491,6 +1355,38 @@
     "新能源",
     "风力",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-wind-warm",
+   "name": "风力新能源 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-wind-warm.png",
+   "thumb": "icons/icon-wind-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风电",
+    "新能源",
+    "风力",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-wind-gold",
+   "name": "风力新能源 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-wind-gold.png",
+   "thumb": "icons/icon-wind-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风电",
+    "新能源",
+    "风力",
+    "轻奢尊贵"
    ]
   },
   {
@@ -510,6 +1406,38 @@
    ]
   },
   {
+   "id": "icon-sun-warm",
+   "name": "光伏太阳能 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-sun-warm.png",
+   "thumb": "icons/icon-sun-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "光伏",
+    "太阳能",
+    "发电",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-sun-gold",
+   "name": "光伏太阳能 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-sun-gold.png",
+   "thumb": "icons/icon-sun-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "光伏",
+    "太阳能",
+    "发电",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-droplet",
    "name": "水务水利",
    "category": "icon",
@@ -523,6 +1451,38 @@
     "水利",
     "给排水",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-droplet-warm",
+   "name": "水务水利 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-droplet-warm.png",
+   "thumb": "icons/icon-droplet-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水务",
+    "水利",
+    "给排水",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-droplet-gold",
+   "name": "水务水利 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-droplet-gold.png",
+   "thumb": "icons/icon-droplet-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水务",
+    "水利",
+    "给排水",
+    "轻奢尊贵"
    ]
   },
   {
@@ -542,6 +1502,38 @@
    ]
   },
   {
+   "id": "icon-flame-warm",
+   "name": "热力能源 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-flame-warm.png",
+   "thumb": "icons/icon-flame-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "热力",
+    "能源",
+    "燃烧",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-flame-gold",
+   "name": "热力能源 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-flame-gold.png",
+   "thumb": "icons/icon-flame-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "热力",
+    "能源",
+    "燃烧",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-recycle",
    "name": "再生资源",
    "category": "icon",
@@ -555,6 +1547,38 @@
     "资源",
     "循环",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-recycle-warm",
+   "name": "再生资源 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-recycle-warm.png",
+   "thumb": "icons/icon-recycle-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "再生",
+    "资源",
+    "循环",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-recycle-gold",
+   "name": "再生资源 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-recycle-gold.png",
+   "thumb": "icons/icon-recycle-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "再生",
+    "资源",
+    "循环",
+    "轻奢尊贵"
    ]
   },
   {
@@ -574,6 +1598,38 @@
    ]
   },
   {
+   "id": "icon-car-warm",
+   "name": "汽车交通 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-car-warm.png",
+   "thumb": "icons/icon-car-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "汽车",
+    "交通",
+    "车行",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-car-gold",
+   "name": "汽车交通 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-car-gold.png",
+   "thumb": "icons/icon-car-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "汽车",
+    "交通",
+    "车行",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-bike",
    "name": "慢行系统",
    "category": "icon",
@@ -587,6 +1643,38 @@
     "骑行",
     "绿道",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-bike-warm",
+   "name": "慢行系统 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-bike-warm.png",
+   "thumb": "icons/icon-bike-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "慢行",
+    "骑行",
+    "绿道",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-bike-gold",
+   "name": "慢行系统 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-bike-gold.png",
+   "thumb": "icons/icon-bike-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "慢行",
+    "骑行",
+    "绿道",
+    "轻奢尊贵"
    ]
   },
   {
@@ -606,6 +1694,38 @@
    ]
   },
   {
+   "id": "icon-anchor-warm",
+   "name": "港航码头 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-anchor-warm.png",
+   "thumb": "icons/icon-anchor-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "港航",
+    "码头",
+    "锚地",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-anchor-gold",
+   "name": "港航码头 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-anchor-gold.png",
+   "thumb": "icons/icon-anchor-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "港航",
+    "码头",
+    "锚地",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-church",
    "name": "文化宗教",
    "category": "icon",
@@ -619,6 +1739,38 @@
     "宗教",
     "礼堂",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-church-warm",
+   "name": "文化宗教 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-church-warm.png",
+   "thumb": "icons/icon-church-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文化",
+    "宗教",
+    "礼堂",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-church-gold",
+   "name": "文化宗教 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-church-gold.png",
+   "thumb": "icons/icon-church-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文化",
+    "宗教",
+    "礼堂",
+    "轻奢尊贵"
    ]
   },
   {
@@ -638,6 +1790,38 @@
    ]
   },
   {
+   "id": "icon-banknote-warm",
+   "name": "金融服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-banknote-warm.png",
+   "thumb": "icons/icon-banknote-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "金融",
+    "银行",
+    "货币",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-banknote-gold",
+   "name": "金融服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-banknote-gold.png",
+   "thumb": "icons/icon-banknote-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "金融",
+    "银行",
+    "货币",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-piggy-bank",
    "name": "投资理财",
    "category": "icon",
@@ -651,6 +1835,38 @@
     "理财",
     "财富",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-piggy-bank-warm",
+   "name": "投资理财 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-piggy-bank-warm.png",
+   "thumb": "icons/icon-piggy-bank-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "投资",
+    "理财",
+    "财富",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-piggy-bank-gold",
+   "name": "投资理财 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-piggy-bank-gold.png",
+   "thumb": "icons/icon-piggy-bank-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "投资",
+    "理财",
+    "财富",
+    "轻奢尊贵"
    ]
   },
   {
@@ -670,6 +1886,38 @@
    ]
   },
   {
+   "id": "icon-hammer-warm",
+   "name": "工程施工 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-hammer-warm.png",
+   "thumb": "icons/icon-hammer-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "施工",
+    "工程",
+    "建造",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-hammer-gold",
+   "name": "工程施工 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-hammer-gold.png",
+   "thumb": "icons/icon-hammer-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "施工",
+    "工程",
+    "建造",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-mountain-snow",
    "name": "山地景区",
    "category": "icon",
@@ -683,6 +1931,38 @@
     "景区",
     "雪峰",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-mountain-snow-warm",
+   "name": "山地景区 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-mountain-snow-warm.png",
+   "thumb": "icons/icon-mountain-snow-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "山地",
+    "景区",
+    "雪峰",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-mountain-snow-gold",
+   "name": "山地景区 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-mountain-snow-gold.png",
+   "thumb": "icons/icon-mountain-snow-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "山地",
+    "景区",
+    "雪峰",
+    "轻奢尊贵"
    ]
   },
   {
@@ -702,6 +1982,38 @@
    ]
   },
   {
+   "id": "icon-wheat-warm",
+   "name": "粮油农产 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-wheat-warm.png",
+   "thumb": "icons/icon-wheat-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "粮油",
+    "农产",
+    "种植",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-wheat-gold",
+   "name": "粮油农产 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-wheat-gold.png",
+   "thumb": "icons/icon-wheat-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "粮油",
+    "农产",
+    "种植",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-tractor",
    "name": "农机农业",
    "category": "icon",
@@ -715,6 +2027,38 @@
     "农业",
     "耕作",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-tractor-warm",
+   "name": "农机农业 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-tractor-warm.png",
+   "thumb": "icons/icon-tractor-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "农机",
+    "农业",
+    "耕作",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-tractor-gold",
+   "name": "农机农业 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-tractor-gold.png",
+   "thumb": "icons/icon-tractor-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "农机",
+    "农业",
+    "耕作",
+    "轻奢尊贵"
    ]
   },
   {
@@ -734,6 +2078,38 @@
    ]
   },
   {
+   "id": "icon-apple-warm",
+   "name": "生鲜果品 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-apple-warm.png",
+   "thumb": "icons/icon-apple-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生鲜",
+    "果品",
+    "果蔬",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-apple-gold",
+   "name": "生鲜果品 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-apple-gold.png",
+   "thumb": "icons/icon-apple-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生鲜",
+    "果品",
+    "果蔬",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-fish-symbol",
    "name": "水产海鲜",
    "category": "icon",
@@ -747,6 +2123,38 @@
     "海鲜",
     "渔业",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-fish-symbol-warm",
+   "name": "水产海鲜 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-fish-symbol-warm.png",
+   "thumb": "icons/icon-fish-symbol-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水产",
+    "海鲜",
+    "渔业",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-fish-symbol-gold",
+   "name": "水产海鲜 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-fish-symbol-gold.png",
+   "thumb": "icons/icon-fish-symbol-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水产",
+    "海鲜",
+    "渔业",
+    "轻奢尊贵"
    ]
   },
   {
@@ -766,6 +2174,38 @@
    ]
   },
   {
+   "id": "icon-milk-warm",
+   "name": "乳品饮料 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-milk-warm.png",
+   "thumb": "icons/icon-milk-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "乳品",
+    "饮料",
+    "奶制品",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-milk-gold",
+   "name": "乳品饮料 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-milk-gold.png",
+   "thumb": "icons/icon-milk-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "乳品",
+    "饮料",
+    "奶制品",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-croissant",
    "name": "烘焙面点",
    "category": "icon",
@@ -779,6 +2219,38 @@
     "面点",
     "食品",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-croissant-warm",
+   "name": "烘焙面点 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-croissant-warm.png",
+   "thumb": "icons/icon-croissant-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "烘焙",
+    "面点",
+    "食品",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-croissant-gold",
+   "name": "烘焙面点 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-croissant-gold.png",
+   "thumb": "icons/icon-croissant-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "烘焙",
+    "面点",
+    "食品",
+    "轻奢尊贵"
    ]
   },
   {
@@ -798,6 +2270,38 @@
    ]
   },
   {
+   "id": "icon-utensils-crossed-warm",
+   "name": "团餐宴席 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-utensils-crossed-warm.png",
+   "thumb": "icons/icon-utensils-crossed-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团餐",
+    "宴席",
+    "食堂",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-utensils-crossed-gold",
+   "name": "团餐宴席 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-utensils-crossed-gold.png",
+   "thumb": "icons/icon-utensils-crossed-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团餐",
+    "宴席",
+    "食堂",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-dog",
    "name": "宠物服务",
    "category": "icon",
@@ -811,6 +2315,38 @@
     "兽医",
     "萌宠",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-dog-warm",
+   "name": "宠物服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-dog-warm.png",
+   "thumb": "icons/icon-dog-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "宠物",
+    "兽医",
+    "萌宠",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-dog-gold",
+   "name": "宠物服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-dog-gold.png",
+   "thumb": "icons/icon-dog-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "宠物",
+    "兽医",
+    "萌宠",
+    "轻奢尊贵"
    ]
   },
   {
@@ -830,6 +2366,38 @@
    ]
   },
   {
+   "id": "icon-baby-warm",
+   "name": "母婴护理 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-baby-warm.png",
+   "thumb": "icons/icon-baby-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "母婴",
+    "育儿",
+    "护理",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-baby-gold",
+   "name": "母婴护理 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-baby-gold.png",
+   "thumb": "icons/icon-baby-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "母婴",
+    "育儿",
+    "护理",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-dna",
    "name": "生物医药",
    "category": "icon",
@@ -843,6 +2411,38 @@
     "医药",
     "基因",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-dna-warm",
+   "name": "生物医药 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-dna-warm.png",
+   "thumb": "icons/icon-dna-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医药",
+    "基因",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-dna-gold",
+   "name": "生物医药 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-dna-gold.png",
+   "thumb": "icons/icon-dna-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医药",
+    "基因",
+    "轻奢尊贵"
    ]
   },
   {
@@ -862,6 +2462,38 @@
    ]
   },
   {
+   "id": "icon-brain-warm",
+   "name": "智库咨询 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-brain-warm.png",
+   "thumb": "icons/icon-brain-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智库",
+    "咨询",
+    "策略",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-brain-gold",
+   "name": "智库咨询 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-brain-gold.png",
+   "thumb": "icons/icon-brain-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智库",
+    "咨询",
+    "策略",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-sofa",
    "name": "家居软装",
    "category": "icon",
@@ -875,6 +2507,38 @@
     "软装",
     "家具",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-sofa-warm",
+   "name": "家居软装 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-sofa-warm.png",
+   "thumb": "icons/icon-sofa-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "家居",
+    "软装",
+    "家具",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-sofa-gold",
+   "name": "家居软装 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-sofa-gold.png",
+   "thumb": "icons/icon-sofa-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "家居",
+    "软装",
+    "家具",
+    "轻奢尊贵"
    ]
   },
   {
@@ -894,6 +2558,38 @@
    ]
   },
   {
+   "id": "icon-bed-double-warm",
+   "name": "酒店客房 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-bed-double-warm.png",
+   "thumb": "icons/icon-bed-double-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客房",
+    "住宿",
+    "民宿",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-bed-double-gold",
+   "name": "酒店客房 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-bed-double-gold.png",
+   "thumb": "icons/icon-bed-double-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客房",
+    "住宿",
+    "民宿",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-tent",
    "name": "户外露营",
    "category": "icon",
@@ -907,6 +2603,38 @@
     "露营",
     "拓展",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-tent-warm",
+   "name": "户外露营 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-tent-warm.png",
+   "thumb": "icons/icon-tent-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "户外",
+    "露营",
+    "拓展",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-tent-gold",
+   "name": "户外露营 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-tent-gold.png",
+   "thumb": "icons/icon-tent-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "户外",
+    "露营",
+    "拓展",
+    "轻奢尊贵"
    ]
   },
   {
@@ -926,6 +2654,38 @@
    ]
   },
   {
+   "id": "icon-luggage-warm",
+   "name": "旅游出行 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-luggage-warm.png",
+   "thumb": "icons/icon-luggage-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "旅游",
+    "出行",
+    "度假",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-luggage-gold",
+   "name": "旅游出行 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-luggage-gold.png",
+   "thumb": "icons/icon-luggage-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "旅游",
+    "出行",
+    "度假",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-sailboat",
    "name": "游艇帆船",
    "category": "icon",
@@ -939,6 +2699,38 @@
     "帆船",
     "水上",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-sailboat-warm",
+   "name": "游艇帆船 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-sailboat-warm.png",
+   "thumb": "icons/icon-sailboat-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游艇",
+    "帆船",
+    "水上",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-sailboat-gold",
+   "name": "游艇帆船 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-sailboat-gold.png",
+   "thumb": "icons/icon-sailboat-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游艇",
+    "帆船",
+    "水上",
+    "轻奢尊贵"
    ]
   },
   {
@@ -958,6 +2750,38 @@
    ]
   },
   {
+   "id": "icon-fuel-warm",
+   "name": "油品石化 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-fuel-warm.png",
+   "thumb": "icons/icon-fuel-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "油品",
+    "石化",
+    "加油站",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-fuel-gold",
+   "name": "油品石化 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-fuel-gold.png",
+   "thumb": "icons/icon-fuel-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "油品",
+    "石化",
+    "加油站",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-radiation",
    "name": "核电放射",
    "category": "icon",
@@ -971,6 +2795,38 @@
     "放射",
     "特检",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-radiation-warm",
+   "name": "核电放射 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-radiation-warm.png",
+   "thumb": "icons/icon-radiation-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "核电",
+    "放射",
+    "特检",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-radiation-gold",
+   "name": "核电放射 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-radiation-gold.png",
+   "thumb": "icons/icon-radiation-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "核电",
+    "放射",
+    "特检",
+    "轻奢尊贵"
    ]
   },
   {
@@ -990,6 +2846,38 @@
    ]
   },
   {
+   "id": "icon-brick-wall-warm",
+   "name": "建材砌筑 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-brick-wall-warm.png",
+   "thumb": "icons/icon-brick-wall-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "建材",
+    "砌筑",
+    "墙体",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-brick-wall-gold",
+   "name": "建材砌筑 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-brick-wall-gold.png",
+   "thumb": "icons/icon-brick-wall-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "建材",
+    "砌筑",
+    "墙体",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-traffic-cone",
    "name": "市政工程",
    "category": "icon",
@@ -1003,6 +2891,38 @@
     "道路",
     "养护",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-traffic-cone-warm",
+   "name": "市政工程 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-traffic-cone-warm.png",
+   "thumb": "icons/icon-traffic-cone-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "市政",
+    "道路",
+    "养护",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-traffic-cone-gold",
+   "name": "市政工程 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-traffic-cone-gold.png",
+   "thumb": "icons/icon-traffic-cone-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "市政",
+    "道路",
+    "养护",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1022,6 +2942,38 @@
    ]
   },
   {
+   "id": "icon-drill-warm",
+   "name": "钻井机加 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-drill-warm.png",
+   "thumb": "icons/icon-drill-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钻井",
+    "机加",
+    "钻孔",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-drill-gold",
+   "name": "钻井机加 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-drill-gold.png",
+   "thumb": "icons/icon-drill-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钻井",
+    "机加",
+    "钻孔",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-pickaxe",
    "name": "矿山采掘",
    "category": "icon",
@@ -1035,6 +2987,38 @@
     "采掘",
     "矿业",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-pickaxe-warm",
+   "name": "矿山采掘 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-pickaxe-warm.png",
+   "thumb": "icons/icon-pickaxe-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矿山",
+    "采掘",
+    "矿业",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-pickaxe-gold",
+   "name": "矿山采掘 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-pickaxe-gold.png",
+   "thumb": "icons/icon-pickaxe-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矿山",
+    "采掘",
+    "矿业",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1054,6 +3038,38 @@
    ]
   },
   {
+   "id": "icon-anvil-warm",
+   "name": "冶金锻造 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-anvil-warm.png",
+   "thumb": "icons/icon-anvil-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冶金",
+    "锻造",
+    "铸造",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-anvil-gold",
+   "name": "冶金锻造 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-anvil-gold.png",
+   "thumb": "icons/icon-anvil-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冶金",
+    "锻造",
+    "铸造",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-radar",
    "name": "探测雷达",
    "category": "icon",
@@ -1067,6 +3083,38 @@
     "探测",
     "传感",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-radar-warm",
+   "name": "探测雷达 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-radar-warm.png",
+   "thumb": "icons/icon-radar-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "雷达",
+    "探测",
+    "传感",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-radar-gold",
+   "name": "探测雷达 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-radar-gold.png",
+   "thumb": "icons/icon-radar-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "雷达",
+    "探测",
+    "传感",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1086,6 +3134,38 @@
    ]
   },
   {
+   "id": "icon-satellite-dish-warm",
+   "name": "卫星通信 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-satellite-dish-warm.png",
+   "thumb": "icons/icon-satellite-dish-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "卫星",
+    "通信",
+    "天线",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-satellite-dish-gold",
+   "name": "卫星通信 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-satellite-dish-gold.png",
+   "thumb": "icons/icon-satellite-dish-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "卫星",
+    "通信",
+    "天线",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-radio-tower",
    "name": "通信铁塔",
    "category": "icon",
@@ -1099,6 +3179,38 @@
     "基站",
     "信号",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-radio-tower-warm",
+   "name": "通信铁塔 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-radio-tower-warm.png",
+   "thumb": "icons/icon-radio-tower-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "铁塔",
+    "基站",
+    "信号",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-radio-tower-gold",
+   "name": "通信铁塔 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-radio-tower-gold.png",
+   "thumb": "icons/icon-radio-tower-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "铁塔",
+    "基站",
+    "信号",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1118,6 +3230,38 @@
    ]
   },
   {
+   "id": "icon-cpu-warm",
+   "name": "芯片半导体 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cpu-warm.png",
+   "thumb": "icons/icon-cpu-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "芯片",
+    "半导体",
+    "电子",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cpu-gold",
+   "name": "芯片半导体 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cpu-gold.png",
+   "thumb": "icons/icon-cpu-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "芯片",
+    "半导体",
+    "电子",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-bot",
    "name": "机器人智能",
    "category": "icon",
@@ -1131,6 +3275,38 @@
     "智能",
     "AI",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-bot-warm",
+   "name": "机器人智能 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-bot-warm.png",
+   "thumb": "icons/icon-bot-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机器人",
+    "智能",
+    "AI",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-bot-gold",
+   "name": "机器人智能 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-bot-gold.png",
+   "thumb": "icons/icon-bot-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机器人",
+    "智能",
+    "AI",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1150,6 +3326,38 @@
    ]
   },
   {
+   "id": "icon-gavel-warm",
+   "name": "法律律所 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-gavel-warm.png",
+   "thumb": "icons/icon-gavel-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "法律",
+    "律所",
+    "法务",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-gavel-gold",
+   "name": "法律律所 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-gavel-gold.png",
+   "thumb": "icons/icon-gavel-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "法律",
+    "律所",
+    "法务",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-newspaper",
    "name": "新闻出版",
    "category": "icon",
@@ -1163,6 +3371,38 @@
     "出版",
     "报刊",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-newspaper-warm",
+   "name": "新闻出版 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-newspaper-warm.png",
+   "thumb": "icons/icon-newspaper-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "新闻",
+    "出版",
+    "报刊",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-newspaper-gold",
+   "name": "新闻出版 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-newspaper-gold.png",
+   "thumb": "icons/icon-newspaper-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "新闻",
+    "出版",
+    "报刊",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1182,6 +3422,38 @@
    ]
   },
   {
+   "id": "icon-mic-warm",
+   "name": "会议主持 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-mic-warm.png",
+   "thumb": "icons/icon-mic-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "会议",
+    "主持",
+    "会务",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-mic-gold",
+   "name": "会议主持 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-mic-gold.png",
+   "thumb": "icons/icon-mic-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "会议",
+    "主持",
+    "会务",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-radio",
    "name": "广播电台",
    "category": "icon",
@@ -1195,6 +3467,38 @@
     "电台",
     "音频",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-radio-warm",
+   "name": "广播电台 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-radio-warm.png",
+   "thumb": "icons/icon-radio-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "广播",
+    "电台",
+    "音频",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-radio-gold",
+   "name": "广播电台 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-radio-gold.png",
+   "thumb": "icons/icon-radio-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "广播",
+    "电台",
+    "音频",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1214,6 +3518,38 @@
    ]
   },
   {
+   "id": "icon-tv-warm",
+   "name": "电视媒体 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-tv-warm.png",
+   "thumb": "icons/icon-tv-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电视",
+    "媒体",
+    "栏目",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-tv-gold",
+   "name": "电视媒体 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-tv-gold.png",
+   "thumb": "icons/icon-tv-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电视",
+    "媒体",
+    "栏目",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-gamepad-2",
    "name": "游戏电竞",
    "category": "icon",
@@ -1227,6 +3563,38 @@
     "电竞",
     "娱乐",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-gamepad-2-warm",
+   "name": "游戏电竞 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-gamepad-2-warm.png",
+   "thumb": "icons/icon-gamepad-2-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游戏",
+    "电竞",
+    "娱乐",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-gamepad-2-gold",
+   "name": "游戏电竞 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-gamepad-2-gold.png",
+   "thumb": "icons/icon-gamepad-2-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游戏",
+    "电竞",
+    "娱乐",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1246,6 +3614,38 @@
    ]
   },
   {
+   "id": "icon-watch-warm",
+   "name": "钟表珠宝 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-watch-warm.png",
+   "thumb": "icons/icon-watch-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钟表",
+    "珠宝",
+    "腕表",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-watch-gold",
+   "name": "钟表珠宝 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-watch-gold.png",
+   "thumb": "icons/icon-watch-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钟表",
+    "珠宝",
+    "腕表",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-fence",
    "name": "围栏护栏",
    "category": "icon",
@@ -1259,6 +3659,38 @@
     "护栏",
     "隔离",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-fence-warm",
+   "name": "围栏护栏 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-fence-warm.png",
+   "thumb": "icons/icon-fence-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "围栏",
+    "护栏",
+    "隔离",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-fence-gold",
+   "name": "围栏护栏 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-fence-gold.png",
+   "thumb": "icons/icon-fence-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "围栏",
+    "护栏",
+    "隔离",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1278,6 +3710,38 @@
    ]
   },
   {
+   "id": "icon-fire-extinguisher-warm",
+   "name": "消防设备 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-fire-extinguisher-warm.png",
+   "thumb": "icons/icon-fire-extinguisher-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消防",
+    "设备",
+    "灭火",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-fire-extinguisher-gold",
+   "name": "消防设备 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-fire-extinguisher-gold.png",
+   "thumb": "icons/icon-fire-extinguisher-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消防",
+    "设备",
+    "灭火",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-heart-handshake",
    "name": "公益养老",
    "category": "icon",
@@ -1291,6 +3755,38 @@
     "养老",
     "助残",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-heart-handshake-warm",
+   "name": "公益养老 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-heart-handshake-warm.png",
+   "thumb": "icons/icon-heart-handshake-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公益",
+    "养老",
+    "助残",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-heart-handshake-gold",
+   "name": "公益养老 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-heart-handshake-gold.png",
+   "thumb": "icons/icon-heart-handshake-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公益",
+    "养老",
+    "助残",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1310,6 +3806,38 @@
    ]
   },
   {
+   "id": "icon-trash-2-warm",
+   "name": "环卫清运 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-trash-2-warm.png",
+   "thumb": "icons/icon-trash-2-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环卫",
+    "清运",
+    "保洁",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-trash-2-gold",
+   "name": "环卫清运 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-trash-2-gold.png",
+   "thumb": "icons/icon-trash-2-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环卫",
+    "清运",
+    "保洁",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-arrow-up-down",
    "name": "电梯",
    "category": "icon",
@@ -1323,6 +3851,38 @@
     "垂直交通",
     "elevator",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-arrow-up-down-warm",
+   "name": "电梯 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-arrow-up-down-warm.png",
+   "thumb": "icons/icon-arrow-up-down-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电梯",
+    "垂直交通",
+    "elevator",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-arrow-up-down-gold",
+   "name": "电梯 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-arrow-up-down-gold.png",
+   "thumb": "icons/icon-arrow-up-down-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电梯",
+    "垂直交通",
+    "elevator",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1342,6 +3902,38 @@
    ]
   },
   {
+   "id": "icon-activity-warm",
+   "name": "运行平稳 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-activity-warm.png",
+   "thumb": "icons/icon-activity-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "运行",
+    "平稳",
+    "activity",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-activity-gold",
+   "name": "运行平稳 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-activity-gold.png",
+   "thumb": "icons/icon-activity-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "运行",
+    "平稳",
+    "activity",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-wrench",
    "name": "维修服务",
    "category": "icon",
@@ -1355,6 +3947,38 @@
     "检修",
     "wrench",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-wrench-warm",
+   "name": "维修服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-wrench-warm.png",
+   "thumb": "icons/icon-wrench-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维修",
+    "检修",
+    "wrench",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-wrench-gold",
+   "name": "维修服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-wrench-gold.png",
+   "thumb": "icons/icon-wrench-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维修",
+    "检修",
+    "wrench",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1374,6 +3998,38 @@
    ]
   },
   {
+   "id": "icon-cog-warm",
+   "name": "维保服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cog-warm.png",
+   "thumb": "icons/icon-cog-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维保",
+    "保养",
+    "运维",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cog-gold",
+   "name": "维保服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cog-gold.png",
+   "thumb": "icons/icon-cog-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维保",
+    "保养",
+    "运维",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-clipboard-check",
    "name": "检测验收",
    "category": "icon",
@@ -1387,6 +4043,38 @@
     "验收",
     "质检",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-clipboard-check-warm",
+   "name": "检测验收 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-clipboard-check-warm.png",
+   "thumb": "icons/icon-clipboard-check-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "检测",
+    "验收",
+    "质检",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-clipboard-check-gold",
+   "name": "检测验收 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-clipboard-check-gold.png",
+   "thumb": "icons/icon-clipboard-check-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "检测",
+    "验收",
+    "质检",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1406,6 +4094,38 @@
    ]
   },
   {
+   "id": "icon-ruler-warm",
+   "name": "测量定制 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-ruler-warm.png",
+   "thumb": "icons/icon-ruler-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "测量",
+    "定制",
+    "勘察",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-ruler-gold",
+   "name": "测量定制 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-ruler-gold.png",
+   "thumb": "icons/icon-ruler-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "测量",
+    "定制",
+    "勘察",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-hard-hat",
    "name": "安装施工",
    "category": "icon",
@@ -1419,6 +4139,38 @@
     "施工",
     "工程",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-hard-hat-warm",
+   "name": "安装施工 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-hard-hat-warm.png",
+   "thumb": "icons/icon-hard-hat-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安装",
+    "施工",
+    "工程",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-hard-hat-gold",
+   "name": "安装施工 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-hard-hat-gold.png",
+   "thumb": "icons/icon-hard-hat-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安装",
+    "施工",
+    "工程",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1438,6 +4190,38 @@
    ]
   },
   {
+   "id": "icon-phone-warm",
+   "name": "咨询预约 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-phone-warm.png",
+   "thumb": "icons/icon-phone-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "咨询",
+    "预约",
+    "电话",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-phone-gold",
+   "name": "咨询预约 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-phone-gold.png",
+   "thumb": "icons/icon-phone-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "咨询",
+    "预约",
+    "电话",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-clock",
    "name": "快速响应",
    "category": "icon",
@@ -1451,6 +4235,38 @@
     "时效",
     "时钟",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-clock-warm",
+   "name": "快速响应 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-clock-warm.png",
+   "thumb": "icons/icon-clock-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "响应",
+    "时效",
+    "时钟",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-clock-gold",
+   "name": "快速响应 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-clock-gold.png",
+   "thumb": "icons/icon-clock-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "响应",
+    "时效",
+    "时钟",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1470,6 +4286,38 @@
    ]
   },
   {
+   "id": "icon-headset-warm",
+   "name": "售后客服 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-headset-warm.png",
+   "thumb": "icons/icon-headset-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "售后",
+    "客服",
+    "支持",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-headset-gold",
+   "name": "售后客服 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-headset-gold.png",
+   "thumb": "icons/icon-headset-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "售后",
+    "客服",
+    "支持",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-package",
    "name": "交付配送",
    "category": "icon",
@@ -1483,6 +4331,38 @@
     "配送",
     "发货",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-package-warm",
+   "name": "交付配送 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-package-warm.png",
+   "thumb": "icons/icon-package-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "交付",
+    "配送",
+    "发货",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-package-gold",
+   "name": "交付配送 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-package-gold.png",
+   "thumb": "icons/icon-package-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "交付",
+    "配送",
+    "发货",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1502,6 +4382,38 @@
    ]
   },
   {
+   "id": "icon-handshake-warm",
+   "name": "合作共赢 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-handshake-warm.png",
+   "thumb": "icons/icon-handshake-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合作",
+    "共赢",
+    "签约",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-handshake-gold",
+   "name": "合作共赢 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-handshake-gold.png",
+   "thumb": "icons/icon-handshake-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合作",
+    "共赢",
+    "签约",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-star",
    "name": "品质服务",
    "category": "icon",
@@ -1515,6 +4427,38 @@
     "优质",
     "星级",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-star-warm",
+   "name": "品质服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-star-warm.png",
+   "thumb": "icons/icon-star-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品质",
+    "优质",
+    "星级",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-star-gold",
+   "name": "品质服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-star-gold.png",
+   "thumb": "icons/icon-star-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品质",
+    "优质",
+    "星级",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1534,6 +4478,38 @@
    ]
   },
   {
+   "id": "icon-life-buoy-warm",
+   "name": "全程保障 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-life-buoy-warm.png",
+   "thumb": "icons/icon-life-buoy-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "保障",
+    "救援",
+    "支持",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-life-buoy-gold",
+   "name": "全程保障 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-life-buoy-gold.png",
+   "thumb": "icons/icon-life-buoy-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "保障",
+    "救援",
+    "支持",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-timer",
    "name": "限时响应",
    "category": "icon",
@@ -1547,6 +4523,38 @@
     "计时",
     "加急",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-timer-warm",
+   "name": "限时响应 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-timer-warm.png",
+   "thumb": "icons/icon-timer-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "限时",
+    "计时",
+    "加急",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-timer-gold",
+   "name": "限时响应 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-timer-gold.png",
+   "thumb": "icons/icon-timer-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "限时",
+    "计时",
+    "加急",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1566,6 +4574,38 @@
    ]
   },
   {
+   "id": "icon-badge-check-warm",
+   "name": "认证合格 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-badge-check-warm.png",
+   "thumb": "icons/icon-badge-check-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "认证",
+    "合格",
+    "资质",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-badge-check-gold",
+   "name": "认证合格 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-badge-check-gold.png",
+   "thumb": "icons/icon-badge-check-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "认证",
+    "合格",
+    "资质",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-shield",
    "name": "安全防护",
    "category": "icon",
@@ -1579,6 +4619,38 @@
     "防护",
     "防卫",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-shield-warm",
+   "name": "安全防护 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-shield-warm.png",
+   "thumb": "icons/icon-shield-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安全",
+    "防护",
+    "防卫",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-shield-gold",
+   "name": "安全防护 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-shield-gold.png",
+   "thumb": "icons/icon-shield-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安全",
+    "防护",
+    "防卫",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1598,6 +4670,38 @@
    ]
   },
   {
+   "id": "icon-siren-warm",
+   "name": "应急警报 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-siren-warm.png",
+   "thumb": "icons/icon-siren-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "应急",
+    "警报",
+    "突发",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-siren-gold",
+   "name": "应急警报 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-siren-gold.png",
+   "thumb": "icons/icon-siren-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "应急",
+    "警报",
+    "突发",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-calendar",
    "name": "排期预约",
    "category": "icon",
@@ -1611,6 +4715,38 @@
     "预约",
     "计划",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-calendar-warm",
+   "name": "排期预约 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-calendar-warm.png",
+   "thumb": "icons/icon-calendar-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "排期",
+    "预约",
+    "计划",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-calendar-gold",
+   "name": "排期预约 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-calendar-gold.png",
+   "thumb": "icons/icon-calendar-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "排期",
+    "预约",
+    "计划",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1630,6 +4766,38 @@
    ]
   },
   {
+   "id": "icon-pen-tool-warm",
+   "name": "设计定制 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-pen-tool-warm.png",
+   "thumb": "icons/icon-pen-tool-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "设计",
+    "定制",
+    "方案",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-pen-tool-gold",
+   "name": "设计定制 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-pen-tool-gold.png",
+   "thumb": "icons/icon-pen-tool-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "设计",
+    "定制",
+    "方案",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-settings-2",
    "name": "系统调试",
    "category": "icon",
@@ -1643,6 +4811,38 @@
     "系统",
     "参数",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-settings-2-warm",
+   "name": "系统调试 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-settings-2-warm.png",
+   "thumb": "icons/icon-settings-2-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "调试",
+    "系统",
+    "参数",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-settings-2-gold",
+   "name": "系统调试 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-settings-2-gold.png",
+   "thumb": "icons/icon-settings-2-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "调试",
+    "系统",
+    "参数",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1662,6 +4862,38 @@
    ]
   },
   {
+   "id": "icon-refresh-cw-warm",
+   "name": "循环运维 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-refresh-cw-warm.png",
+   "thumb": "icons/icon-refresh-cw-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "循环",
+    "运维",
+    "更新",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-refresh-cw-gold",
+   "name": "循环运维 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-refresh-cw-gold.png",
+   "thumb": "icons/icon-refresh-cw-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "循环",
+    "运维",
+    "更新",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-trending-up",
    "name": "增效增长",
    "category": "icon",
@@ -1675,6 +4907,38 @@
     "增效",
     "提升",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-trending-up-warm",
+   "name": "增效增长 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-trending-up-warm.png",
+   "thumb": "icons/icon-trending-up-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "增长",
+    "增效",
+    "提升",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-trending-up-gold",
+   "name": "增效增长 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-trending-up-gold.png",
+   "thumb": "icons/icon-trending-up-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "增长",
+    "增效",
+    "提升",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1694,6 +4958,38 @@
    ]
   },
   {
+   "id": "icon-route-warm",
+   "name": "路线规划 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-route-warm.png",
+   "thumb": "icons/icon-route-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "路线",
+    "规划",
+    "路径",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-route-gold",
+   "name": "路线规划 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-route-gold.png",
+   "thumb": "icons/icon-route-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "路线",
+    "规划",
+    "路径",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-paint-roller",
    "name": "装饰装修",
    "category": "icon",
@@ -1707,6 +5003,38 @@
     "装修",
     "涂装",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-paint-roller-warm",
+   "name": "装饰装修 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-paint-roller-warm.png",
+   "thumb": "icons/icon-paint-roller-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装饰",
+    "装修",
+    "涂装",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-paint-roller-gold",
+   "name": "装饰装修 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-paint-roller-gold.png",
+   "thumb": "icons/icon-paint-roller-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装饰",
+    "装修",
+    "涂装",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1726,6 +5054,38 @@
    ]
   },
   {
+   "id": "icon-wifi-warm",
+   "name": "智能网络 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-wifi-warm.png",
+   "thumb": "icons/icon-wifi-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智能",
+    "网络",
+    "无线",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-wifi-gold",
+   "name": "智能网络 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-wifi-gold.png",
+   "thumb": "icons/icon-wifi-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智能",
+    "网络",
+    "无线",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-server",
    "name": "机房运维",
    "category": "icon",
@@ -1739,6 +5099,38 @@
     "运维",
     "服务器",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-server-warm",
+   "name": "机房运维 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-server-warm.png",
+   "thumb": "icons/icon-server-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机房",
+    "运维",
+    "服务器",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-server-gold",
+   "name": "机房运维 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-server-gold.png",
+   "thumb": "icons/icon-server-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机房",
+    "运维",
+    "服务器",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1758,6 +5150,38 @@
    ]
   },
   {
+   "id": "icon-database-warm",
+   "name": "数据服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-database-warm.png",
+   "thumb": "icons/icon-database-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "存储",
+    "管理",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-database-gold",
+   "name": "数据服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-database-gold.png",
+   "thumb": "icons/icon-database-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "存储",
+    "管理",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-monitor",
    "name": "监控值守",
    "category": "icon",
@@ -1771,6 +5195,38 @@
     "值守",
     "大屏",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-monitor-warm",
+   "name": "监控值守 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-monitor-warm.png",
+   "thumb": "icons/icon-monitor-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "监控",
+    "值守",
+    "大屏",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-monitor-gold",
+   "name": "监控值守 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-monitor-gold.png",
+   "thumb": "icons/icon-monitor-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "监控",
+    "值守",
+    "大屏",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1790,6 +5246,38 @@
    ]
   },
   {
+   "id": "icon-thermometer-warm",
+   "name": "温控调节 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-thermometer-warm.png",
+   "thumb": "icons/icon-thermometer-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "温控",
+    "调节",
+    "温度",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-thermometer-gold",
+   "name": "温控调节 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-thermometer-gold.png",
+   "thumb": "icons/icon-thermometer-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "温控",
+    "调节",
+    "温度",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-fan",
    "name": "通风换气",
    "category": "icon",
@@ -1803,6 +5291,38 @@
     "换气",
     "新风",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-fan-warm",
+   "name": "通风换气 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-fan-warm.png",
+   "thumb": "icons/icon-fan-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "通风",
+    "换气",
+    "新风",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-fan-gold",
+   "name": "通风换气 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-fan-gold.png",
+   "thumb": "icons/icon-fan-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "通风",
+    "换气",
+    "新风",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1822,6 +5342,38 @@
    ]
   },
   {
+   "id": "icon-snowflake-warm",
+   "name": "制冷冷藏 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-snowflake-warm.png",
+   "thumb": "icons/icon-snowflake-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "制冷",
+    "冷藏",
+    "冷链",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-snowflake-gold",
+   "name": "制冷冷藏 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-snowflake-gold.png",
+   "thumb": "icons/icon-snowflake-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "制冷",
+    "冷藏",
+    "冷链",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-lock",
    "name": "安全锁护",
    "category": "icon",
@@ -1835,6 +5387,38 @@
     "锁定",
     "防护",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-lock-warm",
+   "name": "安全锁护 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-lock-warm.png",
+   "thumb": "icons/icon-lock-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安全",
+    "锁定",
+    "防护",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-lock-gold",
+   "name": "安全锁护 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-lock-gold.png",
+   "thumb": "icons/icon-lock-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安全",
+    "锁定",
+    "防护",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1854,6 +5438,38 @@
    ]
   },
   {
+   "id": "icon-fingerprint-warm",
+   "name": "身份核验 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-fingerprint-warm.png",
+   "thumb": "icons/icon-fingerprint-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "身份",
+    "核验",
+    "认证",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-fingerprint-gold",
+   "name": "身份核验 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-fingerprint-gold.png",
+   "thumb": "icons/icon-fingerprint-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "身份",
+    "核验",
+    "认证",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-credit-card",
    "name": "支付结算",
    "category": "icon",
@@ -1867,6 +5483,38 @@
     "结算",
     "收款",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-credit-card-warm",
+   "name": "支付结算 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-credit-card-warm.png",
+   "thumb": "icons/icon-credit-card-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "支付",
+    "结算",
+    "收款",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-credit-card-gold",
+   "name": "支付结算 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-credit-card-gold.png",
+   "thumb": "icons/icon-credit-card-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "支付",
+    "结算",
+    "收款",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1886,6 +5534,38 @@
    ]
   },
   {
+   "id": "icon-receipt-warm",
+   "name": "票据凭证 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-receipt-warm.png",
+   "thumb": "icons/icon-receipt-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "票据",
+    "凭证",
+    "回单",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-receipt-gold",
+   "name": "票据凭证 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-receipt-gold.png",
+   "thumb": "icons/icon-receipt-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "票据",
+    "凭证",
+    "回单",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-hourglass",
    "name": "时效承诺",
    "category": "icon",
@@ -1899,6 +5579,38 @@
     "承诺",
     "工期",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-hourglass-warm",
+   "name": "时效承诺 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-hourglass-warm.png",
+   "thumb": "icons/icon-hourglass-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "时效",
+    "承诺",
+    "工期",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-hourglass-gold",
+   "name": "时效承诺 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-hourglass-gold.png",
+   "thumb": "icons/icon-hourglass-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "时效",
+    "承诺",
+    "工期",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1918,6 +5630,38 @@
    ]
   },
   {
+   "id": "icon-megaphone-warm",
+   "name": "品牌传播 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-megaphone-warm.png",
+   "thumb": "icons/icon-megaphone-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品牌",
+    "传播",
+    "推广",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-megaphone-gold",
+   "name": "品牌传播 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-megaphone-gold.png",
+   "thumb": "icons/icon-megaphone-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品牌",
+    "传播",
+    "推广",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-package-plus",
    "name": "送货上门",
    "category": "icon",
@@ -1931,6 +5675,38 @@
     "上门",
     "配送安装",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-package-plus-warm",
+   "name": "送货上门 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-package-plus-warm.png",
+   "thumb": "icons/icon-package-plus-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "送货",
+    "上门",
+    "配送安装",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-package-plus-gold",
+   "name": "送货上门 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-package-plus-gold.png",
+   "thumb": "icons/icon-package-plus-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "送货",
+    "上门",
+    "配送安装",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1950,6 +5726,38 @@
    ]
   },
   {
+   "id": "icon-container-warm",
+   "name": "集装箱运输 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-container-warm.png",
+   "thumb": "icons/icon-container-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "集装箱",
+    "海运",
+    "货运",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-container-gold",
+   "name": "集装箱运输 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-container-gold.png",
+   "thumb": "icons/icon-container-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "集装箱",
+    "海运",
+    "货运",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-forklift",
    "name": "装卸搬运",
    "category": "icon",
@@ -1963,6 +5771,38 @@
     "搬运",
     "叉车",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-forklift-warm",
+   "name": "装卸搬运 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-forklift-warm.png",
+   "thumb": "icons/icon-forklift-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装卸",
+    "搬运",
+    "叉车",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-forklift-gold",
+   "name": "装卸搬运 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-forklift-gold.png",
+   "thumb": "icons/icon-forklift-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装卸",
+    "搬运",
+    "叉车",
+    "轻奢尊贵"
    ]
   },
   {
@@ -1982,6 +5822,38 @@
    ]
   },
   {
+   "id": "icon-boxes-warm",
+   "name": "仓储托管 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-boxes-warm.png",
+   "thumb": "icons/icon-boxes-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "托管",
+    "库存",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-boxes-gold",
+   "name": "仓储托管 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-boxes-gold.png",
+   "thumb": "icons/icon-boxes-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "托管",
+    "库存",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-refrigerator",
    "name": "冷链配送",
    "category": "icon",
@@ -1995,6 +5867,38 @@
     "冷藏",
     "保鲜",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-refrigerator-warm",
+   "name": "冷链配送 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-refrigerator-warm.png",
+   "thumb": "icons/icon-refrigerator-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冷链",
+    "冷藏",
+    "保鲜",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-refrigerator-gold",
+   "name": "冷链配送 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-refrigerator-gold.png",
+   "thumb": "icons/icon-refrigerator-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冷链",
+    "冷藏",
+    "保鲜",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2014,6 +5918,38 @@
    ]
   },
   {
+   "id": "icon-spray-can-warm",
+   "name": "喷涂工艺 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-spray-can-warm.png",
+   "thumb": "icons/icon-spray-can-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "喷涂",
+    "工艺",
+    "表面处理",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-spray-can-gold",
+   "name": "喷涂工艺 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-spray-can-gold.png",
+   "thumb": "icons/icon-spray-can-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "喷涂",
+    "工艺",
+    "表面处理",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-plug-zap",
    "name": "电气安装",
    "category": "icon",
@@ -2027,6 +5963,38 @@
     "安装",
     "布线",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-plug-zap-warm",
+   "name": "电气安装 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-plug-zap-warm.png",
+   "thumb": "icons/icon-plug-zap-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电气",
+    "安装",
+    "布线",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-plug-zap-gold",
+   "name": "电气安装 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-plug-zap-gold.png",
+   "thumb": "icons/icon-plug-zap-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电气",
+    "安装",
+    "布线",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2046,6 +6014,38 @@
    ]
   },
   {
+   "id": "icon-battery-charging-warm",
+   "name": "充电服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-battery-charging-warm.png",
+   "thumb": "icons/icon-battery-charging-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "充电",
+    "补能",
+    "充电桩",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-battery-charging-gold",
+   "name": "充电服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-battery-charging-gold.png",
+   "thumb": "icons/icon-battery-charging-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "充电",
+    "补能",
+    "充电桩",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-battery-full",
    "name": "储能备电",
    "category": "icon",
@@ -2059,6 +6059,38 @@
     "备电",
     "电源",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-battery-full-warm",
+   "name": "储能备电 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-battery-full-warm.png",
+   "thumb": "icons/icon-battery-full-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "储能",
+    "备电",
+    "电源",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-battery-full-gold",
+   "name": "储能备电 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-battery-full-gold.png",
+   "thumb": "icons/icon-battery-full-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "储能",
+    "备电",
+    "电源",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2078,6 +6110,38 @@
    ]
   },
   {
+   "id": "icon-cable-warm",
+   "name": "线缆敷设 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cable-warm.png",
+   "thumb": "icons/icon-cable-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "线缆",
+    "敷设",
+    "桥架",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cable-gold",
+   "name": "线缆敷设 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cable-gold.png",
+   "thumb": "icons/icon-cable-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "线缆",
+    "敷设",
+    "桥架",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-power",
    "name": "配电工程",
    "category": "icon",
@@ -2091,6 +6155,38 @@
     "供电",
     "电力",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-power-warm",
+   "name": "配电工程 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-power-warm.png",
+   "thumb": "icons/icon-power-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "配电",
+    "供电",
+    "电力",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-power-gold",
+   "name": "配电工程 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-power-gold.png",
+   "thumb": "icons/icon-power-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "配电",
+    "供电",
+    "电力",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2110,6 +6206,38 @@
    ]
   },
   {
+   "id": "icon-gauge-warm",
+   "name": "仪表校准 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-gauge-warm.png",
+   "thumb": "icons/icon-gauge-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仪表",
+    "校准",
+    "计量",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-gauge-gold",
+   "name": "仪表校准 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-gauge-gold.png",
+   "thumb": "icons/icon-gauge-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仪表",
+    "校准",
+    "计量",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-scan-line",
    "name": "扫码溯源",
    "category": "icon",
@@ -2123,6 +6251,38 @@
     "溯源",
     "防伪",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-scan-line-warm",
+   "name": "扫码溯源 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-scan-line-warm.png",
+   "thumb": "icons/icon-scan-line-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "溯源",
+    "防伪",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-scan-line-gold",
+   "name": "扫码溯源 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-scan-line-gold.png",
+   "thumb": "icons/icon-scan-line-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "溯源",
+    "防伪",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2142,6 +6302,38 @@
    ]
   },
   {
+   "id": "icon-barcode-warm",
+   "name": "条码标识 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-barcode-warm.png",
+   "thumb": "icons/icon-barcode-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "条码",
+    "标识",
+    "编码",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-barcode-gold",
+   "name": "条码标识 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-barcode-gold.png",
+   "thumb": "icons/icon-barcode-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "条码",
+    "标识",
+    "编码",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-scan",
    "name": "扫描查验",
    "category": "icon",
@@ -2155,6 +6347,38 @@
     "查验",
     "识别",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-scan-warm",
+   "name": "扫描查验 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-scan-warm.png",
+   "thumb": "icons/icon-scan-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫描",
+    "查验",
+    "识别",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-scan-gold",
+   "name": "扫描查验 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-scan-gold.png",
+   "thumb": "icons/icon-scan-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫描",
+    "查验",
+    "识别",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2174,6 +6398,38 @@
    ]
   },
   {
+   "id": "icon-cctv-warm",
+   "name": "视频监控 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cctv-warm.png",
+   "thumb": "icons/icon-cctv-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "视频",
+    "监控",
+    "摄像头",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cctv-gold",
+   "name": "视频监控 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cctv-gold.png",
+   "thumb": "icons/icon-cctv-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "视频",
+    "监控",
+    "摄像头",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-shield-alert",
    "name": "风险预警",
    "category": "icon",
@@ -2187,6 +6443,38 @@
     "预警",
     "防控",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-shield-alert-warm",
+   "name": "风险预警 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-shield-alert-warm.png",
+   "thumb": "icons/icon-shield-alert-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风险",
+    "预警",
+    "防控",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-shield-alert-gold",
+   "name": "风险预警 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-shield-alert-gold.png",
+   "thumb": "icons/icon-shield-alert-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风险",
+    "预警",
+    "防控",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2206,6 +6494,38 @@
    ]
   },
   {
+   "id": "icon-file-search-warm",
+   "name": "尽职调查 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-file-search-warm.png",
+   "thumb": "icons/icon-file-search-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "尽调",
+    "调查",
+    "核查",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-file-search-gold",
+   "name": "尽职调查 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-file-search-gold.png",
+   "thumb": "icons/icon-file-search-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "尽调",
+    "调查",
+    "核查",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-file-check",
    "name": "合规报批",
    "category": "icon",
@@ -2219,6 +6539,38 @@
     "报批",
     "审批",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-file-check-warm",
+   "name": "合规报批 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-file-check-warm.png",
+   "thumb": "icons/icon-file-check-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合规",
+    "报批",
+    "审批",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-file-check-gold",
+   "name": "合规报批 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-file-check-gold.png",
+   "thumb": "icons/icon-file-check-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合规",
+    "报批",
+    "审批",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2238,6 +6590,38 @@
    ]
   },
   {
+   "id": "icon-scroll-text-warm",
+   "name": "合同文书 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-scroll-text-warm.png",
+   "thumb": "icons/icon-scroll-text-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合同",
+    "文书",
+    "签约",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-scroll-text-gold",
+   "name": "合同文书 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-scroll-text-gold.png",
+   "thumb": "icons/icon-scroll-text-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合同",
+    "文书",
+    "签约",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-party-popper",
    "name": "活动策划",
    "category": "icon",
@@ -2251,6 +6635,38 @@
     "策划",
     "庆典",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-party-popper-warm",
+   "name": "活动策划 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-party-popper-warm.png",
+   "thumb": "icons/icon-party-popper-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "活动",
+    "策划",
+    "庆典",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-party-popper-gold",
+   "name": "活动策划 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-party-popper-gold.png",
+   "thumb": "icons/icon-party-popper-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "活动",
+    "策划",
+    "庆典",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2270,6 +6686,38 @@
    ]
   },
   {
+   "id": "icon-mail-check-warm",
+   "name": "邮件确认 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-mail-check-warm.png",
+   "thumb": "icons/icon-mail-check-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "邮件",
+    "确认",
+    "通知",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-mail-check-gold",
+   "name": "邮件确认 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-mail-check-gold.png",
+   "thumb": "icons/icon-mail-check-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "邮件",
+    "确认",
+    "通知",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-list-checks",
    "name": "清单核对",
    "category": "icon",
@@ -2283,6 +6731,38 @@
     "核对",
     "逐项",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-list-checks-warm",
+   "name": "清单核对 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-list-checks-warm.png",
+   "thumb": "icons/icon-list-checks-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "清单",
+    "核对",
+    "逐项",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-list-checks-gold",
+   "name": "清单核对 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-list-checks-gold.png",
+   "thumb": "icons/icon-list-checks-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "清单",
+    "核对",
+    "逐项",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2302,6 +6782,38 @@
    ]
   },
   {
+   "id": "icon-square-check-big-warm",
+   "name": "验收通过 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-square-check-big-warm.png",
+   "thumb": "icons/icon-square-check-big-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "验收",
+    "通过",
+    "确认",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-square-check-big-gold",
+   "name": "验收通过 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-square-check-big-gold.png",
+   "thumb": "icons/icon-square-check-big-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "验收",
+    "通过",
+    "确认",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-cloud-upload",
    "name": "云端备份",
    "category": "icon",
@@ -2315,6 +6827,38 @@
     "备份",
     "同步",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-cloud-upload-warm",
+   "name": "云端备份 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cloud-upload-warm.png",
+   "thumb": "icons/icon-cloud-upload-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云端",
+    "备份",
+    "同步",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cloud-upload-gold",
+   "name": "云端备份 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cloud-upload-gold.png",
+   "thumb": "icons/icon-cloud-upload-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云端",
+    "备份",
+    "同步",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2334,6 +6878,38 @@
    ]
   },
   {
+   "id": "icon-languages-warm",
+   "name": "多语翻译 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-languages-warm.png",
+   "thumb": "icons/icon-languages-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "翻译",
+    "多语",
+    "本地化",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-languages-gold",
+   "name": "多语翻译 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-languages-gold.png",
+   "thumb": "icons/icon-languages-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "翻译",
+    "多语",
+    "本地化",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-image",
    "name": "图片",
    "category": "icon",
@@ -2347,6 +6923,38 @@
     "照片",
     "image",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-image-warm",
+   "name": "图片 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-image-warm.png",
+   "thumb": "icons/icon-image-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "图片",
+    "照片",
+    "image",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-image-gold",
+   "name": "图片 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-image-gold.png",
+   "thumb": "icons/icon-image-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "图片",
+    "照片",
+    "image",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2366,6 +6974,38 @@
    ]
   },
   {
+   "id": "icon-users-warm",
+   "name": "人群团队 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-users-warm.png",
+   "thumb": "icons/icon-users-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团队",
+    "人群",
+    "用户",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-users-gold",
+   "name": "人群团队 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-users-gold.png",
+   "thumb": "icons/icon-users-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团队",
+    "人群",
+    "用户",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-award",
    "name": "荣誉奖项",
    "category": "icon",
@@ -2379,6 +7019,38 @@
     "奖项",
     "奖杯",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-award-warm",
+   "name": "荣誉奖项 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-award-warm.png",
+   "thumb": "icons/icon-award-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "荣誉",
+    "奖项",
+    "奖杯",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-award-gold",
+   "name": "荣誉奖项 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-award-gold.png",
+   "thumb": "icons/icon-award-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "荣誉",
+    "奖项",
+    "奖杯",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2398,6 +7070,38 @@
    ]
   },
   {
+   "id": "icon-gem-warm",
+   "name": "精品案例 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-gem-warm.png",
+   "thumb": "icons/icon-gem-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精品",
+    "案例",
+    "宝石",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-gem-gold",
+   "name": "精品案例 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-gem-gold.png",
+   "thumb": "icons/icon-gem-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精品",
+    "案例",
+    "宝石",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-lightbulb",
    "name": "方案创意",
    "category": "icon",
@@ -2411,6 +7115,38 @@
     "方案",
     "点子",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-lightbulb-warm",
+   "name": "方案创意 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-lightbulb-warm.png",
+   "thumb": "icons/icon-lightbulb-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "创意",
+    "方案",
+    "点子",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-lightbulb-gold",
+   "name": "方案创意 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-lightbulb-gold.png",
+   "thumb": "icons/icon-lightbulb-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "创意",
+    "方案",
+    "点子",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2430,6 +7166,38 @@
    ]
   },
   {
+   "id": "icon-map-pin-warm",
+   "name": "位置服务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-map-pin-warm.png",
+   "thumb": "icons/icon-map-pin-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "位置",
+    "地图",
+    "定位",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-map-pin-gold",
+   "name": "位置服务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-map-pin-gold.png",
+   "thumb": "icons/icon-map-pin-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "位置",
+    "地图",
+    "定位",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-globe",
    "name": "全球业务",
    "category": "icon",
@@ -2443,6 +7211,38 @@
     "国际",
     "业务",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-globe-warm",
+   "name": "全球业务 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-globe-warm.png",
+   "thumb": "icons/icon-globe-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "全球",
+    "国际",
+    "业务",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-globe-gold",
+   "name": "全球业务 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-globe-gold.png",
+   "thumb": "icons/icon-globe-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "全球",
+    "国际",
+    "业务",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2462,6 +7262,38 @@
    ]
   },
   {
+   "id": "icon-qr-code-warm",
+   "name": "扫码入口 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-qr-code-warm.png",
+   "thumb": "icons/icon-qr-code-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "二维码",
+    "入口",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-qr-code-gold",
+   "name": "扫码入口 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-qr-code-gold.png",
+   "thumb": "icons/icon-qr-code-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "二维码",
+    "入口",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-share-2",
    "name": "分享传播",
    "category": "icon",
@@ -2475,6 +7307,38 @@
     "传播",
     "转发",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-share-2-warm",
+   "name": "分享传播 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-share-2-warm.png",
+   "thumb": "icons/icon-share-2-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "分享",
+    "传播",
+    "转发",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-share-2-gold",
+   "name": "分享传播 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-share-2-gold.png",
+   "thumb": "icons/icon-share-2-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "分享",
+    "传播",
+    "转发",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2494,6 +7358,38 @@
    ]
   },
   {
+   "id": "icon-message-circle-warm",
+   "name": "消息沟通 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-message-circle-warm.png",
+   "thumb": "icons/icon-message-circle-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消息",
+    "沟通",
+    "对话",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-message-circle-gold",
+   "name": "消息沟通 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-message-circle-gold.png",
+   "thumb": "icons/icon-message-circle-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消息",
+    "沟通",
+    "对话",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-thumbs-up",
    "name": "口碑好评",
    "category": "icon",
@@ -2507,6 +7403,38 @@
     "口碑",
     "点赞",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-thumbs-up-warm",
+   "name": "口碑好评 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-thumbs-up-warm.png",
+   "thumb": "icons/icon-thumbs-up-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "好评",
+    "口碑",
+    "点赞",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-thumbs-up-gold",
+   "name": "口碑好评 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-thumbs-up-gold.png",
+   "thumb": "icons/icon-thumbs-up-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "好评",
+    "口碑",
+    "点赞",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2526,6 +7454,38 @@
    ]
   },
   {
+   "id": "icon-target-warm",
+   "name": "目标达成 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-target-warm.png",
+   "thumb": "icons/icon-target-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "目标",
+    "达成",
+    "聚焦",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-target-gold",
+   "name": "目标达成 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-target-gold.png",
+   "thumb": "icons/icon-target-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "目标",
+    "达成",
+    "聚焦",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-compass",
    "name": "方向指引",
    "category": "icon",
@@ -2539,6 +7499,38 @@
     "指引",
     "导航",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-compass-warm",
+   "name": "方向指引 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-compass-warm.png",
+   "thumb": "icons/icon-compass-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "方向",
+    "指引",
+    "导航",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-compass-gold",
+   "name": "方向指引 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-compass-gold.png",
+   "thumb": "icons/icon-compass-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "方向",
+    "指引",
+    "导航",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2558,6 +7550,38 @@
    ]
   },
   {
+   "id": "icon-layout-grid-warm",
+   "name": "矩阵陈列 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-layout-grid-warm.png",
+   "thumb": "icons/icon-layout-grid-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矩阵",
+    "陈列",
+    "网格",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-layout-grid-gold",
+   "name": "矩阵陈列 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-layout-grid-gold.png",
+   "thumb": "icons/icon-layout-grid-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矩阵",
+    "陈列",
+    "网格",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-camera",
    "name": "影像拍摄",
    "category": "icon",
@@ -2571,6 +7595,38 @@
     "拍摄",
     "摄影",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-camera-warm",
+   "name": "影像拍摄 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-camera-warm.png",
+   "thumb": "icons/icon-camera-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "影像",
+    "拍摄",
+    "摄影",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-camera-gold",
+   "name": "影像拍摄 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-camera-gold.png",
+   "thumb": "icons/icon-camera-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "影像",
+    "拍摄",
+    "摄影",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2590,6 +7646,38 @@
    ]
   },
   {
+   "id": "icon-printer-warm",
+   "name": "印刷输出 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-printer-warm.png",
+   "thumb": "icons/icon-printer-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "印刷",
+    "输出",
+    "打印",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-printer-gold",
+   "name": "印刷输出 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-printer-gold.png",
+   "thumb": "icons/icon-printer-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "印刷",
+    "输出",
+    "打印",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-shirt",
    "name": "服饰定制",
    "category": "icon",
@@ -2603,6 +7691,38 @@
     "定制",
     "服装",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-shirt-warm",
+   "name": "服饰定制 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-shirt-warm.png",
+   "thumb": "icons/icon-shirt-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "服饰",
+    "定制",
+    "服装",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-shirt-gold",
+   "name": "服饰定制 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-shirt-gold.png",
+   "thumb": "icons/icon-shirt-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "服饰",
+    "定制",
+    "服装",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2622,6 +7742,38 @@
    ]
   },
   {
+   "id": "icon-lamp-warm",
+   "name": "照明亮化 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-lamp-warm.png",
+   "thumb": "icons/icon-lamp-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "照明",
+    "亮化",
+    "灯具",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-lamp-gold",
+   "name": "照明亮化 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-lamp-gold.png",
+   "thumb": "icons/icon-lamp-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "照明",
+    "亮化",
+    "灯具",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-coffee",
    "name": "商务洽谈",
    "category": "icon",
@@ -2635,6 +7787,38 @@
     "商务",
     "会客",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-coffee-warm",
+   "name": "商务洽谈 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-coffee-warm.png",
+   "thumb": "icons/icon-coffee-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "洽谈",
+    "商务",
+    "会客",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-coffee-gold",
+   "name": "商务洽谈 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-coffee-gold.png",
+   "thumb": "icons/icon-coffee-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "洽谈",
+    "商务",
+    "会客",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2654,6 +7838,38 @@
    ]
   },
   {
+   "id": "icon-cake-warm",
+   "name": "庆典活动 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cake-warm.png",
+   "thumb": "icons/icon-cake-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "庆典",
+    "活动",
+    "仪式",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cake-gold",
+   "name": "庆典活动 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cake-gold.png",
+   "thumb": "icons/icon-cake-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "庆典",
+    "活动",
+    "仪式",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-music",
    "name": "文娱演出",
    "category": "icon",
@@ -2667,6 +7883,38 @@
     "演出",
     "音乐",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-music-warm",
+   "name": "文娱演出 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-music-warm.png",
+   "thumb": "icons/icon-music-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文娱",
+    "演出",
+    "音乐",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-music-gold",
+   "name": "文娱演出 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-music-gold.png",
+   "thumb": "icons/icon-music-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文娱",
+    "演出",
+    "音乐",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2686,6 +7934,38 @@
    ]
   },
   {
+   "id": "icon-film-warm",
+   "name": "影视制作 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-film-warm.png",
+   "thumb": "icons/icon-film-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "影视",
+    "制作",
+    "影片",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-film-gold",
+   "name": "影视制作 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-film-gold.png",
+   "thumb": "icons/icon-film-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "影视",
+    "制作",
+    "影片",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-palette",
    "name": "创意设计",
    "category": "icon",
@@ -2699,6 +7979,38 @@
     "创意",
     "美术",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-palette-warm",
+   "name": "创意设计 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-palette-warm.png",
+   "thumb": "icons/icon-palette-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "设计",
+    "创意",
+    "美术",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-palette-gold",
+   "name": "创意设计 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-palette-gold.png",
+   "thumb": "icons/icon-palette-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "设计",
+    "创意",
+    "美术",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2718,6 +8030,38 @@
    ]
   },
   {
+   "id": "icon-gift-warm",
+   "name": "礼遇回馈 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-gift-warm.png",
+   "thumb": "icons/icon-gift-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "礼遇",
+    "回馈",
+    "福利",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-gift-gold",
+   "name": "礼遇回馈 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-gift-gold.png",
+   "thumb": "icons/icon-gift-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "礼遇",
+    "回馈",
+    "福利",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-box",
    "name": "产品包装",
    "category": "icon",
@@ -2731,6 +8075,38 @@
     "包装",
     "货品",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-box-warm",
+   "name": "产品包装 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-box-warm.png",
+   "thumb": "icons/icon-box-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "产品",
+    "包装",
+    "货品",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-box-gold",
+   "name": "产品包装 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-box-gold.png",
+   "thumb": "icons/icon-box-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "产品",
+    "包装",
+    "货品",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2750,6 +8126,38 @@
    ]
   },
   {
+   "id": "icon-tag-warm",
+   "name": "标签分类 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-tag-warm.png",
+   "thumb": "icons/icon-tag-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "标签",
+    "分类",
+    "标记",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-tag-gold",
+   "name": "标签分类 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-tag-gold.png",
+   "thumb": "icons/icon-tag-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "标签",
+    "分类",
+    "标记",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-history",
    "name": "发展历程",
    "category": "icon",
@@ -2763,6 +8171,38 @@
     "发展",
     "沿革",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-history-warm",
+   "name": "发展历程 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-history-warm.png",
+   "thumb": "icons/icon-history-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "历程",
+    "发展",
+    "沿革",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-history-gold",
+   "name": "发展历程 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-history-gold.png",
+   "thumb": "icons/icon-history-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "历程",
+    "发展",
+    "沿革",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2782,6 +8222,38 @@
    ]
   },
   {
+   "id": "icon-infinity-warm",
+   "name": "永续合作 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-infinity-warm.png",
+   "thumb": "icons/icon-infinity-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "永续",
+    "长期",
+    "合作",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-infinity-gold",
+   "name": "永续合作 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-infinity-gold.png",
+   "thumb": "icons/icon-infinity-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "永续",
+    "长期",
+    "合作",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-layers",
    "name": "体系架构",
    "category": "icon",
@@ -2795,6 +8267,38 @@
     "架构",
     "层级",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-layers-warm",
+   "name": "体系架构 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-layers-warm.png",
+   "thumb": "icons/icon-layers-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "体系",
+    "架构",
+    "层级",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-layers-gold",
+   "name": "体系架构 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-layers-gold.png",
+   "thumb": "icons/icon-layers-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "体系",
+    "架构",
+    "层级",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2814,6 +8318,38 @@
    ]
   },
   {
+   "id": "icon-component-warm",
+   "name": "模块单元 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-component-warm.png",
+   "thumb": "icons/icon-component-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "模块",
+    "单元",
+    "组件",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-component-gold",
+   "name": "模块单元 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-component-gold.png",
+   "thumb": "icons/icon-component-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "模块",
+    "单元",
+    "组件",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-terminal",
    "name": "技术研发",
    "category": "icon",
@@ -2827,6 +8363,38 @@
     "技术",
     "工程",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-terminal-warm",
+   "name": "技术研发 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-terminal-warm.png",
+   "thumb": "icons/icon-terminal-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "研发",
+    "技术",
+    "工程",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-terminal-gold",
+   "name": "技术研发 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-terminal-gold.png",
+   "thumb": "icons/icon-terminal-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "研发",
+    "技术",
+    "工程",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2846,6 +8414,38 @@
    ]
   },
   {
+   "id": "icon-binary-warm",
+   "name": "数据算法 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-binary-warm.png",
+   "thumb": "icons/icon-binary-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "算法",
+    "算力",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-binary-gold",
+   "name": "数据算法 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-binary-gold.png",
+   "thumb": "icons/icon-binary-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "算法",
+    "算力",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-hard-drive",
    "name": "数据存储",
    "category": "icon",
@@ -2859,6 +8459,38 @@
     "数据",
     "备份",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-hard-drive-warm",
+   "name": "数据存储 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-hard-drive-warm.png",
+   "thumb": "icons/icon-hard-drive-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "存储",
+    "数据",
+    "备份",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-hard-drive-gold",
+   "name": "数据存储 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-hard-drive-gold.png",
+   "thumb": "icons/icon-hard-drive-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "存储",
+    "数据",
+    "备份",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2878,6 +8510,38 @@
    ]
   },
   {
+   "id": "icon-milestone-warm",
+   "name": "里程碑 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-milestone-warm.png",
+   "thumb": "icons/icon-milestone-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "里程碑",
+    "节点",
+    "进展",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-milestone-gold",
+   "name": "里程碑 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-milestone-gold.png",
+   "thumb": "icons/icon-milestone-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "里程碑",
+    "节点",
+    "进展",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-book-marked",
    "name": "知识文档",
    "category": "icon",
@@ -2891,6 +8555,38 @@
     "文档",
     "资料",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-book-marked-warm",
+   "name": "知识文档 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-book-marked-warm.png",
+   "thumb": "icons/icon-book-marked-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "知识",
+    "文档",
+    "资料",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-book-marked-gold",
+   "name": "知识文档 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-book-marked-gold.png",
+   "thumb": "icons/icon-book-marked-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "知识",
+    "文档",
+    "资料",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2910,6 +8606,38 @@
    ]
   },
   {
+   "id": "icon-contact-warm",
+   "name": "客户名录 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-contact-warm.png",
+   "thumb": "icons/icon-contact-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客户",
+    "名录",
+    "通讯录",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-contact-gold",
+   "name": "客户名录 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-contact-gold.png",
+   "thumb": "icons/icon-contact-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客户",
+    "名录",
+    "通讯录",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-id-card",
    "name": "证件资质",
    "category": "icon",
@@ -2923,6 +8651,38 @@
     "资质",
     "证照",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-id-card-warm",
+   "name": "证件资质 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-id-card-warm.png",
+   "thumb": "icons/icon-id-card-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "证件",
+    "资质",
+    "证照",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-id-card-gold",
+   "name": "证件资质 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-id-card-gold.png",
+   "thumb": "icons/icon-id-card-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "证件",
+    "资质",
+    "证照",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2942,6 +8702,38 @@
    ]
   },
   {
+   "id": "icon-book-user-warm",
+   "name": "讲师培训 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-book-user-warm.png",
+   "thumb": "icons/icon-book-user-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "讲师",
+    "培训",
+    "授课",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-book-user-gold",
+   "name": "讲师培训 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-book-user-gold.png",
+   "thumb": "icons/icon-book-user-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "讲师",
+    "培训",
+    "授课",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-sparkles",
    "name": "精工品质",
    "category": "icon",
@@ -2955,6 +8747,38 @@
     "品质",
     "匠心",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-sparkles-warm",
+   "name": "精工品质 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-sparkles-warm.png",
+   "thumb": "icons/icon-sparkles-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精工",
+    "品质",
+    "匠心",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-sparkles-gold",
+   "name": "精工品质 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-sparkles-gold.png",
+   "thumb": "icons/icon-sparkles-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精工",
+    "品质",
+    "匠心",
+    "轻奢尊贵"
    ]
   },
   {
@@ -2974,6 +8798,38 @@
    ]
   },
   {
+   "id": "icon-rocket-warm",
+   "name": "快速上线 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-rocket-warm.png",
+   "thumb": "icons/icon-rocket-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "上线",
+    "提速",
+    "交付",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-rocket-gold",
+   "name": "快速上线 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-rocket-gold.png",
+   "thumb": "icons/icon-rocket-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "上线",
+    "提速",
+    "交付",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-blend",
    "name": "融合集成",
    "category": "icon",
@@ -2987,6 +8843,38 @@
     "集成",
     "整合",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-blend-warm",
+   "name": "融合集成 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-blend-warm.png",
+   "thumb": "icons/icon-blend-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "融合",
+    "集成",
+    "整合",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-blend-gold",
+   "name": "融合集成 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-blend-gold.png",
+   "thumb": "icons/icon-blend-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "融合",
+    "集成",
+    "整合",
+    "轻奢尊贵"
    ]
   },
   {
@@ -3006,6 +8894,38 @@
    ]
   },
   {
+   "id": "icon-search-warm",
+   "name": "搜索查询 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-search-warm.png",
+   "thumb": "icons/icon-search-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "搜索",
+    "查询",
+    "检索",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-search-gold",
+   "name": "搜索查询 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-search-gold.png",
+   "thumb": "icons/icon-search-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "搜索",
+    "查询",
+    "检索",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-cloud",
    "name": "云托管",
    "category": "icon",
@@ -3022,6 +8942,38 @@
    ]
   },
   {
+   "id": "icon-cloud-warm",
+   "name": "云托管 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-cloud-warm.png",
+   "thumb": "icons/icon-cloud-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云",
+    "托管",
+    "SaaS",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-cloud-gold",
+   "name": "云托管 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-cloud-gold.png",
+   "thumb": "icons/icon-cloud-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云",
+    "托管",
+    "SaaS",
+    "轻奢尊贵"
+   ]
+  },
+  {
    "id": "icon-link",
    "name": "资源对接",
    "category": "icon",
@@ -3035,6 +8987,38 @@
     "资源",
     "链接",
     "简约清晰"
+   ]
+  },
+  {
+   "id": "icon-link-warm",
+   "name": "资源对接 · 暖阳",
+   "category": "icon",
+   "style": "nature",
+   "file": "icons/icon-link-warm.png",
+   "thumb": "icons/icon-link-warm.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "对接",
+    "资源",
+    "链接",
+    "温暖自然"
+   ]
+  },
+  {
+   "id": "icon-link-gold",
+   "name": "资源对接 · 鎏金",
+   "category": "icon",
+   "style": "luxury",
+   "file": "icons/icon-link-gold.png",
+   "thumb": "icons/icon-link-gold.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "对接",
+    "资源",
+    "链接",
+    "轻奢尊贵"
    ]
   },
   {
