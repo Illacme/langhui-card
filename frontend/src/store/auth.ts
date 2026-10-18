@@ -16,6 +16,8 @@ export const useAuthStore = defineStore('auth', {
     companyName: localStorage.getItem('admin_company_name') || '',
     companyShortName: localStorage.getItem('admin_company_short_name') || '',
     isPlatform: localStorage.getItem('admin_is_platform') === '1',
+    // 独立版企业锁定：企业管理页只读开关（后端写接口同样拦截，双保险）
+    independentLock: localStorage.getItem('admin_independent_lock') === '1',
     profileLoaded: false, // 本次会话是否已从 /api/admin/me 恢复过身份
   }),
   getters: {
@@ -31,6 +33,7 @@ export const useAuthStore = defineStore('auth', {
         this.companyName = profile.companyName ?? ''
         this.companyShortName = profile.companyShortName ?? ''
         this.isPlatform = profile.isPlatform ?? false
+        this.independentLock = profile.independentLock ?? false
       }
       this.profileLoaded = !!profile
       this.persist()
@@ -43,6 +46,7 @@ export const useAuthStore = defineStore('auth', {
       this.companyName = profile.companyName
       this.companyShortName = profile.companyShortName
       this.isPlatform = profile.isPlatform
+      this.independentLock = profile.independentLock ?? false
       this.profileLoaded = true
       this.persist()
     },
@@ -53,6 +57,7 @@ export const useAuthStore = defineStore('auth', {
       this.companyName = ''
       this.companyShortName = ''
       this.isPlatform = false
+      this.independentLock = false
       this.profileLoaded = false
       localStorage.removeItem('admin_user')
       localStorage.removeItem('admin_loggedin')
@@ -60,6 +65,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('admin_company_name')
       localStorage.removeItem('admin_company_short_name')
       localStorage.removeItem('admin_is_platform')
+      localStorage.removeItem('admin_independent_lock')
     },
     persist() {
       localStorage.setItem('admin_user', this.username)
@@ -68,6 +74,7 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('admin_company_name', this.companyName)
       localStorage.setItem('admin_company_short_name', this.companyShortName)
       localStorage.setItem('admin_is_platform', this.isPlatform ? '1' : '0')
+      localStorage.setItem('admin_independent_lock', this.independentLock ? '1' : '0')
     },
   },
 })

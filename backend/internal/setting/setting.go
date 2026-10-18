@@ -58,10 +58,9 @@ var registry = []def{
 	// 缺省空串 = 「未设置」，读取时回退环境变量 METRICS_ENABLED；
 	// 一旦在界面显式设为 true/false 就以界面为准（避免升级后让既有部署的开关行为突变）。
 	{"metrics_enabled", "feature", "bool", "", "是否开放 /metrics（Prometheus 指标）；留空则跟随环境变量 METRICS_ENABLED"},
-	// TODO(未接线)：仅登记到界面，尚无任何代码读取——界面可存但当前不影响行为。
-	// 待产品定义「锁定后具体禁掉哪些操作」（企业启停？企业管理页只读？）后再实现；
-	// 在此之前保留可见，是为了让管理员看到规划中的开关，而不是假装已生效。
-	{"independent_lock", "feature", "bool", "false", "独立版企业锁定（暂未生效：锁定范围待定义，当前开启不影响任何行为）"},
+	// 开启后企业管理页整体只读：列表/管理员列表可查，但新建企业、编辑企业、
+	// 启停企业、新建企业管理员一律拒绝（见 handler/companies.go 的 writeLocked）。
+	{"independent_lock", "feature", "bool", "false", "独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员）"},
 }
 
 // registryByKey 供按 key 快速查类型。

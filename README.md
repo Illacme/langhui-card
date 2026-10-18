@@ -64,7 +64,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 微信 | `wxacode_ttl_hours` | 小程序码缓存有效期（小时） |
 | 微信 | `wx_appid` | 小程序 AppID（留空则回退环境变量 `WX_APPID`） |
 | 功能开关 | `metrics_enabled` | 是否开放 `/metrics`（Prometheus 指标）；留空则跟随环境变量 `METRICS_ENABLED` |
-| 功能开关 | `independent_lock` | 独立版企业锁定（**尚未接线**，界面可存但不生效，待定义锁定范围后实现） |
+| 功能开关 | `independent_lock` | 独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员） |
 
 > **密钥类不进界面**：数据库地址、JWT 密钥、云存储 / CDN 凭据、微信 AppSecret 等
 > 始终走环境变量（见 `.env.example`），不落库、不可在界面编辑，避免敏感信息泄漏。

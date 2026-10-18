@@ -10,6 +10,9 @@ export interface AdminProfile {
   companyName: string
   companyShortName: string
   isPlatform: boolean
+  // 独立版企业锁定（后台「系统设置 → independent_lock」）：开启后企业管理页只读，
+  // 后端写接口同样拦截。前端据此隐藏/禁用写操作按钮，避免点了才报错。
+  independentLock?: boolean
 }
 
 // 管理员登录（平台超管 / 企业管理员均可）：成功时服务端写入 httpOnly Cookie

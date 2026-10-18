@@ -9,6 +9,7 @@ import (
 	"langhui/internal/auth"
 	"langhui/internal/middleware"
 	"langhui/internal/model"
+	"langhui/internal/setting"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -24,6 +25,26 @@ func resolveShortName(raw string) string {
 		return s
 	}
 	return defaultShortName
+}
+
+// independentLocked 是否开启「独立版企业锁定」（后台「系统设置 → 功能开关 → independent_lock」）。
+// 开启后企业管理整体只读：列表 / 管理员列表照常可查，
+// 但新建企业、编辑企业、启停企业、新建企业管理员一律拒绝。
+func independentLocked() bool {
+	return setting.GetBool("independent_lock", false)
+}
+
+// writeLocked 企业管理「写操作」的统一门禁：锁定时返回 403 并给出明确原因。
+// 放在各写接口开头而非注册期判定——锁定是运行期开关，注册期判定会导致改完还得重启。
+func writeLocked(c *gin.Context) bool {
+	if !independentLocked() {
+		return false
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"code": 403,
+		"msg":  "已开启独立版企业锁定（系统设置 independent_lock），企业管理为只读",
+	})
+	return true
 }
 
 // RegisterCompanies 注册租户（企业）管理接口——仅平台超级管理员可用
@@ -57,6 +78,9 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 			"companyName":      companyName,
 			"companyShortName": companyShortName,
 			"isPlatform":       a.CompanyID == 0,
+			// 独立版企业锁定：前端据此把「企业管理」页切为只读。
+			// 后端各写接口也有 writeLocked 拦截——双保险，避免只靠前端隐藏按钮被绕过。
+			"independentLock": independentLocked(),
 		}})
 	})
 
@@ -83,6 +107,9 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 	// ② 显式填写的值同时作为公司信息简称的初始值，企业管理员登录后可在
 	// 「公司信息」页继续完善（此后仅影响小程序展示）。
 	r.POST("/api/admin/companies", plat, func(c *gin.Context) {
+		if writeLocked(c) {
+			return
+		}
 		var req struct {
 			Name          string `json:"name"`
 			ShortName     string `json:"shortName"`
@@ -131,6 +158,9 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 	// 简称改后同步侧边栏品牌名（未设置/清空则回落缺省值「智能名片」），但不回写公司信息的简称——
 	// 公司信息里的简称是企业管理员在「公司信息」页维护的小程序展示值，两者相互独立。
 	r.PUT("/api/admin/companies/:id", plat, func(c *gin.Context) {
+		if writeLocked(c) {
+			return
+		}
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
 			Name      string `json:"name"`
@@ -150,6 +180,9 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 
 	// 停用 / 启用企业（停用后该企业的管理员与员工均不能登录）
 	r.POST("/api/admin/companies/:id/status", plat, func(c *gin.Context) {
+		if writeLocked(c) {
+			return
+		}
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
 			Status string `json:"status"`
@@ -180,6 +213,9 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 
 	// 新增企业管理员
 	r.POST("/api/admin/companies/:id/admins", plat, func(c *gin.Context) {
+		if writeLocked(c) {
+			return
+		}
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
 		var req struct {
 			Username string `json:"username"`

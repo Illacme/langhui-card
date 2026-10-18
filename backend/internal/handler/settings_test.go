@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -138,6 +139,57 @@ func TestMetricsEnabledSettingFallsBackToEnv(t *testing.T) {
 	_, body = c.do("PUT", "/api/admin/settings", map[string]string{"metrics_enabled": "false"}, adminToken)
 	require.EqualValues(t, 0, body["code"])
 	require.False(t, setting.GetBool("metrics_enabled", true))
+}
+
+// TestIndependentLockMakesCompaniesReadOnly independent_lock 接线验证（同为曾经的死配置项）。
+// 语义：开启后企业管理页整体只读——列表 / 管理员列表照常可查，
+// 新建企业、编辑企业、启停企业、新建企业管理员一律 403。
+func TestIndependentLockMakesCompaniesReadOnly(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	loginAdmin(t, c) // 企管接口走 Cookie 鉴权：登录即写入 jar
+
+	// 1) 未锁定：可正常新建企业
+	_, body := c.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{"name": "甲公司"})
+	require.EqualValues(t, 0, body["code"])
+	cid := fmt.Sprint(body["data"].(map[string]interface{})["id"])
+
+	// 2) 开启独立版锁定
+	_, body = c.doWithCookie("PUT", "/api/admin/settings", map[string]string{"independent_lock": "true"})
+	require.EqualValues(t, 0, body["code"])
+
+	// 3) 四类写操作全部被拒（403），且给出明确原因
+	_, body = c.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{"name": "乙公司"})
+	require.EqualValues(t, 403, body["code"])
+	require.Contains(t, body["msg"], "只读")
+
+	_, body = c.doWithCookie("PUT", "/api/admin/companies/"+cid, map[string]interface{}{"name": "改名"})
+	require.EqualValues(t, 403, body["code"])
+
+	_, body = c.doWithCookie("POST", "/api/admin/companies/"+cid+"/status",
+		map[string]interface{}{"status": "disabled"})
+	require.EqualValues(t, 403, body["code"])
+
+	_, body = c.doWithCookie("POST", "/api/admin/companies/"+cid+"/admins",
+		map[string]interface{}{"username": "boss2", "password": "pwd12345"})
+	require.EqualValues(t, 403, body["code"])
+
+	// 4) 只读接口仍然可用（列表 / 管理员列表）
+	_, body = c.doWithCookie("GET", "/api/admin/companies", nil)
+	require.EqualValues(t, 0, body["code"])
+	_, body = c.doWithCookie("GET", "/api/admin/companies/"+cid+"/admins", nil)
+	require.EqualValues(t, 0, body["code"])
+
+	// 5) /admin/me 下发锁定状态，供前端把企管页切为只读
+	_, body = c.doWithCookie("GET", "/api/admin/me", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, true, body["data"].(map[string]interface{})["independentLock"])
+
+	// 6) 关闭锁定后写操作立刻恢复（运行期开关，无需重启）
+	_, body = c.doWithCookie("PUT", "/api/admin/settings", map[string]string{"independent_lock": "false"})
+	require.EqualValues(t, 0, body["code"])
+	_, body = c.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{"name": "丙公司"})
+	require.EqualValues(t, 0, body["code"])
 }
 
 // loginEmployee 建一个员工并登录，返回其 Bearer 令牌（用于越权断言）。

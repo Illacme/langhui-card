@@ -6,9 +6,22 @@
         <div class="bar-right">
           <span class="bar-tip">平台超级管理员：开通/停用企业、管理企业管理员</span>
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
-          <el-button type="primary" :icon="Plus" @click="openCreate">开通企业</el-button>
+          <el-button type="primary" :icon="Plus" :disabled="locked" @click="openCreate"
+            >开通企业</el-button
+          >
         </div>
       </div>
+
+      <!-- 独立版企业锁定：整体只读，并说明在哪里能解除 -->
+      <el-alert
+        v-if="locked"
+        type="warning"
+        :closable="false"
+        show-icon
+        title="已开启独立版企业锁定，当前为只读"
+        description="不能新建/编辑企业、启停企业或添加企业管理员。如需修改，请到「平台管理 → 系统设置 → 功能开关」关闭 independent_lock。"
+        style="margin-bottom: 14px"
+      />
 
       <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column prop="id" label="编号" width="70" align="center" />
@@ -31,16 +44,23 @@
         <el-table-column label="操作" width="260" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link @click="openAdmins(row)">管理员</el-button>
-            <el-button type="primary" link @click="openEdit(row)">编辑</el-button>
+            <el-button type="primary" link :disabled="locked" @click="openEdit(row)">编辑</el-button>
             <el-button
               v-if="row.status === 'enabled'"
               type="warning"
               link
+              :disabled="locked"
               :loading="actingId === row.id"
               @click="toggleStatus(row)"
               >停用</el-button
             >
-            <el-button v-else type="success" link :loading="actingId === row.id" @click="toggleStatus(row)"
+            <el-button
+              v-else
+              type="success"
+              link
+              :disabled="locked"
+              :loading="actingId === row.id"
+              @click="toggleStatus(row)"
               >启用</el-button
             >
           </template>
@@ -105,7 +125,14 @@
       <div class="admin-add-bar">
         <el-input v-model="newAdmin.username" placeholder="用户名" style="width: 180px" clearable />
         <el-input v-model="newAdmin.password" placeholder="密码" style="width: 180px" clearable />
-        <el-button type="primary" :icon="Plus" :loading="addingAdmin" @click="submitAddAdmin">添加</el-button>
+        <el-button
+          type="primary"
+          :icon="Plus"
+          :disabled="locked"
+          :loading="addingAdmin"
+          @click="submitAddAdmin"
+          >添加</el-button
+        >
       </div>
       <el-table :data="admins" v-loading="adminsLoading" border stripe max-height="360">
         <el-table-column prop="id" label="编号" width="70" align="center" />
@@ -119,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
@@ -133,6 +160,13 @@ import {
   type CompanyItem,
 } from '@/api/tenants'
 import { formatDateTime } from '@/utils/datetime'
+import { useAuthStore } from '@/store/auth'
+
+const auth = useAuthStore()
+// 独立版企业锁定（后台「系统设置 → independent_lock」）：企业管理页整体只读。
+// 写按钮已 disabled，这里再加一道入口守卫——防止快捷键 / 残留弹窗绕过界面禁用。
+// 后端 writeLocked 才是最终防线，前端只是避免「点了才报错」。
+const locked = computed(() => auth.independentLock)
 
 const rows = ref<any[]>([])
 const loading = ref(false)
@@ -163,6 +197,7 @@ const createRules: FormRules = {
 }
 
 function openCreate() {
+  if (locked.value) return
   createVisible.value = true
 }
 
@@ -207,6 +242,7 @@ const editRules: FormRules = {
 }
 
 function openEdit(row: any) {
+  if (locked.value) return
   editForm.id = row.id
   editForm.name = row.name
   editForm.shortName = row.shortName || ''
@@ -239,6 +275,7 @@ async function submitEdit() {
 
 // ===== 停用 / 启用 =====
 async function toggleStatus(row: any) {
+  if (locked.value) return
   const disabling = row.status === 'enabled'
   try {
     await ElMessageBox.confirm(
@@ -293,6 +330,7 @@ async function reloadAdmins() {
 }
 
 async function submitAddAdmin() {
+  if (locked.value) return
   if (!currentCompany.value) return
   if (!newAdmin.username || !newAdmin.password) {
     ElMessage.warning('请输入用户名与密码')
