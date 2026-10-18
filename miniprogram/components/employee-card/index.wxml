@@ -18,12 +18,16 @@
     </view>
   </view>
 
-  <!-- 下半部：两列联系表（手机+座机同行，邮箱独占一行） -->
+  <!-- 下半部：两列联系表。
+       分隔线按设计稿用真实元素绘制（不依赖伪元素）：
+       rows-line = 通栏双色线（左段蓝 + 右段灰），row-hline = 两行间仅左列的灰色半截线 -->
   <view class="rows">
+    <view class="rows-line" />
     <view class="row">
       <view class="cell"><text class="label">手机</text><text class="val">{{employee.phone}}</text></view>
       <view class="cell"><text class="label">座机</text><text class="val">{{employee.landline || company.tel}}</text></view>
     </view>
+    <view class="row-hline" />
     <view class="row">
       <view class="cell email"><text class="label">邮箱</text><text class="val">{{employee.email}}</text></view>
     </view>
