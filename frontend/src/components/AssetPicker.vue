@@ -9,6 +9,7 @@
     title="素材库"
     width="880px"
     top="6vh"
+    class="resp-dialog"
     :close-on-click-modal="false"
     @closed="onClosed"
   >
