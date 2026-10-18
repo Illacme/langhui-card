@@ -64,13 +64,21 @@ ICON_PALETTES = {
         "svc": ((180, 83, 9), (120, 53, 15)),
         "misc": ((146, 64, 14), (69, 26, 3)),
     },
+    "soft": {  # 素雅浅底（客户原型图风格）：白→极浅蓝渐变底 + 蓝色细线图形，
+        # 三组同底色（统一素净，靠图形本身区分），适配轻盈清新的商务调性
+        "cat": ((240, 247, 255), (219, 234, 254)),
+        "svc": ((240, 247, 255), (219, 234, 254)),
+        "misc": ((240, 247, 255), (219, 234, 254)),
+    },
 }
 
-# 图标调性变体：(风格 key, id 后缀, 名称后缀)
+# 图标调性变体：(风格 key, id 后缀, 名称后缀, 线条颜色)。
+# 线条颜色 None = 白色（深底）；素雅浅底用蓝色线条保证对比度（见客户原型图）。
 ICON_VARIANTS = [
-    ("clean", "", ""),
-    ("nature", "-warm", " · 暖阳"),
-    ("luxury", "-gold", " · 鎏金"),
+    ("clean", "", "", None),
+    ("nature", "-warm", " · 暖阳", None),
+    ("luxury", "-gold", " · 鎏金", None),
+    ("soft", "-soft", " · 素雅", "#2F7CD8"),
 ]
 
 # (lucide 名, 中文名, 分组, 搜索标签)
@@ -300,6 +308,7 @@ _STYLE_GROUPS = {
         "cover-topo", "cover-mountain", "cover-meshnodes", "cover-meshnodes-teal",
         "cover-radar", "cover-radar-slate", "cover-chevrons", "cover-stairs",
         "cover-stairs-indigo", "cover-arclines", "cover-confetti",
+        "cover-estate-dusk",
     ),
     "nature": (
         "bg-canyon", "bg-forest", "bg-sand", "bg-amber", "bg-sunrise",
@@ -327,6 +336,9 @@ _STYLE_GROUPS = {
         # LOGO / 头像：高明度淡色（淡紫、浅灰、浅玫红、薄荷、珊瑚、靛紫）
         "logo-orbit-violet", "logo-tower-slate", "logo-diamond-rose",
         "avatar-16", "avatar-17", "avatar-18", "avatar-21",
+        # 浅蓝素雅背景（客户原型图风格）与浅底建筑封面
+        "bg-skyblue", "bg-cloudmist", "bg-iceblue",
+        "cover-glasstower", "cover-estate", "cover-plaza",
     ),
     "vivid": (
         "bg-bokeh", "bg-glow", "bg-mesh", "bg-aurora", "bg-waves", "bg-nebula",
@@ -403,6 +415,11 @@ COVERS = [
     ("cover-stairs-indigo", "靛蓝阶梯", ((30, 27, 75), (99, 102, 241)), "stairs"),
     ("cover-arclines-rose", "玫红弧线", ((136, 19, 55), (251, 113, 133)), "arclines"),
     ("cover-confetti-mint", "薄荷碎点", ((15, 118, 110), (153, 246, 228)), "confetti"),
+    # ── 建筑主题（客户原型图：播放封面 / 项目封面需要楼宇实拍感素材）──
+    ("cover-glasstower", "玻璃塔楼", ((224, 242, 254), (96, 165, 250)), "glasstower"),
+    ("cover-estate", "楼盘社区", ((224, 242, 254), (125, 211, 252)), "estate"),
+    ("cover-plaza", "商务广场", ((241, 245, 249), (148, 163, 184)), "glasstower"),
+    ("cover-estate-dusk", "暮色楼盘", ((30, 41, 59), (71, 85, 105)), "estate"),
 ]
 
 # LOGO：渐变圆角方块 + 白色几何标记。
@@ -496,6 +513,10 @@ BACKGROUNDS = [
     ("bg-royal", "皇家蓝", ((12, 35, 128), (29, 78, 216)), "glow", ["皇家蓝", "深邃", "大气"]),
     ("bg-charcoal", "炭黑", ((24, 24, 27), (63, 63, 70)), "grid", ["炭黑", "沉稳", "中性"]),
     ("bg-amber", "琥珀", ((254, 243, 199), (217, 119, 6)), "diagonal", ["琥珀", "暖阳", "浅色"]),
+    # ── 浅蓝素雅系（客户原型图：页面浅蓝背景，若隐若现、不抢内容）──
+    ("bg-skyblue", "晴空", ((224, 242, 254), (147, 197, 253)), "bokeh", ["晴空", "浅蓝", "清新", "淡雅"]),
+    ("bg-cloudmist", "云雾", ((239, 246, 255), (191, 219, 254)), "glow", ["云雾", "极浅", "素雅", "轻盈"]),
+    ("bg-iceblue", "冰蓝", ((224, 242, 254), (186, 230, 253)), "waves", ["冰蓝", "水色", "浅色", "通透"]),
     # ── 新 motif（行业调性 + 更多浅色）──
     ("bg-marble", "大理石", ((60, 60, 67), (24, 24, 27)), "marble", ["大理石", "石材", "建材"]),
     ("bg-silk", "丝绸", ((30, 58, 138), (76, 29, 149)), "silk", ["丝绸", "柔顺", "服装"]),
@@ -617,10 +638,11 @@ def fetch_lucide(name):
     return dst
 
 
-def render_glyph(svg_path, size, stroke_scale=0.75):
-    """Lucide SVG → 指定尺寸的白色图形 PNG（透明底，rsvg-convert 光栅化）。"""
+def render_glyph(svg_path, size, stroke_scale=0.75, color="#FFFFFF"):
+    """Lucide SVG → 指定尺寸的线形图形 PNG（透明底，rsvg-convert 光栅化）。
+    color 默认白色（深底用）；浅底变体传蓝色等深色以保证对比度。"""
     src = open(svg_path, encoding="utf-8").read()
-    src = src.replace('stroke="currentColor"', 'stroke="#FFFFFF"')
+    src = src.replace('stroke="currentColor"', 'stroke="%s"' % color)
     src = src.replace('stroke-width="2"', 'stroke-width="%.2f"' % (2 * stroke_scale))
     with tempfile.TemporaryDirectory() as td:
         svg = os.path.join(td, "g.svg")
@@ -634,10 +656,10 @@ def render_glyph(svg_path, size, stroke_scale=0.75):
         return Image.open(png).convert("RGBA")
 
 
-def make_icon(item_id, name, lucide, group, tags, colors, style):
+def make_icon(item_id, name, lucide, group, tags, colors, style, glyph_color="#FFFFFF"):
     S = 256
     tile = rounded_tile(S, *colors)
-    glyph = render_glyph(fetch_lucide(lucide), int(S * 0.62))
+    glyph = render_glyph(fetch_lucide(lucide), int(S * 0.62), color=glyph_color)
     tile.alpha_composite(glyph, ((S - glyph.width) // 2, (S - glyph.height) // 2))
     path = os.path.join(OUT, "icons", item_id + ".png")
     tile.save(path, "PNG")
@@ -1129,6 +1151,58 @@ def motif_confetti(img):
     img.alpha_composite(ov)
 
 
+def motif_glasstower(img):
+    """玻璃塔楼：错落楼体 + 幕墙竖纹 + 楼层横线 + 天线 + 斜向反光（建筑日景，
+    适合作视频播放封面 / 项目封面的建筑主题素材）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    base = h
+    # (x, 高度比例, 宽)：高低错落的主楼群
+    for x, hr, bw in ((60, 0.30, 150), (240, 0.52, 120), (390, 0.68, 170),
+                      (600, 0.44, 130), (760, 0.58, 150)):
+        bh = int(h * hr)
+        top = base - bh
+        d.rectangle([x, top, x + bw, base], fill=(255, 255, 255, 52))
+        for gx in range(x + 10, x + bw - 8, 16):  # 幕墙竖纹
+            d.line([(gx, top + 8), (gx, base - 6)], fill=(255, 255, 255, 60), width=2)
+        for gy in range(top + 12, base - 8, 26):  # 楼层横线
+            d.line([(x + 4, gy), (x + bw - 4, gy)], fill=(255, 255, 255, 34), width=1)
+        d.line([(x + bw // 2, top - 26), (x + bw // 2, top)],
+               fill=(255, 255, 255, 130), width=3)  # 天线
+    # 斜向反光带（玻璃幕墙的反光感）
+    band = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(band).polygon([(w * 0.15, h), (w * 0.45, 0), (w * 0.58, 0),
+                                  (w * 0.28, h)], fill=(255, 255, 255, 26))
+    ov = Image.alpha_composite(ov, band.filter(ImageFilter.GaussianBlur(18)))
+    d.line([(0, base), (w, base)], fill=(255, 255, 255, 110), width=3)
+    img.alpha_composite(ov)
+
+
+def motif_estate(img):
+    """楼盘社区：远景楼群剪影 + 中景住宅楼（带窗格）+ 前景地面（地产日景）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(223)
+    x = -10
+    while x < w:  # 远景楼群
+        bw = random.randint(60, 110)
+        bh = random.randint(int(h * 0.10), int(h * 0.22))
+        d.rectangle([x, int(h * 0.62) - bh, x + bw, int(h * 0.62)],
+                    fill=(255, 255, 255, 28))
+        x += bw + random.randint(6, 18)
+    for bx, hr, bw in ((90, 0.30, 200), (420, 0.38, 240), (720, 0.28, 190)):
+        bh = int(h * hr)
+        top = int(h * 0.78) - bh
+        d.rectangle([bx, top, bx + bw, int(h * 0.78)], fill=(255, 255, 255, 50))
+        for wy in range(top + 12, int(h * 0.78) - 10, 24):  # 窗格
+            for wx in range(bx + 12, bx + bw - 10, 26):
+                d.rectangle([wx, wy, wx + 14, wy + 12], fill=(255, 255, 255, 90))
+    d.rectangle([0, int(h * 0.78), w, h], fill=(255, 255, 255, 20))
+    d.line([(0, int(h * 0.78)), (w, int(h * 0.78))],
+           fill=(255, 255, 255, 90), width=3)
+    img.alpha_composite(ov)
+
+
 COVER_MOTIFS = {
     "skyline": motif_skyline, "dots": motif_dots, "beams": motif_beams,
     "arcs": motif_arcs, "blocks": motif_blocks, "shield": motif_shield,
@@ -1138,6 +1212,7 @@ COVER_MOTIFS = {
     "minimal": motif_minimal, "night": motif_night, "circuit": motif_circuit,
     "rings": motif_rings, "stripes": motif_stripes, "bubbles": motif_bubbles,
     "cityline": motif_cityline, "veins": motif_veins, "prism": motif_prism,
+    "glasstower": motif_glasstower, "estate": motif_estate,
     "topo": motif_topo, "meshnodes": motif_meshnodes, "radar": motif_radar,
     "ripple": motif_ripple, "chevrons": motif_chevrons, "orbs": motif_orbs,
     "stairs": motif_stairs, "arclines": motif_arclines,
@@ -2208,11 +2283,19 @@ BG_MOTIFS = {
 }
 
 
+def _lum(c):
+    """感知亮度 0~255（ITU-R BT.601）。"""
+    return 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]
+
+
 def make_background(item_id, name, colors, motif, tags):
-    """背景图：竖幅渐变 + motif + 暗角；JPEG 原图 + 缩略图（选择器预览）。"""
+    """背景图：竖幅渐变 + motif + 暗角；JPEG 原图 + 缩略图（选择器预览）。
+    浅色图（平均亮度 >180）跳过暗角——浅蓝底压暗四角会显脏，原型图的浅蓝
+    背景要的是通透感。"""
     img = vgrad((BG_W, BG_H), *colors).convert("RGBA")
     BG_MOTIFS[motif](img)
-    _vignette(img)
+    if (_lum(colors[0]) + _lum(colors[1])) / 2 < 180:
+        _vignette(img)
     path = os.path.join(OUT, "backgrounds", item_id + ".jpg")
     img.convert("RGB").save(path, "JPEG", quality=87)
     thumb = img.convert("RGB").resize((BG_THUMB_W, BG_THUMB_H), Image.LANCZOS)
@@ -2260,10 +2343,10 @@ def main():
     items = []
     print("icons: %d 个 × %d 配色档" % (len(ICONS), len(ICON_VARIANTS)))
     for lucide, name, group, tags in ICONS:
-        for style, suffix, name_suffix in ICON_VARIANTS:
+        for style, suffix, name_suffix, glyph_color in ICON_VARIANTS:
             items.append(make_icon(
                 "icon-" + lucide + suffix, name + name_suffix, lucide, group, tags,
-                ICON_PALETTES[style][group], style))
+                ICON_PALETTES[style][group], style, glyph_color or "#FFFFFF"))
     print("covers: %d" % len(COVERS))
     for cid, name, colors, motif in COVERS:
         items.append(make_cover(cid, name, colors, motif))
@@ -2293,7 +2376,7 @@ def main():
             raise RuntimeError("调性 %s 没有任何素材，检查 _STYLE_GROUPS 的 id" % sk)
 
     manifest = {
-        "version": 6,
+        "version": 7,
         "styles": [{"key": k, "name": n} for k, n in STYLES],
         "categories": [
             {"key": "icon", "name": "图标"},

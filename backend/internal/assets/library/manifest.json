@@ -1,5 +1,5 @@
 {
- "version": 6,
+ "version": 7,
  "styles": [
   {
    "key": "clean",
@@ -94,6 +94,22 @@
    ]
   },
   {
+   "id": "icon-house-soft",
+   "name": "居住住宅 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-house-soft.png",
+   "thumb": "icons/icon-house-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "住宅",
+    "楼宇",
+    "home",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-landmark",
    "name": "政务办公",
    "category": "icon",
@@ -139,6 +155,22 @@
     "government",
     "机关",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-landmark-soft",
+   "name": "政务办公 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-landmark-soft.png",
+   "thumb": "icons/icon-landmark-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "政务",
+    "government",
+    "机关",
+    "柔美清新"
    ]
   },
   {
@@ -190,6 +222,22 @@
    ]
   },
   {
+   "id": "icon-hospital-soft",
+   "name": "医院 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-hospital-soft.png",
+   "thumb": "icons/icon-hospital-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "医疗",
+    "hospital",
+    "卫生",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-school",
    "name": "学校",
    "category": "icon",
@@ -235,6 +283,22 @@
     "school",
     "校园",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-school-soft",
+   "name": "学校 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-school-soft.png",
+   "thumb": "icons/icon-school-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "school",
+    "校园",
+    "柔美清新"
    ]
   },
   {
@@ -286,6 +350,22 @@
    ]
   },
   {
+   "id": "icon-shopping-bag-soft",
+   "name": "商业综合体 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-shopping-bag-soft.png",
+   "thumb": "icons/icon-shopping-bag-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商业",
+    "购物",
+    "商场",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-train-front",
    "name": "地铁站点",
    "category": "icon",
@@ -331,6 +411,22 @@
     "交通",
     "轨道",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-train-front-soft",
+   "name": "地铁站点 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-train-front-soft.png",
+   "thumb": "icons/icon-train-front-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "地铁",
+    "交通",
+    "轨道",
+    "柔美清新"
    ]
   },
   {
@@ -382,6 +478,22 @@
    ]
   },
   {
+   "id": "icon-factory-soft",
+   "name": "生产制造 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-factory-soft.png",
+   "thumb": "icons/icon-factory-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "工厂",
+    "制造",
+    "车间",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-warehouse",
    "name": "仓储物流",
    "category": "icon",
@@ -427,6 +539,22 @@
     "物流",
     "仓库",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-warehouse-soft",
+   "name": "仓储物流 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-warehouse-soft.png",
+   "thumb": "icons/icon-warehouse-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "物流",
+    "仓库",
+    "柔美清新"
    ]
   },
   {
@@ -478,6 +606,22 @@
    ]
   },
   {
+   "id": "icon-building-2-soft",
+   "name": "楼宇建筑 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-building-2-soft.png",
+   "thumb": "icons/icon-building-2-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "楼宇",
+    "建筑",
+    "building",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-briefcase",
    "name": "商务办公",
    "category": "icon",
@@ -523,6 +667,22 @@
     "办公",
     "写字楼",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-briefcase-soft",
+   "name": "商务办公 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-briefcase-soft.png",
+   "thumb": "icons/icon-briefcase-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商务",
+    "办公",
+    "写字楼",
+    "柔美清新"
    ]
   },
   {
@@ -574,6 +734,22 @@
    ]
   },
   {
+   "id": "icon-graduation-cap-soft",
+   "name": "教育培训 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-graduation-cap-soft.png",
+   "thumb": "icons/icon-graduation-cap-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "教育",
+    "培训",
+    "高校",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-hotel",
    "name": "酒店住宿",
    "category": "icon",
@@ -619,6 +795,22 @@
     "住宿",
     "宾馆",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-hotel-soft",
+   "name": "酒店住宿 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-hotel-soft.png",
+   "thumb": "icons/icon-hotel-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "酒店",
+    "住宿",
+    "宾馆",
+    "柔美清新"
    ]
   },
   {
@@ -670,6 +862,22 @@
    ]
   },
   {
+   "id": "icon-utensils-soft",
+   "name": "餐饮美食 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-utensils-soft.png",
+   "thumb": "icons/icon-utensils-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "餐饮",
+    "美食",
+    "餐厅",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-bus",
    "name": "公共交通",
    "category": "icon",
@@ -715,6 +923,22 @@
     "交通",
     "客运",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-bus-soft",
+   "name": "公共交通 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-bus-soft.png",
+   "thumb": "icons/icon-bus-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公交",
+    "交通",
+    "客运",
+    "柔美清新"
    ]
   },
   {
@@ -766,6 +990,22 @@
    ]
   },
   {
+   "id": "icon-zap-soft",
+   "name": "能源电力 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-zap-soft.png",
+   "thumb": "icons/icon-zap-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "能源",
+    "电力",
+    "电气",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-leaf",
    "name": "绿色环保",
    "category": "icon",
@@ -811,6 +1051,22 @@
     "绿色",
     "节能",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-leaf-soft",
+   "name": "绿色环保 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-leaf-soft.png",
+   "thumb": "icons/icon-leaf-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环保",
+    "绿色",
+    "节能",
+    "柔美清新"
    ]
   },
   {
@@ -862,6 +1118,22 @@
    ]
   },
   {
+   "id": "icon-shield-check-soft",
+   "name": "安防保障 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-shield-check-soft.png",
+   "thumb": "icons/icon-shield-check-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安防",
+    "保障",
+    "安全",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-truck",
    "name": "物流配送",
    "category": "icon",
@@ -907,6 +1179,22 @@
     "配送",
     "运输",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-truck-soft",
+   "name": "物流配送 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-truck-soft.png",
+   "thumb": "icons/icon-truck-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "物流",
+    "配送",
+    "运输",
+    "柔美清新"
    ]
   },
   {
@@ -958,6 +1246,22 @@
    ]
   },
   {
+   "id": "icon-plane-soft",
+   "name": "航空机场 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-plane-soft.png",
+   "thumb": "icons/icon-plane-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "航空",
+    "机场",
+    "飞机",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-ship",
    "name": "港口航运",
    "category": "icon",
@@ -1003,6 +1307,22 @@
     "航运",
     "船舶",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-ship-soft",
+   "name": "港口航运 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-ship-soft.png",
+   "thumb": "icons/icon-ship-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "港口",
+    "航运",
+    "船舶",
+    "柔美清新"
    ]
   },
   {
@@ -1054,6 +1374,22 @@
    ]
   },
   {
+   "id": "icon-store-soft",
+   "name": "商铺零售 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-store-soft.png",
+   "thumb": "icons/icon-store-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "商铺",
+    "零售",
+    "门店",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-library",
    "name": "文化场馆",
    "category": "icon",
@@ -1099,6 +1435,22 @@
     "场馆",
     "图书",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-library-soft",
+   "name": "文化场馆 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-library-soft.png",
+   "thumb": "icons/icon-library-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文化",
+    "场馆",
+    "图书",
+    "柔美清新"
    ]
   },
   {
@@ -1150,6 +1502,22 @@
    ]
   },
   {
+   "id": "icon-flask-conical-soft",
+   "name": "科研实验 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-flask-conical-soft.png",
+   "thumb": "icons/icon-flask-conical-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "科研",
+    "实验",
+    "检测",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-microscope",
    "name": "生物医疗",
    "category": "icon",
@@ -1195,6 +1563,22 @@
     "医疗",
     "显微",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-microscope-soft",
+   "name": "生物医疗 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-microscope-soft.png",
+   "thumb": "icons/icon-microscope-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医疗",
+    "显微",
+    "柔美清新"
    ]
   },
   {
@@ -1246,6 +1630,22 @@
    ]
   },
   {
+   "id": "icon-atom-soft",
+   "name": "高新科技 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-atom-soft.png",
+   "thumb": "icons/icon-atom-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "科技",
+    "高新",
+    "原子",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-dumbbell",
    "name": "文体健身",
    "category": "icon",
@@ -1291,6 +1691,22 @@
     "文体",
     "运动",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-dumbbell-soft",
+   "name": "文体健身 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-dumbbell-soft.png",
+   "thumb": "icons/icon-dumbbell-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "健身",
+    "文体",
+    "运动",
+    "柔美清新"
    ]
   },
   {
@@ -1342,6 +1758,22 @@
    ]
   },
   {
+   "id": "icon-trees-soft",
+   "name": "园林绿化 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-trees-soft.png",
+   "thumb": "icons/icon-trees-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "园林",
+    "绿化",
+    "景观",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-wind",
    "name": "风力新能源",
    "category": "icon",
@@ -1387,6 +1819,22 @@
     "新能源",
     "风力",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-wind-soft",
+   "name": "风力新能源 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-wind-soft.png",
+   "thumb": "icons/icon-wind-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风电",
+    "新能源",
+    "风力",
+    "柔美清新"
    ]
   },
   {
@@ -1438,6 +1886,22 @@
    ]
   },
   {
+   "id": "icon-sun-soft",
+   "name": "光伏太阳能 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-sun-soft.png",
+   "thumb": "icons/icon-sun-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "光伏",
+    "太阳能",
+    "发电",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-droplet",
    "name": "水务水利",
    "category": "icon",
@@ -1483,6 +1947,22 @@
     "水利",
     "给排水",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-droplet-soft",
+   "name": "水务水利 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-droplet-soft.png",
+   "thumb": "icons/icon-droplet-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水务",
+    "水利",
+    "给排水",
+    "柔美清新"
    ]
   },
   {
@@ -1534,6 +2014,22 @@
    ]
   },
   {
+   "id": "icon-flame-soft",
+   "name": "热力能源 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-flame-soft.png",
+   "thumb": "icons/icon-flame-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "热力",
+    "能源",
+    "燃烧",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-recycle",
    "name": "再生资源",
    "category": "icon",
@@ -1579,6 +2075,22 @@
     "资源",
     "循环",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-recycle-soft",
+   "name": "再生资源 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-recycle-soft.png",
+   "thumb": "icons/icon-recycle-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "再生",
+    "资源",
+    "循环",
+    "柔美清新"
    ]
   },
   {
@@ -1630,6 +2142,22 @@
    ]
   },
   {
+   "id": "icon-car-soft",
+   "name": "汽车交通 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-car-soft.png",
+   "thumb": "icons/icon-car-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "汽车",
+    "交通",
+    "车行",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-bike",
    "name": "慢行系统",
    "category": "icon",
@@ -1675,6 +2203,22 @@
     "骑行",
     "绿道",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-bike-soft",
+   "name": "慢行系统 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-bike-soft.png",
+   "thumb": "icons/icon-bike-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "慢行",
+    "骑行",
+    "绿道",
+    "柔美清新"
    ]
   },
   {
@@ -1726,6 +2270,22 @@
    ]
   },
   {
+   "id": "icon-anchor-soft",
+   "name": "港航码头 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-anchor-soft.png",
+   "thumb": "icons/icon-anchor-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "港航",
+    "码头",
+    "锚地",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-church",
    "name": "文化宗教",
    "category": "icon",
@@ -1771,6 +2331,22 @@
     "宗教",
     "礼堂",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-church-soft",
+   "name": "文化宗教 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-church-soft.png",
+   "thumb": "icons/icon-church-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文化",
+    "宗教",
+    "礼堂",
+    "柔美清新"
    ]
   },
   {
@@ -1822,6 +2398,22 @@
    ]
   },
   {
+   "id": "icon-banknote-soft",
+   "name": "金融服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-banknote-soft.png",
+   "thumb": "icons/icon-banknote-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "金融",
+    "银行",
+    "货币",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-piggy-bank",
    "name": "投资理财",
    "category": "icon",
@@ -1867,6 +2459,22 @@
     "理财",
     "财富",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-piggy-bank-soft",
+   "name": "投资理财 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-piggy-bank-soft.png",
+   "thumb": "icons/icon-piggy-bank-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "投资",
+    "理财",
+    "财富",
+    "柔美清新"
    ]
   },
   {
@@ -1918,6 +2526,22 @@
    ]
   },
   {
+   "id": "icon-hammer-soft",
+   "name": "工程施工 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-hammer-soft.png",
+   "thumb": "icons/icon-hammer-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "施工",
+    "工程",
+    "建造",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-mountain-snow",
    "name": "山地景区",
    "category": "icon",
@@ -1963,6 +2587,22 @@
     "景区",
     "雪峰",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-mountain-snow-soft",
+   "name": "山地景区 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-mountain-snow-soft.png",
+   "thumb": "icons/icon-mountain-snow-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "山地",
+    "景区",
+    "雪峰",
+    "柔美清新"
    ]
   },
   {
@@ -2014,6 +2654,22 @@
    ]
   },
   {
+   "id": "icon-wheat-soft",
+   "name": "粮油农产 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-wheat-soft.png",
+   "thumb": "icons/icon-wheat-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "粮油",
+    "农产",
+    "种植",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-tractor",
    "name": "农机农业",
    "category": "icon",
@@ -2059,6 +2715,22 @@
     "农业",
     "耕作",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-tractor-soft",
+   "name": "农机农业 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-tractor-soft.png",
+   "thumb": "icons/icon-tractor-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "农机",
+    "农业",
+    "耕作",
+    "柔美清新"
    ]
   },
   {
@@ -2110,6 +2782,22 @@
    ]
   },
   {
+   "id": "icon-apple-soft",
+   "name": "生鲜果品 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-apple-soft.png",
+   "thumb": "icons/icon-apple-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生鲜",
+    "果品",
+    "果蔬",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-fish-symbol",
    "name": "水产海鲜",
    "category": "icon",
@@ -2155,6 +2843,22 @@
     "海鲜",
     "渔业",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-fish-symbol-soft",
+   "name": "水产海鲜 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-fish-symbol-soft.png",
+   "thumb": "icons/icon-fish-symbol-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水产",
+    "海鲜",
+    "渔业",
+    "柔美清新"
    ]
   },
   {
@@ -2206,6 +2910,22 @@
    ]
   },
   {
+   "id": "icon-milk-soft",
+   "name": "乳品饮料 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-milk-soft.png",
+   "thumb": "icons/icon-milk-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "乳品",
+    "饮料",
+    "奶制品",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-croissant",
    "name": "烘焙面点",
    "category": "icon",
@@ -2251,6 +2971,22 @@
     "面点",
     "食品",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-croissant-soft",
+   "name": "烘焙面点 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-croissant-soft.png",
+   "thumb": "icons/icon-croissant-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "烘焙",
+    "面点",
+    "食品",
+    "柔美清新"
    ]
   },
   {
@@ -2302,6 +3038,22 @@
    ]
   },
   {
+   "id": "icon-utensils-crossed-soft",
+   "name": "团餐宴席 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-utensils-crossed-soft.png",
+   "thumb": "icons/icon-utensils-crossed-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团餐",
+    "宴席",
+    "食堂",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-dog",
    "name": "宠物服务",
    "category": "icon",
@@ -2347,6 +3099,22 @@
     "兽医",
     "萌宠",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-dog-soft",
+   "name": "宠物服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-dog-soft.png",
+   "thumb": "icons/icon-dog-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "宠物",
+    "兽医",
+    "萌宠",
+    "柔美清新"
    ]
   },
   {
@@ -2398,6 +3166,22 @@
    ]
   },
   {
+   "id": "icon-baby-soft",
+   "name": "母婴护理 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-baby-soft.png",
+   "thumb": "icons/icon-baby-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "母婴",
+    "育儿",
+    "护理",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-dna",
    "name": "生物医药",
    "category": "icon",
@@ -2443,6 +3227,22 @@
     "医药",
     "基因",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-dna-soft",
+   "name": "生物医药 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-dna-soft.png",
+   "thumb": "icons/icon-dna-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医药",
+    "基因",
+    "柔美清新"
    ]
   },
   {
@@ -2494,6 +3294,22 @@
    ]
   },
   {
+   "id": "icon-brain-soft",
+   "name": "智库咨询 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-brain-soft.png",
+   "thumb": "icons/icon-brain-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智库",
+    "咨询",
+    "策略",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-sofa",
    "name": "家居软装",
    "category": "icon",
@@ -2539,6 +3355,22 @@
     "软装",
     "家具",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-sofa-soft",
+   "name": "家居软装 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-sofa-soft.png",
+   "thumb": "icons/icon-sofa-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "家居",
+    "软装",
+    "家具",
+    "柔美清新"
    ]
   },
   {
@@ -2590,6 +3422,22 @@
    ]
   },
   {
+   "id": "icon-bed-double-soft",
+   "name": "酒店客房 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-bed-double-soft.png",
+   "thumb": "icons/icon-bed-double-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客房",
+    "住宿",
+    "民宿",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-tent",
    "name": "户外露营",
    "category": "icon",
@@ -2635,6 +3483,22 @@
     "露营",
     "拓展",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-tent-soft",
+   "name": "户外露营 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-tent-soft.png",
+   "thumb": "icons/icon-tent-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "户外",
+    "露营",
+    "拓展",
+    "柔美清新"
    ]
   },
   {
@@ -2686,6 +3550,22 @@
    ]
   },
   {
+   "id": "icon-luggage-soft",
+   "name": "旅游出行 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-luggage-soft.png",
+   "thumb": "icons/icon-luggage-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "旅游",
+    "出行",
+    "度假",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-sailboat",
    "name": "游艇帆船",
    "category": "icon",
@@ -2731,6 +3611,22 @@
     "帆船",
     "水上",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-sailboat-soft",
+   "name": "游艇帆船 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-sailboat-soft.png",
+   "thumb": "icons/icon-sailboat-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游艇",
+    "帆船",
+    "水上",
+    "柔美清新"
    ]
   },
   {
@@ -2782,6 +3678,22 @@
    ]
   },
   {
+   "id": "icon-fuel-soft",
+   "name": "油品石化 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-fuel-soft.png",
+   "thumb": "icons/icon-fuel-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "油品",
+    "石化",
+    "加油站",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-radiation",
    "name": "核电放射",
    "category": "icon",
@@ -2827,6 +3739,22 @@
     "放射",
     "特检",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-radiation-soft",
+   "name": "核电放射 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-radiation-soft.png",
+   "thumb": "icons/icon-radiation-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "核电",
+    "放射",
+    "特检",
+    "柔美清新"
    ]
   },
   {
@@ -2878,6 +3806,22 @@
    ]
   },
   {
+   "id": "icon-brick-wall-soft",
+   "name": "建材砌筑 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-brick-wall-soft.png",
+   "thumb": "icons/icon-brick-wall-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "建材",
+    "砌筑",
+    "墙体",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-traffic-cone",
    "name": "市政工程",
    "category": "icon",
@@ -2923,6 +3867,22 @@
     "道路",
     "养护",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-traffic-cone-soft",
+   "name": "市政工程 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-traffic-cone-soft.png",
+   "thumb": "icons/icon-traffic-cone-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "市政",
+    "道路",
+    "养护",
+    "柔美清新"
    ]
   },
   {
@@ -2974,6 +3934,22 @@
    ]
   },
   {
+   "id": "icon-drill-soft",
+   "name": "钻井机加 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-drill-soft.png",
+   "thumb": "icons/icon-drill-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钻井",
+    "机加",
+    "钻孔",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-pickaxe",
    "name": "矿山采掘",
    "category": "icon",
@@ -3019,6 +3995,22 @@
     "采掘",
     "矿业",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-pickaxe-soft",
+   "name": "矿山采掘 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-pickaxe-soft.png",
+   "thumb": "icons/icon-pickaxe-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矿山",
+    "采掘",
+    "矿业",
+    "柔美清新"
    ]
   },
   {
@@ -3070,6 +4062,22 @@
    ]
   },
   {
+   "id": "icon-anvil-soft",
+   "name": "冶金锻造 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-anvil-soft.png",
+   "thumb": "icons/icon-anvil-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冶金",
+    "锻造",
+    "铸造",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-radar",
    "name": "探测雷达",
    "category": "icon",
@@ -3115,6 +4123,22 @@
     "探测",
     "传感",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-radar-soft",
+   "name": "探测雷达 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-radar-soft.png",
+   "thumb": "icons/icon-radar-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "雷达",
+    "探测",
+    "传感",
+    "柔美清新"
    ]
   },
   {
@@ -3166,6 +4190,22 @@
    ]
   },
   {
+   "id": "icon-satellite-dish-soft",
+   "name": "卫星通信 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-satellite-dish-soft.png",
+   "thumb": "icons/icon-satellite-dish-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "卫星",
+    "通信",
+    "天线",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-radio-tower",
    "name": "通信铁塔",
    "category": "icon",
@@ -3211,6 +4251,22 @@
     "基站",
     "信号",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-radio-tower-soft",
+   "name": "通信铁塔 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-radio-tower-soft.png",
+   "thumb": "icons/icon-radio-tower-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "铁塔",
+    "基站",
+    "信号",
+    "柔美清新"
    ]
   },
   {
@@ -3262,6 +4318,22 @@
    ]
   },
   {
+   "id": "icon-cpu-soft",
+   "name": "芯片半导体 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cpu-soft.png",
+   "thumb": "icons/icon-cpu-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "芯片",
+    "半导体",
+    "电子",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-bot",
    "name": "机器人智能",
    "category": "icon",
@@ -3307,6 +4379,22 @@
     "智能",
     "AI",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-bot-soft",
+   "name": "机器人智能 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-bot-soft.png",
+   "thumb": "icons/icon-bot-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机器人",
+    "智能",
+    "AI",
+    "柔美清新"
    ]
   },
   {
@@ -3358,6 +4446,22 @@
    ]
   },
   {
+   "id": "icon-gavel-soft",
+   "name": "法律律所 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-gavel-soft.png",
+   "thumb": "icons/icon-gavel-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "法律",
+    "律所",
+    "法务",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-newspaper",
    "name": "新闻出版",
    "category": "icon",
@@ -3403,6 +4507,22 @@
     "出版",
     "报刊",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-newspaper-soft",
+   "name": "新闻出版 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-newspaper-soft.png",
+   "thumb": "icons/icon-newspaper-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "新闻",
+    "出版",
+    "报刊",
+    "柔美清新"
    ]
   },
   {
@@ -3454,6 +4574,22 @@
    ]
   },
   {
+   "id": "icon-mic-soft",
+   "name": "会议主持 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-mic-soft.png",
+   "thumb": "icons/icon-mic-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "会议",
+    "主持",
+    "会务",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-radio",
    "name": "广播电台",
    "category": "icon",
@@ -3499,6 +4635,22 @@
     "电台",
     "音频",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-radio-soft",
+   "name": "广播电台 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-radio-soft.png",
+   "thumb": "icons/icon-radio-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "广播",
+    "电台",
+    "音频",
+    "柔美清新"
    ]
   },
   {
@@ -3550,6 +4702,22 @@
    ]
   },
   {
+   "id": "icon-tv-soft",
+   "name": "电视媒体 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-tv-soft.png",
+   "thumb": "icons/icon-tv-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电视",
+    "媒体",
+    "栏目",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-gamepad-2",
    "name": "游戏电竞",
    "category": "icon",
@@ -3595,6 +4763,22 @@
     "电竞",
     "娱乐",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-gamepad-2-soft",
+   "name": "游戏电竞 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-gamepad-2-soft.png",
+   "thumb": "icons/icon-gamepad-2-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游戏",
+    "电竞",
+    "娱乐",
+    "柔美清新"
    ]
   },
   {
@@ -3646,6 +4830,22 @@
    ]
   },
   {
+   "id": "icon-watch-soft",
+   "name": "钟表珠宝 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-watch-soft.png",
+   "thumb": "icons/icon-watch-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钟表",
+    "珠宝",
+    "腕表",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-fence",
    "name": "围栏护栏",
    "category": "icon",
@@ -3691,6 +4891,22 @@
     "护栏",
     "隔离",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-fence-soft",
+   "name": "围栏护栏 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-fence-soft.png",
+   "thumb": "icons/icon-fence-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "围栏",
+    "护栏",
+    "隔离",
+    "柔美清新"
    ]
   },
   {
@@ -3742,6 +4958,22 @@
    ]
   },
   {
+   "id": "icon-fire-extinguisher-soft",
+   "name": "消防设备 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-fire-extinguisher-soft.png",
+   "thumb": "icons/icon-fire-extinguisher-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消防",
+    "设备",
+    "灭火",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-heart-handshake",
    "name": "公益养老",
    "category": "icon",
@@ -3787,6 +5019,22 @@
     "养老",
     "助残",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-heart-handshake-soft",
+   "name": "公益养老 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-heart-handshake-soft.png",
+   "thumb": "icons/icon-heart-handshake-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公益",
+    "养老",
+    "助残",
+    "柔美清新"
    ]
   },
   {
@@ -3838,6 +5086,22 @@
    ]
   },
   {
+   "id": "icon-trash-2-soft",
+   "name": "环卫清运 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-trash-2-soft.png",
+   "thumb": "icons/icon-trash-2-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环卫",
+    "清运",
+    "保洁",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-arrow-up-down",
    "name": "电梯",
    "category": "icon",
@@ -3883,6 +5147,22 @@
     "垂直交通",
     "elevator",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-arrow-up-down-soft",
+   "name": "电梯 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-arrow-up-down-soft.png",
+   "thumb": "icons/icon-arrow-up-down-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电梯",
+    "垂直交通",
+    "elevator",
+    "柔美清新"
    ]
   },
   {
@@ -3934,6 +5214,22 @@
    ]
   },
   {
+   "id": "icon-activity-soft",
+   "name": "运行平稳 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-activity-soft.png",
+   "thumb": "icons/icon-activity-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "运行",
+    "平稳",
+    "activity",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-wrench",
    "name": "维修服务",
    "category": "icon",
@@ -3979,6 +5275,22 @@
     "检修",
     "wrench",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-wrench-soft",
+   "name": "维修服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-wrench-soft.png",
+   "thumb": "icons/icon-wrench-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维修",
+    "检修",
+    "wrench",
+    "柔美清新"
    ]
   },
   {
@@ -4030,6 +5342,22 @@
    ]
   },
   {
+   "id": "icon-cog-soft",
+   "name": "维保服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cog-soft.png",
+   "thumb": "icons/icon-cog-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "维保",
+    "保养",
+    "运维",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-clipboard-check",
    "name": "检测验收",
    "category": "icon",
@@ -4075,6 +5403,22 @@
     "验收",
     "质检",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-clipboard-check-soft",
+   "name": "检测验收 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-clipboard-check-soft.png",
+   "thumb": "icons/icon-clipboard-check-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "检测",
+    "验收",
+    "质检",
+    "柔美清新"
    ]
   },
   {
@@ -4126,6 +5470,22 @@
    ]
   },
   {
+   "id": "icon-ruler-soft",
+   "name": "测量定制 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-ruler-soft.png",
+   "thumb": "icons/icon-ruler-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "测量",
+    "定制",
+    "勘察",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-hard-hat",
    "name": "安装施工",
    "category": "icon",
@@ -4171,6 +5531,22 @@
     "施工",
     "工程",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-hard-hat-soft",
+   "name": "安装施工 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-hard-hat-soft.png",
+   "thumb": "icons/icon-hard-hat-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安装",
+    "施工",
+    "工程",
+    "柔美清新"
    ]
   },
   {
@@ -4222,6 +5598,22 @@
    ]
   },
   {
+   "id": "icon-phone-soft",
+   "name": "咨询预约 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-phone-soft.png",
+   "thumb": "icons/icon-phone-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "咨询",
+    "预约",
+    "电话",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-clock",
    "name": "快速响应",
    "category": "icon",
@@ -4267,6 +5659,22 @@
     "时效",
     "时钟",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-clock-soft",
+   "name": "快速响应 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-clock-soft.png",
+   "thumb": "icons/icon-clock-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "响应",
+    "时效",
+    "时钟",
+    "柔美清新"
    ]
   },
   {
@@ -4318,6 +5726,22 @@
    ]
   },
   {
+   "id": "icon-headset-soft",
+   "name": "售后客服 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-headset-soft.png",
+   "thumb": "icons/icon-headset-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "售后",
+    "客服",
+    "支持",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-package",
    "name": "交付配送",
    "category": "icon",
@@ -4363,6 +5787,22 @@
     "配送",
     "发货",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-package-soft",
+   "name": "交付配送 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-package-soft.png",
+   "thumb": "icons/icon-package-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "交付",
+    "配送",
+    "发货",
+    "柔美清新"
    ]
   },
   {
@@ -4414,6 +5854,22 @@
    ]
   },
   {
+   "id": "icon-handshake-soft",
+   "name": "合作共赢 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-handshake-soft.png",
+   "thumb": "icons/icon-handshake-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合作",
+    "共赢",
+    "签约",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-star",
    "name": "品质服务",
    "category": "icon",
@@ -4459,6 +5915,22 @@
     "优质",
     "星级",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-star-soft",
+   "name": "品质服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-star-soft.png",
+   "thumb": "icons/icon-star-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品质",
+    "优质",
+    "星级",
+    "柔美清新"
    ]
   },
   {
@@ -4510,6 +5982,22 @@
    ]
   },
   {
+   "id": "icon-life-buoy-soft",
+   "name": "全程保障 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-life-buoy-soft.png",
+   "thumb": "icons/icon-life-buoy-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "保障",
+    "救援",
+    "支持",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-timer",
    "name": "限时响应",
    "category": "icon",
@@ -4555,6 +6043,22 @@
     "计时",
     "加急",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-timer-soft",
+   "name": "限时响应 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-timer-soft.png",
+   "thumb": "icons/icon-timer-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "限时",
+    "计时",
+    "加急",
+    "柔美清新"
    ]
   },
   {
@@ -4606,6 +6110,22 @@
    ]
   },
   {
+   "id": "icon-badge-check-soft",
+   "name": "认证合格 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-badge-check-soft.png",
+   "thumb": "icons/icon-badge-check-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "认证",
+    "合格",
+    "资质",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-shield",
    "name": "安全防护",
    "category": "icon",
@@ -4651,6 +6171,22 @@
     "防护",
     "防卫",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-shield-soft",
+   "name": "安全防护 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-shield-soft.png",
+   "thumb": "icons/icon-shield-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安全",
+    "防护",
+    "防卫",
+    "柔美清新"
    ]
   },
   {
@@ -4702,6 +6238,22 @@
    ]
   },
   {
+   "id": "icon-siren-soft",
+   "name": "应急警报 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-siren-soft.png",
+   "thumb": "icons/icon-siren-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "应急",
+    "警报",
+    "突发",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-calendar",
    "name": "排期预约",
    "category": "icon",
@@ -4747,6 +6299,22 @@
     "预约",
     "计划",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-calendar-soft",
+   "name": "排期预约 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-calendar-soft.png",
+   "thumb": "icons/icon-calendar-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "排期",
+    "预约",
+    "计划",
+    "柔美清新"
    ]
   },
   {
@@ -4798,6 +6366,22 @@
    ]
   },
   {
+   "id": "icon-pen-tool-soft",
+   "name": "设计定制 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-pen-tool-soft.png",
+   "thumb": "icons/icon-pen-tool-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "设计",
+    "定制",
+    "方案",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-settings-2",
    "name": "系统调试",
    "category": "icon",
@@ -4843,6 +6427,22 @@
     "系统",
     "参数",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-settings-2-soft",
+   "name": "系统调试 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-settings-2-soft.png",
+   "thumb": "icons/icon-settings-2-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "调试",
+    "系统",
+    "参数",
+    "柔美清新"
    ]
   },
   {
@@ -4894,6 +6494,22 @@
    ]
   },
   {
+   "id": "icon-refresh-cw-soft",
+   "name": "循环运维 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-refresh-cw-soft.png",
+   "thumb": "icons/icon-refresh-cw-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "循环",
+    "运维",
+    "更新",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-trending-up",
    "name": "增效增长",
    "category": "icon",
@@ -4939,6 +6555,22 @@
     "增效",
     "提升",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-trending-up-soft",
+   "name": "增效增长 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-trending-up-soft.png",
+   "thumb": "icons/icon-trending-up-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "增长",
+    "增效",
+    "提升",
+    "柔美清新"
    ]
   },
   {
@@ -4990,6 +6622,22 @@
    ]
   },
   {
+   "id": "icon-route-soft",
+   "name": "路线规划 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-route-soft.png",
+   "thumb": "icons/icon-route-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "路线",
+    "规划",
+    "路径",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-paint-roller",
    "name": "装饰装修",
    "category": "icon",
@@ -5035,6 +6683,22 @@
     "装修",
     "涂装",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-paint-roller-soft",
+   "name": "装饰装修 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-paint-roller-soft.png",
+   "thumb": "icons/icon-paint-roller-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装饰",
+    "装修",
+    "涂装",
+    "柔美清新"
    ]
   },
   {
@@ -5086,6 +6750,22 @@
    ]
   },
   {
+   "id": "icon-wifi-soft",
+   "name": "智能网络 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-wifi-soft.png",
+   "thumb": "icons/icon-wifi-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智能",
+    "网络",
+    "无线",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-server",
    "name": "机房运维",
    "category": "icon",
@@ -5131,6 +6811,22 @@
     "运维",
     "服务器",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-server-soft",
+   "name": "机房运维 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-server-soft.png",
+   "thumb": "icons/icon-server-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机房",
+    "运维",
+    "服务器",
+    "柔美清新"
    ]
   },
   {
@@ -5182,6 +6878,22 @@
    ]
   },
   {
+   "id": "icon-database-soft",
+   "name": "数据服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-database-soft.png",
+   "thumb": "icons/icon-database-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "存储",
+    "管理",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-monitor",
    "name": "监控值守",
    "category": "icon",
@@ -5227,6 +6939,22 @@
     "值守",
     "大屏",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-monitor-soft",
+   "name": "监控值守 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-monitor-soft.png",
+   "thumb": "icons/icon-monitor-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "监控",
+    "值守",
+    "大屏",
+    "柔美清新"
    ]
   },
   {
@@ -5278,6 +7006,22 @@
    ]
   },
   {
+   "id": "icon-thermometer-soft",
+   "name": "温控调节 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-thermometer-soft.png",
+   "thumb": "icons/icon-thermometer-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "温控",
+    "调节",
+    "温度",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-fan",
    "name": "通风换气",
    "category": "icon",
@@ -5323,6 +7067,22 @@
     "换气",
     "新风",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-fan-soft",
+   "name": "通风换气 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-fan-soft.png",
+   "thumb": "icons/icon-fan-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "通风",
+    "换气",
+    "新风",
+    "柔美清新"
    ]
   },
   {
@@ -5374,6 +7134,22 @@
    ]
   },
   {
+   "id": "icon-snowflake-soft",
+   "name": "制冷冷藏 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-snowflake-soft.png",
+   "thumb": "icons/icon-snowflake-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "制冷",
+    "冷藏",
+    "冷链",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-lock",
    "name": "安全锁护",
    "category": "icon",
@@ -5419,6 +7195,22 @@
     "锁定",
     "防护",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-lock-soft",
+   "name": "安全锁护 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-lock-soft.png",
+   "thumb": "icons/icon-lock-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "安全",
+    "锁定",
+    "防护",
+    "柔美清新"
    ]
   },
   {
@@ -5470,6 +7262,22 @@
    ]
   },
   {
+   "id": "icon-fingerprint-soft",
+   "name": "身份核验 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-fingerprint-soft.png",
+   "thumb": "icons/icon-fingerprint-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "身份",
+    "核验",
+    "认证",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-credit-card",
    "name": "支付结算",
    "category": "icon",
@@ -5515,6 +7323,22 @@
     "结算",
     "收款",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-credit-card-soft",
+   "name": "支付结算 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-credit-card-soft.png",
+   "thumb": "icons/icon-credit-card-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "支付",
+    "结算",
+    "收款",
+    "柔美清新"
    ]
   },
   {
@@ -5566,6 +7390,22 @@
    ]
   },
   {
+   "id": "icon-receipt-soft",
+   "name": "票据凭证 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-receipt-soft.png",
+   "thumb": "icons/icon-receipt-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "票据",
+    "凭证",
+    "回单",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-hourglass",
    "name": "时效承诺",
    "category": "icon",
@@ -5611,6 +7451,22 @@
     "承诺",
     "工期",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-hourglass-soft",
+   "name": "时效承诺 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-hourglass-soft.png",
+   "thumb": "icons/icon-hourglass-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "时效",
+    "承诺",
+    "工期",
+    "柔美清新"
    ]
   },
   {
@@ -5662,6 +7518,22 @@
    ]
   },
   {
+   "id": "icon-megaphone-soft",
+   "name": "品牌传播 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-megaphone-soft.png",
+   "thumb": "icons/icon-megaphone-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "品牌",
+    "传播",
+    "推广",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-package-plus",
    "name": "送货上门",
    "category": "icon",
@@ -5707,6 +7579,22 @@
     "上门",
     "配送安装",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-package-plus-soft",
+   "name": "送货上门 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-package-plus-soft.png",
+   "thumb": "icons/icon-package-plus-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "送货",
+    "上门",
+    "配送安装",
+    "柔美清新"
    ]
   },
   {
@@ -5758,6 +7646,22 @@
    ]
   },
   {
+   "id": "icon-container-soft",
+   "name": "集装箱运输 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-container-soft.png",
+   "thumb": "icons/icon-container-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "集装箱",
+    "海运",
+    "货运",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-forklift",
    "name": "装卸搬运",
    "category": "icon",
@@ -5803,6 +7707,22 @@
     "搬运",
     "叉车",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-forklift-soft",
+   "name": "装卸搬运 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-forklift-soft.png",
+   "thumb": "icons/icon-forklift-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装卸",
+    "搬运",
+    "叉车",
+    "柔美清新"
    ]
   },
   {
@@ -5854,6 +7774,22 @@
    ]
   },
   {
+   "id": "icon-boxes-soft",
+   "name": "仓储托管 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-boxes-soft.png",
+   "thumb": "icons/icon-boxes-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "托管",
+    "库存",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-refrigerator",
    "name": "冷链配送",
    "category": "icon",
@@ -5899,6 +7835,22 @@
     "冷藏",
     "保鲜",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-refrigerator-soft",
+   "name": "冷链配送 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-refrigerator-soft.png",
+   "thumb": "icons/icon-refrigerator-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冷链",
+    "冷藏",
+    "保鲜",
+    "柔美清新"
    ]
   },
   {
@@ -5950,6 +7902,22 @@
    ]
   },
   {
+   "id": "icon-spray-can-soft",
+   "name": "喷涂工艺 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-spray-can-soft.png",
+   "thumb": "icons/icon-spray-can-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "喷涂",
+    "工艺",
+    "表面处理",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-plug-zap",
    "name": "电气安装",
    "category": "icon",
@@ -5995,6 +7963,22 @@
     "安装",
     "布线",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-plug-zap-soft",
+   "name": "电气安装 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-plug-zap-soft.png",
+   "thumb": "icons/icon-plug-zap-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电气",
+    "安装",
+    "布线",
+    "柔美清新"
    ]
   },
   {
@@ -6046,6 +8030,22 @@
    ]
   },
   {
+   "id": "icon-battery-charging-soft",
+   "name": "充电服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-battery-charging-soft.png",
+   "thumb": "icons/icon-battery-charging-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "充电",
+    "补能",
+    "充电桩",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-battery-full",
    "name": "储能备电",
    "category": "icon",
@@ -6091,6 +8091,22 @@
     "备电",
     "电源",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-battery-full-soft",
+   "name": "储能备电 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-battery-full-soft.png",
+   "thumb": "icons/icon-battery-full-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "储能",
+    "备电",
+    "电源",
+    "柔美清新"
    ]
   },
   {
@@ -6142,6 +8158,22 @@
    ]
   },
   {
+   "id": "icon-cable-soft",
+   "name": "线缆敷设 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cable-soft.png",
+   "thumb": "icons/icon-cable-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "线缆",
+    "敷设",
+    "桥架",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-power",
    "name": "配电工程",
    "category": "icon",
@@ -6187,6 +8219,22 @@
     "供电",
     "电力",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-power-soft",
+   "name": "配电工程 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-power-soft.png",
+   "thumb": "icons/icon-power-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "配电",
+    "供电",
+    "电力",
+    "柔美清新"
    ]
   },
   {
@@ -6238,6 +8286,22 @@
    ]
   },
   {
+   "id": "icon-gauge-soft",
+   "name": "仪表校准 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-gauge-soft.png",
+   "thumb": "icons/icon-gauge-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仪表",
+    "校准",
+    "计量",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-scan-line",
    "name": "扫码溯源",
    "category": "icon",
@@ -6283,6 +8347,22 @@
     "溯源",
     "防伪",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-scan-line-soft",
+   "name": "扫码溯源 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-scan-line-soft.png",
+   "thumb": "icons/icon-scan-line-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "溯源",
+    "防伪",
+    "柔美清新"
    ]
   },
   {
@@ -6334,6 +8414,22 @@
    ]
   },
   {
+   "id": "icon-barcode-soft",
+   "name": "条码标识 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-barcode-soft.png",
+   "thumb": "icons/icon-barcode-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "条码",
+    "标识",
+    "编码",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-scan",
    "name": "扫描查验",
    "category": "icon",
@@ -6379,6 +8475,22 @@
     "查验",
     "识别",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-scan-soft",
+   "name": "扫描查验 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-scan-soft.png",
+   "thumb": "icons/icon-scan-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫描",
+    "查验",
+    "识别",
+    "柔美清新"
    ]
   },
   {
@@ -6430,6 +8542,22 @@
    ]
   },
   {
+   "id": "icon-cctv-soft",
+   "name": "视频监控 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cctv-soft.png",
+   "thumb": "icons/icon-cctv-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "视频",
+    "监控",
+    "摄像头",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-shield-alert",
    "name": "风险预警",
    "category": "icon",
@@ -6475,6 +8603,22 @@
     "预警",
     "防控",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-shield-alert-soft",
+   "name": "风险预警 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-shield-alert-soft.png",
+   "thumb": "icons/icon-shield-alert-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风险",
+    "预警",
+    "防控",
+    "柔美清新"
    ]
   },
   {
@@ -6526,6 +8670,22 @@
    ]
   },
   {
+   "id": "icon-file-search-soft",
+   "name": "尽职调查 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-file-search-soft.png",
+   "thumb": "icons/icon-file-search-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "尽调",
+    "调查",
+    "核查",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-file-check",
    "name": "合规报批",
    "category": "icon",
@@ -6571,6 +8731,22 @@
     "报批",
     "审批",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-file-check-soft",
+   "name": "合规报批 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-file-check-soft.png",
+   "thumb": "icons/icon-file-check-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合规",
+    "报批",
+    "审批",
+    "柔美清新"
    ]
   },
   {
@@ -6622,6 +8798,22 @@
    ]
   },
   {
+   "id": "icon-scroll-text-soft",
+   "name": "合同文书 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-scroll-text-soft.png",
+   "thumb": "icons/icon-scroll-text-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合同",
+    "文书",
+    "签约",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-party-popper",
    "name": "活动策划",
    "category": "icon",
@@ -6667,6 +8859,22 @@
     "策划",
     "庆典",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-party-popper-soft",
+   "name": "活动策划 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-party-popper-soft.png",
+   "thumb": "icons/icon-party-popper-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "活动",
+    "策划",
+    "庆典",
+    "柔美清新"
    ]
   },
   {
@@ -6718,6 +8926,22 @@
    ]
   },
   {
+   "id": "icon-mail-check-soft",
+   "name": "邮件确认 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-mail-check-soft.png",
+   "thumb": "icons/icon-mail-check-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "邮件",
+    "确认",
+    "通知",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-list-checks",
    "name": "清单核对",
    "category": "icon",
@@ -6763,6 +8987,22 @@
     "核对",
     "逐项",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-list-checks-soft",
+   "name": "清单核对 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-list-checks-soft.png",
+   "thumb": "icons/icon-list-checks-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "清单",
+    "核对",
+    "逐项",
+    "柔美清新"
    ]
   },
   {
@@ -6814,6 +9054,22 @@
    ]
   },
   {
+   "id": "icon-square-check-big-soft",
+   "name": "验收通过 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-square-check-big-soft.png",
+   "thumb": "icons/icon-square-check-big-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "验收",
+    "通过",
+    "确认",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-cloud-upload",
    "name": "云端备份",
    "category": "icon",
@@ -6859,6 +9115,22 @@
     "备份",
     "同步",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-cloud-upload-soft",
+   "name": "云端备份 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cloud-upload-soft.png",
+   "thumb": "icons/icon-cloud-upload-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云端",
+    "备份",
+    "同步",
+    "柔美清新"
    ]
   },
   {
@@ -6910,6 +9182,22 @@
    ]
   },
   {
+   "id": "icon-languages-soft",
+   "name": "多语翻译 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-languages-soft.png",
+   "thumb": "icons/icon-languages-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "翻译",
+    "多语",
+    "本地化",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-image",
    "name": "图片",
    "category": "icon",
@@ -6955,6 +9243,22 @@
     "照片",
     "image",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-image-soft",
+   "name": "图片 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-image-soft.png",
+   "thumb": "icons/icon-image-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "图片",
+    "照片",
+    "image",
+    "柔美清新"
    ]
   },
   {
@@ -7006,6 +9310,22 @@
    ]
   },
   {
+   "id": "icon-users-soft",
+   "name": "人群团队 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-users-soft.png",
+   "thumb": "icons/icon-users-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团队",
+    "人群",
+    "用户",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-award",
    "name": "荣誉奖项",
    "category": "icon",
@@ -7051,6 +9371,22 @@
     "奖项",
     "奖杯",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-award-soft",
+   "name": "荣誉奖项 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-award-soft.png",
+   "thumb": "icons/icon-award-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "荣誉",
+    "奖项",
+    "奖杯",
+    "柔美清新"
    ]
   },
   {
@@ -7102,6 +9438,22 @@
    ]
   },
   {
+   "id": "icon-gem-soft",
+   "name": "精品案例 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-gem-soft.png",
+   "thumb": "icons/icon-gem-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精品",
+    "案例",
+    "宝石",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-lightbulb",
    "name": "方案创意",
    "category": "icon",
@@ -7147,6 +9499,22 @@
     "方案",
     "点子",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-lightbulb-soft",
+   "name": "方案创意 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-lightbulb-soft.png",
+   "thumb": "icons/icon-lightbulb-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "创意",
+    "方案",
+    "点子",
+    "柔美清新"
    ]
   },
   {
@@ -7198,6 +9566,22 @@
    ]
   },
   {
+   "id": "icon-map-pin-soft",
+   "name": "位置服务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-map-pin-soft.png",
+   "thumb": "icons/icon-map-pin-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "位置",
+    "地图",
+    "定位",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-globe",
    "name": "全球业务",
    "category": "icon",
@@ -7243,6 +9627,22 @@
     "国际",
     "业务",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-globe-soft",
+   "name": "全球业务 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-globe-soft.png",
+   "thumb": "icons/icon-globe-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "全球",
+    "国际",
+    "业务",
+    "柔美清新"
    ]
   },
   {
@@ -7294,6 +9694,22 @@
    ]
   },
   {
+   "id": "icon-qr-code-soft",
+   "name": "扫码入口 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-qr-code-soft.png",
+   "thumb": "icons/icon-qr-code-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "二维码",
+    "入口",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-share-2",
    "name": "分享传播",
    "category": "icon",
@@ -7339,6 +9755,22 @@
     "传播",
     "转发",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-share-2-soft",
+   "name": "分享传播 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-share-2-soft.png",
+   "thumb": "icons/icon-share-2-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "分享",
+    "传播",
+    "转发",
+    "柔美清新"
    ]
   },
   {
@@ -7390,6 +9822,22 @@
    ]
   },
   {
+   "id": "icon-message-circle-soft",
+   "name": "消息沟通 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-message-circle-soft.png",
+   "thumb": "icons/icon-message-circle-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消息",
+    "沟通",
+    "对话",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-thumbs-up",
    "name": "口碑好评",
    "category": "icon",
@@ -7435,6 +9883,22 @@
     "口碑",
     "点赞",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-thumbs-up-soft",
+   "name": "口碑好评 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-thumbs-up-soft.png",
+   "thumb": "icons/icon-thumbs-up-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "好评",
+    "口碑",
+    "点赞",
+    "柔美清新"
    ]
   },
   {
@@ -7486,6 +9950,22 @@
    ]
   },
   {
+   "id": "icon-target-soft",
+   "name": "目标达成 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-target-soft.png",
+   "thumb": "icons/icon-target-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "目标",
+    "达成",
+    "聚焦",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-compass",
    "name": "方向指引",
    "category": "icon",
@@ -7531,6 +10011,22 @@
     "指引",
     "导航",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-compass-soft",
+   "name": "方向指引 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-compass-soft.png",
+   "thumb": "icons/icon-compass-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "方向",
+    "指引",
+    "导航",
+    "柔美清新"
    ]
   },
   {
@@ -7582,6 +10078,22 @@
    ]
   },
   {
+   "id": "icon-layout-grid-soft",
+   "name": "矩阵陈列 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-layout-grid-soft.png",
+   "thumb": "icons/icon-layout-grid-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矩阵",
+    "陈列",
+    "网格",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-camera",
    "name": "影像拍摄",
    "category": "icon",
@@ -7627,6 +10139,22 @@
     "拍摄",
     "摄影",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-camera-soft",
+   "name": "影像拍摄 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-camera-soft.png",
+   "thumb": "icons/icon-camera-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "影像",
+    "拍摄",
+    "摄影",
+    "柔美清新"
    ]
   },
   {
@@ -7678,6 +10206,22 @@
    ]
   },
   {
+   "id": "icon-printer-soft",
+   "name": "印刷输出 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-printer-soft.png",
+   "thumb": "icons/icon-printer-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "印刷",
+    "输出",
+    "打印",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-shirt",
    "name": "服饰定制",
    "category": "icon",
@@ -7723,6 +10267,22 @@
     "定制",
     "服装",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-shirt-soft",
+   "name": "服饰定制 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-shirt-soft.png",
+   "thumb": "icons/icon-shirt-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "服饰",
+    "定制",
+    "服装",
+    "柔美清新"
    ]
   },
   {
@@ -7774,6 +10334,22 @@
    ]
   },
   {
+   "id": "icon-lamp-soft",
+   "name": "照明亮化 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-lamp-soft.png",
+   "thumb": "icons/icon-lamp-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "照明",
+    "亮化",
+    "灯具",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-coffee",
    "name": "商务洽谈",
    "category": "icon",
@@ -7819,6 +10395,22 @@
     "商务",
     "会客",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-coffee-soft",
+   "name": "商务洽谈 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-coffee-soft.png",
+   "thumb": "icons/icon-coffee-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "洽谈",
+    "商务",
+    "会客",
+    "柔美清新"
    ]
   },
   {
@@ -7870,6 +10462,22 @@
    ]
   },
   {
+   "id": "icon-cake-soft",
+   "name": "庆典活动 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cake-soft.png",
+   "thumb": "icons/icon-cake-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "庆典",
+    "活动",
+    "仪式",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-music",
    "name": "文娱演出",
    "category": "icon",
@@ -7915,6 +10523,22 @@
     "演出",
     "音乐",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-music-soft",
+   "name": "文娱演出 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-music-soft.png",
+   "thumb": "icons/icon-music-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "文娱",
+    "演出",
+    "音乐",
+    "柔美清新"
    ]
   },
   {
@@ -7966,6 +10590,22 @@
    ]
   },
   {
+   "id": "icon-film-soft",
+   "name": "影视制作 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-film-soft.png",
+   "thumb": "icons/icon-film-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "影视",
+    "制作",
+    "影片",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-palette",
    "name": "创意设计",
    "category": "icon",
@@ -8011,6 +10651,22 @@
     "创意",
     "美术",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-palette-soft",
+   "name": "创意设计 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-palette-soft.png",
+   "thumb": "icons/icon-palette-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "设计",
+    "创意",
+    "美术",
+    "柔美清新"
    ]
   },
   {
@@ -8062,6 +10718,22 @@
    ]
   },
   {
+   "id": "icon-gift-soft",
+   "name": "礼遇回馈 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-gift-soft.png",
+   "thumb": "icons/icon-gift-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "礼遇",
+    "回馈",
+    "福利",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-box",
    "name": "产品包装",
    "category": "icon",
@@ -8107,6 +10779,22 @@
     "包装",
     "货品",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-box-soft",
+   "name": "产品包装 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-box-soft.png",
+   "thumb": "icons/icon-box-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "产品",
+    "包装",
+    "货品",
+    "柔美清新"
    ]
   },
   {
@@ -8158,6 +10846,22 @@
    ]
   },
   {
+   "id": "icon-tag-soft",
+   "name": "标签分类 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-tag-soft.png",
+   "thumb": "icons/icon-tag-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "标签",
+    "分类",
+    "标记",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-history",
    "name": "发展历程",
    "category": "icon",
@@ -8203,6 +10907,22 @@
     "发展",
     "沿革",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-history-soft",
+   "name": "发展历程 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-history-soft.png",
+   "thumb": "icons/icon-history-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "历程",
+    "发展",
+    "沿革",
+    "柔美清新"
    ]
   },
   {
@@ -8254,6 +10974,22 @@
    ]
   },
   {
+   "id": "icon-infinity-soft",
+   "name": "永续合作 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-infinity-soft.png",
+   "thumb": "icons/icon-infinity-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "永续",
+    "长期",
+    "合作",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-layers",
    "name": "体系架构",
    "category": "icon",
@@ -8299,6 +11035,22 @@
     "架构",
     "层级",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-layers-soft",
+   "name": "体系架构 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-layers-soft.png",
+   "thumb": "icons/icon-layers-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "体系",
+    "架构",
+    "层级",
+    "柔美清新"
    ]
   },
   {
@@ -8350,6 +11102,22 @@
    ]
   },
   {
+   "id": "icon-component-soft",
+   "name": "模块单元 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-component-soft.png",
+   "thumb": "icons/icon-component-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "模块",
+    "单元",
+    "组件",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-terminal",
    "name": "技术研发",
    "category": "icon",
@@ -8395,6 +11163,22 @@
     "技术",
     "工程",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-terminal-soft",
+   "name": "技术研发 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-terminal-soft.png",
+   "thumb": "icons/icon-terminal-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "研发",
+    "技术",
+    "工程",
+    "柔美清新"
    ]
   },
   {
@@ -8446,6 +11230,22 @@
    ]
   },
   {
+   "id": "icon-binary-soft",
+   "name": "数据算法 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-binary-soft.png",
+   "thumb": "icons/icon-binary-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "算法",
+    "算力",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-hard-drive",
    "name": "数据存储",
    "category": "icon",
@@ -8491,6 +11291,22 @@
     "数据",
     "备份",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-hard-drive-soft",
+   "name": "数据存储 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-hard-drive-soft.png",
+   "thumb": "icons/icon-hard-drive-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "存储",
+    "数据",
+    "备份",
+    "柔美清新"
    ]
   },
   {
@@ -8542,6 +11358,22 @@
    ]
   },
   {
+   "id": "icon-milestone-soft",
+   "name": "里程碑 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-milestone-soft.png",
+   "thumb": "icons/icon-milestone-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "里程碑",
+    "节点",
+    "进展",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-book-marked",
    "name": "知识文档",
    "category": "icon",
@@ -8587,6 +11419,22 @@
     "文档",
     "资料",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-book-marked-soft",
+   "name": "知识文档 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-book-marked-soft.png",
+   "thumb": "icons/icon-book-marked-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "知识",
+    "文档",
+    "资料",
+    "柔美清新"
    ]
   },
   {
@@ -8638,6 +11486,22 @@
    ]
   },
   {
+   "id": "icon-contact-soft",
+   "name": "客户名录 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-contact-soft.png",
+   "thumb": "icons/icon-contact-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客户",
+    "名录",
+    "通讯录",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-id-card",
    "name": "证件资质",
    "category": "icon",
@@ -8683,6 +11547,22 @@
     "资质",
     "证照",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-id-card-soft",
+   "name": "证件资质 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-id-card-soft.png",
+   "thumb": "icons/icon-id-card-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "证件",
+    "资质",
+    "证照",
+    "柔美清新"
    ]
   },
   {
@@ -8734,6 +11614,22 @@
    ]
   },
   {
+   "id": "icon-book-user-soft",
+   "name": "讲师培训 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-book-user-soft.png",
+   "thumb": "icons/icon-book-user-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "讲师",
+    "培训",
+    "授课",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-sparkles",
    "name": "精工品质",
    "category": "icon",
@@ -8779,6 +11675,22 @@
     "品质",
     "匠心",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-sparkles-soft",
+   "name": "精工品质 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-sparkles-soft.png",
+   "thumb": "icons/icon-sparkles-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精工",
+    "品质",
+    "匠心",
+    "柔美清新"
    ]
   },
   {
@@ -8830,6 +11742,22 @@
    ]
   },
   {
+   "id": "icon-rocket-soft",
+   "name": "快速上线 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-rocket-soft.png",
+   "thumb": "icons/icon-rocket-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "上线",
+    "提速",
+    "交付",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-blend",
    "name": "融合集成",
    "category": "icon",
@@ -8875,6 +11803,22 @@
     "集成",
     "整合",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-blend-soft",
+   "name": "融合集成 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-blend-soft.png",
+   "thumb": "icons/icon-blend-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "融合",
+    "集成",
+    "整合",
+    "柔美清新"
    ]
   },
   {
@@ -8926,6 +11870,22 @@
    ]
   },
   {
+   "id": "icon-search-soft",
+   "name": "搜索查询 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-search-soft.png",
+   "thumb": "icons/icon-search-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "搜索",
+    "查询",
+    "检索",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-cloud",
    "name": "云托管",
    "category": "icon",
@@ -8974,6 +11934,22 @@
    ]
   },
   {
+   "id": "icon-cloud-soft",
+   "name": "云托管 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-cloud-soft.png",
+   "thumb": "icons/icon-cloud-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云",
+    "托管",
+    "SaaS",
+    "柔美清新"
+   ]
+  },
+  {
    "id": "icon-link",
    "name": "资源对接",
    "category": "icon",
@@ -9019,6 +11995,22 @@
     "资源",
     "链接",
     "轻奢尊贵"
+   ]
+  },
+  {
+   "id": "icon-link-soft",
+   "name": "资源对接 · 素雅",
+   "category": "icon",
+   "style": "soft",
+   "file": "icons/icon-link-soft.png",
+   "thumb": "icons/icon-link-soft.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "对接",
+    "资源",
+    "链接",
+    "柔美清新"
    ]
   },
   {
@@ -9835,6 +12827,74 @@
     "背景",
     "confetti",
     "柔美清新"
+   ]
+  },
+  {
+   "id": "cover-glasstower",
+   "name": "玻璃塔楼",
+   "category": "cover",
+   "style": "soft",
+   "file": "covers/cover-glasstower.jpg",
+   "thumb": "thumbs/covers/cover-glasstower.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "玻璃塔楼",
+    "封面",
+    "背景",
+    "glasstower",
+    "柔美清新"
+   ]
+  },
+  {
+   "id": "cover-estate",
+   "name": "楼盘社区",
+   "category": "cover",
+   "style": "soft",
+   "file": "covers/cover-estate.jpg",
+   "thumb": "thumbs/covers/cover-estate.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "楼盘社区",
+    "封面",
+    "背景",
+    "estate",
+    "柔美清新"
+   ]
+  },
+  {
+   "id": "cover-plaza",
+   "name": "商务广场",
+   "category": "cover",
+   "style": "soft",
+   "file": "covers/cover-plaza.jpg",
+   "thumb": "thumbs/covers/cover-plaza.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "商务广场",
+    "封面",
+    "背景",
+    "glasstower",
+    "柔美清新"
+   ]
+  },
+  {
+   "id": "cover-estate-dusk",
+   "name": "暮色楼盘",
+   "category": "cover",
+   "style": "clean",
+   "file": "covers/cover-estate-dusk.jpg",
+   "thumb": "thumbs/covers/cover-estate-dusk.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "暮色楼盘",
+    "封面",
+    "背景",
+    "estate",
+    "简约清晰"
    ]
   },
   {
@@ -11469,6 +14529,66 @@
     "全屏",
     "diagonal",
     "温暖自然"
+   ]
+  },
+  {
+   "id": "bg-skyblue",
+   "name": "晴空",
+   "category": "background",
+   "style": "soft",
+   "file": "backgrounds/bg-skyblue.jpg",
+   "thumb": "thumbs/backgrounds/bg-skyblue.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "晴空",
+    "浅蓝",
+    "清新",
+    "淡雅",
+    "背景",
+    "全屏",
+    "bokeh",
+    "柔美清新"
+   ]
+  },
+  {
+   "id": "bg-cloudmist",
+   "name": "云雾",
+   "category": "background",
+   "style": "soft",
+   "file": "backgrounds/bg-cloudmist.jpg",
+   "thumb": "thumbs/backgrounds/bg-cloudmist.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "云雾",
+    "极浅",
+    "素雅",
+    "轻盈",
+    "背景",
+    "全屏",
+    "glow",
+    "柔美清新"
+   ]
+  },
+  {
+   "id": "bg-iceblue",
+   "name": "冰蓝",
+   "category": "background",
+   "style": "soft",
+   "file": "backgrounds/bg-iceblue.jpg",
+   "thumb": "thumbs/backgrounds/bg-iceblue.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "冰蓝",
+    "水色",
+    "浅色",
+    "通透",
+    "背景",
+    "全屏",
+    "waves",
+    "柔美清新"
    ]
   },
   {
