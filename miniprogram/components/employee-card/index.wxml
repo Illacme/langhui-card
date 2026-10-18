@@ -3,12 +3,12 @@
        类名一律 ec- 前缀：组件 addGlobalClass 会吃到全局样式，
        通用名（cell/row/label…）会与「我的」页等全局类冲突泄漏样式 -->
   <view class="ec-head">
-    <image class="avatar" src="{{employee.avatar}}" mode="aspectFill" lazy-load wx:if="{{employee.avatar}}" />
-    <view class="avatar" wx:else />
+    <image class="ec-avatar" src="{{employee.avatar}}" mode="aspectFill" lazy-load wx:if="{{employee.avatar}}" />
+    <view class="ec-avatar" wx:else />
     <view class="ec-info">
       <view class="ec-line1">
         <view class="ec-name">{{employee.name}}</view>
-        <image class="logo" src="{{company.logo}}" mode="aspectFit" lazy-load wx:if="{{company.logo}}" />
+        <image class="ec-logo" src="{{company.logo}}" mode="aspectFit" lazy-load wx:if="{{company.logo}}" />
       </view>
       <view class="ec-title" wx:if="{{employee.title}}">{{employee.title}}</view>
       <view class="ec-line3">

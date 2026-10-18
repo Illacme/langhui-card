@@ -18,7 +18,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
   box-sizing: border-box;
 }
 .emp-card .ec-head { display: flex; }
-.emp-card .avatar {
+.emp-card .ec-avatar {
   width: 112rpx; height: 112rpx; border-radius: 50%;
   background: #e8f1fb; flex-shrink: 0;
   border: 4rpx solid #fff; box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.10);
@@ -26,7 +26,7 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .emp-card .ec-info { flex: 1; min-width: 0; margin-left: 22rpx; }
 .emp-card .ec-line1 { display: flex; align-items: center; justify-content: space-between; }
 .emp-card .ec-name { font-size: 34rpx; font-weight: 700; color: #222; }
-.emp-card .logo { width: 150rpx; height: 44rpx; flex-shrink: 0; margin-left: 16rpx; }
+.emp-card .ec-logo { width: 150rpx; height: 44rpx; flex-shrink: 0; margin-left: 16rpx; }
 .emp-card .ec-title { color: #6b7a89; font-size: 24rpx; margin-top: 2rpx; }
 .emp-card .ec-line3 { display: flex; align-items: center; margin-top: 10rpx; }
 .emp-card .ec-cname {
