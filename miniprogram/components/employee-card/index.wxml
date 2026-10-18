@@ -1,23 +1,31 @@
 <view class="emp-card">
-  <view class="top">
+  <!-- 上半部：头像 + 姓名/职位 + 右上角企业 LOGO + 公司全称/案例进入 + 地址 -->
+  <view class="head">
     <image class="avatar" src="{{employee.avatar}}" mode="aspectFill" lazy-load wx:if="{{employee.avatar}}" />
     <view class="avatar" wx:else />
     <view class="info">
-      <view class="name">{{employee.name}}</view>
-      <view class="title">{{employee.title}}</view>
+      <view class="line1">
+        <view class="name">{{employee.name}}</view>
+        <image class="logo" src="{{company.logo}}" mode="aspectFit" lazy-load wx:if="{{company.logo}}" />
+      </view>
+      <view class="title" wx:if="{{employee.title}}">{{employee.title}}</view>
+      <view class="line3">
+        <view class="cname">{{company.fullName}}</view>
+        <!-- 按设计图为浅底描边小药丸；跳转行为由页面通过 enter case 事件决定 -->
+        <view class="case-btn" bindtap="onEnterCase">案例进入</view>
+      </view>
+      <view class="addr" wx:if="{{company.address}}">{{company.address}}</view>
     </view>
-    <!-- 右上角「案例进入」：按设计图仅保留一个实心蓝丸按钮。
-         具体跳转行为由页面通过 enter case 事件决定（业绩区在首页则滚动，隐藏则跳分类列表）。 -->
-    <view class="case-btn" bindtap="onEnterCase">案例进入</view>
   </view>
-  <view class="company">
-    <image class="logo" src="{{company.logo}}" mode="aspectFit" lazy-load wx:if="{{company.logo}}" />
-    <view class="cname">{{company.fullName}}</view>
-  </view>
+
+  <!-- 下半部：两列联系表（手机+座机同行，邮箱独占一行） -->
   <view class="rows">
-    <view class="row"><text class="label">地址</text><text>{{company.address}}</text></view>
-    <view class="row"><text class="label">手机</text><text>{{employee.phone}}</text></view>
-    <view class="row"><text class="label">座机</text><text>{{employee.landline || company.tel}}</text></view>
-    <view class="row"><text class="label">邮箱</text><text>{{employee.email}}</text></view>
+    <view class="row">
+      <view class="cell"><text class="label">手机</text><text class="val">{{employee.phone}}</text></view>
+      <view class="cell"><text class="label">座机</text><text class="val">{{employee.landline || company.tel}}</text></view>
+    </view>
+    <view class="row">
+      <view class="cell wide"><text class="label">邮箱</text><text class="val">{{employee.email}}</text></view>
+    </view>
   </view>
 </view>
