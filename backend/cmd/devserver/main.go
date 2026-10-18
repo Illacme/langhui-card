@@ -126,6 +126,7 @@ func main() {
 	handler.RegisterApply(r, db)
 	handler.RegisterContent(r, db)
 	handler.RegisterCompanies(r, db) // 企业管理（平台超管）
+	handler.RegisterAdmins(r, db)    // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
 
 	up := &storage.LocalUploader{
 		Dir:      cfg.UploadDir,

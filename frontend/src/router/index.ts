@@ -97,6 +97,14 @@ const routes = [
         component: () => import('@/views/platform/Settings.vue'),
         meta: { title: '系统设置', group: '平台管理', platformOnly: true },
       },
+      {
+        // 账号管理：平台超管账号的改名 / 新增 / 重置密码 / 删除。
+        // 初始超管由后端按 ADMIN_USER 一次性 seed，此前没有改用户名的入口。
+        path: 'platform/accounts',
+        name: 'accounts',
+        component: () => import('@/views/platform/Accounts.vue'),
+        meta: { title: '账号管理', group: '平台管理', platformOnly: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/apply/open' },

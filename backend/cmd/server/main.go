@@ -75,6 +75,7 @@ func main() {
 	handler.RegisterApply(r, db)     // 开通申请 / 名片修改审核 / 员工管理 / 统计
 	handler.RegisterContent(r, db)   // 企业内容管理（公司信息/简介/分类/项目/服务/布局，按租户隔离）
 	handler.RegisterCompanies(r, db) // 企业管理（平台超管）：开通/停用企业、企业管理员管理
+	handler.RegisterAdmins(r, db)    // 平台超管账号管理：列表/新增/改用户名/重置密码/删除
 
 	// 文件上传：存储驱动可配（local 默认 / minio / oss），业务代码不变
 	up, err := newUploader(cfg)

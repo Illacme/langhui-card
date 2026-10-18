@@ -159,6 +159,8 @@ const allMenuGroups = [
       { path: '/platform/cdn-refresh', title: 'CDN 刷新' },
       // 系统设置：运行参数（品牌名 / 上传限制 / 小程序码 TTL / 特性开关）后台维护
       { path: '/platform/settings', title: '系统设置' },
+      // 账号管理：平台超管账号改名 / 新增 / 重置密码 / 删除
+      { path: '/platform/accounts', title: '账号管理' },
     ],
   },
 ]

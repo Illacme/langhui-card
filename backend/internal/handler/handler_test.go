@@ -129,6 +129,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	RegisterApply(r, db)
 	RegisterContent(r, db)
 	RegisterCompanies(r, db)
+	RegisterAdmins(r, db) // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
 
 	// 静态托管需要目录存在
 	require.NoError(t, os.MkdirAll(cfg.UploadDir, 0755))
