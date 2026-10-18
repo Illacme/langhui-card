@@ -101,6 +101,25 @@ go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖�
 - **员工 token**：登录后存 `wx.storage('empToken')`（access，15 分钟）+ `empRefreshToken`（refresh，30 天），`request.ts` 自动注入；`code=401` 先用 refresh 令牌静默换发并重试一次，失败再清 token 引导重新登录。改密 / 被禁用会令旧令牌立即失效。（小程序走 Bearer 头鉴权；PC 管理后台则改用 httpOnly Cookie，见前端 README。）
 - **状态语义**：员工 `status=disabled` 时首页整页提示「已停用」；名片修改走「提交申请 → 超管审核通过后公开生效」。
 
+## 组件开发规范与样式自查清单
+
+所有组件均开启 `addGlobalClass: true`，组件目录内**没有独立 wxss**，样式统一写在 `app.wxss`。由此带来一条必须遵守的约束（踩过真实线上样式 bug）：
+
+1. **组件内禁用裸通用类名**：`cell` / `row` / `label` / `val` / `name` / `title` / `info` / `head` / `avatar` / `logo` 等，一律加组件前缀（如 employee-card 用 `ec-`）。
+   - 原因：全局 `app.wxss` 里任何同名独立类（例如给「我的」页写的 `.cell { border-bottom: 1rpx solid #f0f0f0 }`）都会命中组件内部元素，泄漏出凭空多出的边框 / 边距，且症状与业务代码无关、极难排查。
+   - 组件自身根类名（`.emp-card`、`.cat-grid` 等）属于项目约定，写在 `app.wxss` 中不受此限。
+2. **分隔线 / 装饰线用真实元素**（`<view class="xx-line" />`）而非 `::before` 伪元素，结构在 WXML 可见，便于比对与排查。
+3. **新增组件或全局类后跑一次审计**（秒级，无需开发者工具）：
+
+```bash
+python3 miniprogram/tests/audit_class_collision.py
+```
+
+脚本会做两件事：① 找出「被组件与其他页面/组件同时使用」的全局独立类（真正的跨模块污染，应为 0）；② 列出组件内残留的通用字类名（未来风险提示）。
+
+### 排查「预览里凭空多出的线 / 边距」的方法
+截图肉眼判断不可靠，直接用像素扫描定位：取截图逐行找**连续横向线段**，输出其起止 x、宽度占比与主色——据此即可反查是哪个元素、什么颜色、多宽（例：曾据此定位到 `#f0f0f0`、宽 50% 的线来自全局 `.cell` 的 `border-bottom`，而非组件代码）。
+
 ## 单元测试（经前端 Vitest 运行）
 
 `tests/` 收录小程序**纯逻辑**单测（不依赖微信开发者工具 / 真机）。小程序侧没有独立测试工具链，统一由前端工程的 Vitest 纳管（`frontend/vitest.config.ts` 通过 `server.fs.allow` 放行仓库根外路径 + `vi.resetModules()` + 动态 import），并对 `getApp` / `wx` 全局做桩：
