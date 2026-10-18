@@ -25,7 +25,7 @@
       <view class="cell"><text class="label">座机</text><text class="val">{{employee.landline || company.tel}}</text></view>
     </view>
     <view class="row">
-      <view class="cell wide"><text class="label">邮箱</text><text class="val">{{employee.email}}</text></view>
+      <view class="cell email"><text class="label">邮箱</text><text class="val">{{employee.email}}</text></view>
     </view>
   </view>
 </view>

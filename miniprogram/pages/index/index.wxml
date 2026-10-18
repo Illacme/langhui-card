@@ -16,14 +16,14 @@
     <image wx:if="{{bgImage}}" class="page-bg" src="{{bgImage}}" mode="aspectFill" />
     <view wx:if="{{bgImage}}" class="page-bg-mask" style="opacity: {{bgMaskAlpha}}" />
 
-    <!-- 自定义顶栏（navigationStyle=custom）：左上角「我的」入口，固定常驻 -->
+    <!-- 自定义顶栏（navigationStyle=custom）：按设计稿融入浅蓝渐变背景，无白色底与居中标题，
+         仅保留左上角「我的」入口，固定常驻 -->
     <view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
       <view class="nav-inner">
         <view class="nav-me" bindtap="goMe">
           <view class="nav-me-avatar" wx:if="{{meAvatar}}"><image src="{{meAvatar}}" mode="aspectFill" /></view>
           <text class="nav-me-text">{{meName || '我的'}}</text>
         </view>
-        <view class="nav-title">{{company.shortName || company.fullName || '朗汇机电'}}</view>
       </view>
     </view>
     <view class="nav-spacer" style="height: {{navHeight}}px;" />
@@ -39,11 +39,15 @@
       <view class="section">
         <view class="sec-title">公司简介</view>
         <company-video channelId="{{profile.videoChannelId}}" backupMp4Url="{{profile.backupMp4Url}}" cover="{{profile.cover}}" />
+        <view class="company-name">{{company.fullName}}</view>
         <text class="intro">{{profile.introText}}</text>
       </view>
       <block wx:for="{{homeOrder}}" wx:key="*this">
         <view wx:if="{{item === 'achievement'}}" id="sec-achievement" class="section">
-          <view class="sec-title">经典业绩</view>
+          <view class="sec-head">
+            <view class="sec-title">经典业绩</view>
+            <view class="sec-link" bindtap="onEnterCase">案例进入</view>
+          </view>
           <achievement-grid categories="{{categories}}" staffId="{{staffId}}" />
           <featured-projects featured="{{featured}}" staffId="{{staffId}}" />
         </view>

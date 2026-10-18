@@ -1,12 +1,12 @@
-/* 首页自定义顶栏（navigationStyle=custom）：左上角「我的」入口，固定常驻 */
+/* 首页自定义顶栏（navigationStyle=custom）：按设计稿融入浅蓝渐变背景——
+   无白色底、无边框线、无居中标题，仅左上角「我的」入口，固定常驻 */
 .custom-nav {
   position: fixed;
   left: 0;
   right: 0;
   top: 0;
   z-index: 100;
-  background: #fff;
-  border-bottom: 1rpx solid #eee;
+  background: transparent;
 }
 .custom-nav .nav-inner {
   height: 44px;
@@ -15,21 +15,12 @@
   padding: 0 24rpx;
   position: relative;
 }
-.custom-nav .nav-title {
-  position: absolute;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: #333;
-  pointer-events: none;
-}
 .custom-nav .nav-me {
   display: flex;
   align-items: center;
   padding: 6rpx 20rpx;
-  border: 1rpx solid #1a8cff;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1rpx solid rgba(26, 140, 255, 0.45);
   border-radius: 28rpx;
 }
 .custom-nav .nav-me-avatar {
@@ -49,14 +40,35 @@
   color: #1a8cff;
 }
 
-/* 首页背景图（后台「首页布局」可选设置）：
-   背景层与遮罩层用 fixed + 负 z-index，铺在视口最底层——
-   内容（顶栏/名片区/各板块）按常规流绘制，天然在其上方，不会被遮住。 */
-.page { position: relative; }
+/* 首页背景：无后台背景图时按设计稿铺浅蓝→白渐变；有背景图时由
+   page-bg（fixed + 负 z-index）整幅覆盖，渐变自然被盖住。 */
+.page {
+  position: relative;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #d5e7fa 0%, #e7f1fc 24%, #f4f7fb 52%, #f4f7fb 100%);
+}
 .page-bg { position: fixed; left: 0; right: 0; top: 0; bottom: 0; width: 100%; height: 100%; z-index: -1; }
 .page-bg-mask { position: fixed; left: 0; right: 0; top: 0; bottom: 0; background: #000; z-index: -1; }
 
+/* 内容板块（设计稿：白色圆角卡片浮于浅蓝背景，仅作用于首页，不影响「我的」页） */
+.page .section {
+  background: #fff;
+  border-radius: 20rpx;
+  margin: 20rpx 24rpx 0;
+  padding: 28rpx;
+  box-shadow: 0 6rpx 18rpx rgba(30, 90, 160, 0.06);
+  box-sizing: border-box;
+}
+.page .section .sec-title { margin-bottom: 20rpx; }
+
+/* 「经典业绩」标题行：左侧标题 + 右侧「案例进入」小字链接（同名片按钮行为） */
+.sec-head { display: flex; align-items: center; justify-content: space-between; }
+.sec-link { font-size: 24rpx; color: #8aa5c0; }
+
+/* 简介区：视频封面下的公司名大标题（设计稿黑色加粗） */
+.company-name { font-size: 34rpx; font-weight: 700; color: #222; margin-top: 24rpx; }
+
 /* 有背景时的高端包装：卡片半透明浮起 + 圆角阴影，与深色背景形成层次 */
-.has-bg .custom-nav { background: rgba(255,255,255,.94); border-bottom: none; }
+.has-bg .custom-nav { background: rgba(255,255,255,.94); }
 .has-bg .section { background: rgba(255,255,255,.95); border-radius: 16rpx; margin: 20rpx 24rpx; padding: 28rpx; box-shadow: 0 6rpx 20rpx rgba(0,0,0,.10); }
 .has-bg .nav-spacer + .section, .has-bg .section:first-of-type { margin-top: 20rpx; }
