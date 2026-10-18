@@ -111,6 +111,68 @@ func TestAssetLibrary(t *testing.T) {
 	require.EqualValues(t, 0, body["data"].(map[string]interface{})["total"])
 	require.Empty(t, body["data"].(map[string]interface{})["items"])
 
+	// 2.6 视觉调性（style）：与分类正交的第二筛选维度
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library", nil)
+	require.EqualValues(t, 0, body["code"])
+	allData := body["data"].(map[string]interface{})
+	require.Len(t, allData["styles"].([]interface{}), 5, "简约清晰/温暖自然/轻奢尊贵/柔美清新/光影流动 五档调性")
+	counts := allData["styleCounts"].([]interface{})
+	require.Len(t, counts, 5)
+	// 调性计数之和 = 当前条件下的总条数（此处为全量）
+	sum := 0
+	for _, c := range counts {
+		sum += int(c.(map[string]interface{})["count"].(float64))
+	}
+	require.Equal(t, total, sum, "调性计数之和应等于未加调性过滤时的 total")
+	for _, it := range items {
+		m := it.(map[string]interface{})
+		require.NotEmpty(t, m["style"], "每项素材都应带调性: %s", m["id"])
+	}
+
+	// 2.6.1 调性过滤生效：返回项全部命中，total 随之收窄
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?style=luxury", nil)
+	require.EqualValues(t, 0, body["code"])
+	luxData := body["data"].(map[string]interface{})
+	luxTotal := int(luxData["total"].(float64))
+	require.GreaterOrEqual(t, luxTotal, 6, "轻奢尊贵档应有多款素材")
+	require.Less(t, luxTotal, total)
+	require.NotEmpty(t, luxData["items"].([]interface{}))
+	for _, it := range luxData["items"].([]interface{}) {
+		require.Equal(t, "luxury", it.(map[string]interface{})["style"])
+	}
+	// 关键：调性计数不受 style 参数影响，否则前端选中一档后其余全变 0
+	require.Equal(t, sum, styleCountSum(t, luxData), "styleCounts 应基于 分类+关键字 统计，排除 style 本身")
+
+	// 2.6.2 分类 + 调性组合过滤
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=background&style=nature", nil)
+	require.EqualValues(t, 0, body["code"])
+	combo2 := body["data"].(map[string]interface{})
+	require.GreaterOrEqual(t, int(combo2["total"].(float64)), 5)
+	for _, it := range combo2["items"].([]interface{}) {
+		m := it.(map[string]interface{})
+		require.Equal(t, "background", m["category"])
+		require.Equal(t, "nature", m["style"])
+	}
+
+	// 2.6.3 图标分类下只有一个调性有素材（其余 count=0，前端据此隐藏该档位）
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?type=icon", nil)
+	require.EqualValues(t, 0, body["code"])
+	iconCounts := body["data"].(map[string]interface{})["styleCounts"].([]interface{})
+	nonZero := 0
+	for _, c := range iconCounts {
+		m := c.(map[string]interface{})
+		if int(m["count"].(float64)) > 0 {
+			nonZero++
+			require.Equal(t, "clean", m["key"], "图标视觉语言统一，只应落在简约清晰")
+		}
+	}
+	require.Equal(t, 1, nonZero)
+
+	// 2.6.4 调性中文名并入搜索标签：搜「轻奢」能命中该档素材
+	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?keyword=轻奢", nil)
+	require.EqualValues(t, 0, body["code"])
+	require.GreaterOrEqual(t, int(body["data"].(map[string]interface{})["total"].(float64)), 6)
+
 	// 3. 采用图标：URL 落进上传存储（/uploads/library/...），静态托管可取到真实 PNG
 	_, body = plat.doWithCookie("POST", "/api/admin/assets/adopt", map[string]interface{}{"id": "icon-house"})
 	require.EqualValues(t, 0, body["code"])
@@ -168,4 +230,15 @@ func TestAssetLibrary(t *testing.T) {
 		r.ServeHTTP(w, req)
 		require.NotEqual(t, http.StatusOK, w.Code, p)
 	}
+}
+
+// styleCountSum 汇总响应里 styleCounts 的 count，用于校验调性计数之和
+func styleCountSum(t *testing.T, data map[string]interface{}) int {
+	counts, ok := data["styleCounts"].([]interface{})
+	require.True(t, ok, "响应应带 styleCounts")
+	sum := 0
+	for _, c := range counts {
+		sum += int(c.(map[string]interface{})["count"].(float64))
+	}
+	return sum
 }

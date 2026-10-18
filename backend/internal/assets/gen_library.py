@@ -246,6 +246,69 @@ ICONS = [
     ("link", "资源对接", "misc", ["对接", "资源", "链接"]),
 ]
 
+# ── 视觉调性（style）───────────────────────────────────────────────────
+# 与 category（用途/位置）正交的第二筛选维度，描述素材的"气质"而非技术手法。
+# 命名原则：用用户能直接感知的形容词，不暴露 mesh / grain / noise 等实现术语
+# ——客户不知道什么是网格渐变，但知道自己要"沉稳"还是要"温暖"。
+STYLES = [
+    ("clean", "简约清晰"),
+    ("nature", "温暖自然"),
+    ("luxury", "轻奢尊贵"),
+    ("soft", "柔美清新"),
+    ("vivid", "光影流动"),
+]
+
+# 调性归类：按素材 id 登记；未登记的缺省 clean（新增素材漏标也能安全降级）。
+# 只有构图/氛围存在差异的分类（背景、封面）需要登记；图标/LOGO/头像视觉语言
+# 统一，全部落 clean，选择器的风格行会自动隐藏当前分类下 0 结果的调性。
+_STYLE_GROUPS = {
+    "clean": (
+        # 背景：深色、几何、克制
+        "bg-deepspace", "bg-mountain", "bg-citynight", "bg-grid", "bg-diagonal",
+        "bg-noir", "bg-ridge", "bg-tech", "bg-charcoal", "bg-royal", "bg-topo",
+        "bg-hexcell", "bg-dotmatrix", "bg-dotmatrix-royal", "bg-sparkdust",
+        "bg-dusk", "bg-arcstripe", "bg-lines", "bg-geo", "bg-ocean",
+        # 封面：明确几何构图
+        "cover-skyline", "cover-dots", "cover-blocks", "cover-shield",
+        "cover-motion", "cover-stars", "cover-hex", "cover-hex-steel",
+        "cover-gridline", "cover-minimal", "cover-night", "cover-circuit",
+        "cover-rings", "cover-stripes", "cover-cityline", "cover-prism",
+        "cover-topo", "cover-mountain", "cover-meshnodes", "cover-meshnodes-teal",
+        "cover-radar", "cover-radar-slate", "cover-chevrons", "cover-stairs",
+        "cover-stairs-indigo", "cover-arclines", "cover-confetti",
+    ),
+    "nature": (
+        "bg-canyon", "bg-forest", "bg-sand", "bg-amber", "bg-sunrise",
+        "bg-linen", "bg-weave",
+        "cover-veins", "cover-skyline-warm", "cover-minimal-sand",
+        "cover-stars-dawn", "cover-orbs-amber", "cover-chevrons-emerald",
+    ),
+    "luxury": (
+        "bg-gold", "bg-marble", "bg-marble-white", "bg-silk", "bg-silk-rose",
+        "bg-hexcell-copper",
+        "cover-goldline", "cover-goldline-emerald",
+    ),
+    "soft": (
+        "bg-ink", "bg-pearl", "bg-mint", "bg-bloom", "bg-bloom-lavender",
+        "bg-skyline-day", "bg-ripple",
+        "cover-arcs-rose", "cover-ripple-violet", "cover-arclines-rose",
+        "cover-confetti-mint", "cover-blocks-mint",
+    ),
+    "vivid": (
+        "bg-bokeh", "bg-glow", "bg-mesh", "bg-aurora", "bg-waves", "bg-nebula",
+        "bg-coral", "bg-sunburst",
+        "cover-beams", "cover-arcs", "cover-waves", "cover-waves-deep",
+        "cover-bokeh", "cover-bubbles", "cover-ripple", "cover-orbs",
+    ),
+}
+STYLE_MAP = {i: s for s, ids in _STYLE_GROUPS.items() for i in ids}
+STYLE_NAMES = dict(STYLES)
+
+
+def style_of(item_id):
+    """素材调性：查表，未登记缺省 clean。同时把调性中文名并入搜索标签。"""
+    return STYLE_MAP.get(item_id, "clean")
+
 # 封面：渐变 + 几何 motif，无文字。
 # 四元组 (id, 名称, 上下渐变色, motif 名)：motif 与 id 解耦，
 # 同一 motif 换配色即可派生新款式（扩充素材时只需加一行）。
@@ -540,9 +603,9 @@ def make_icon(item_id, name, lucide, group, tags):
     tile.alpha_composite(glyph, ((S - glyph.width) // 2, (S - glyph.height) // 2))
     path = os.path.join(OUT, "icons", item_id + ".png")
     tile.save(path, "PNG")
-    return {"id": item_id, "name": name, "category": "icon",
+    return {"id": item_id, "name": name, "category": "icon", "style": "clean",
             "file": "icons/%s.png" % item_id, "thumb": "icons/%s.png" % item_id,
-            "width": S, "height": S, "tags": tags}
+            "width": S, "height": S, "tags": tags + ["简约清晰"]}
 
 
 # ── 封面 motif ────────────────────────────────────────────────────────
@@ -1053,10 +1116,10 @@ def make_cover(item_id, name, colors, motif):
     thumb = img.convert("RGB").resize((THUMB_W, THUMB_H), Image.LANCZOS)
     tpath = os.path.join(OUT, "thumbs", "covers", item_id + ".jpg")
     thumb.save(tpath, "JPEG", quality=80)
-    return {"id": item_id, "name": name, "category": "cover",
+    return {"id": item_id, "name": name, "category": "cover", "style": style_of(item_id),
             "file": "covers/%s.jpg" % item_id, "thumb": "thumbs/covers/%s.jpg" % item_id,
             "width": COVER_W, "height": COVER_H,
-            "tags": [name, "封面", "背景", motif]}
+            "tags": [name, "封面", "背景", motif, STYLE_NAMES[style_of(item_id)]]}
 
 
 # ── LOGO 标记 ─────────────────────────────────────────────────────────
@@ -1459,9 +1522,9 @@ def make_avatar(item_id, name, colors):
     tile = rounded_tile(S, *colors, radius_ratio=0.22)
     tile.alpha_composite(mark_person(S), (0, 0))
     tile.save(os.path.join(OUT, "avatars", item_id + ".png"), "PNG")
-    return {"id": item_id, "name": name, "category": "avatar",
+    return {"id": item_id, "name": name, "category": "avatar", "style": "clean",
             "file": "avatars/%s.png" % item_id, "thumb": "avatars/%s.png" % item_id,
-            "width": S, "height": S, "tags": [name, "头像", "默认"]}
+            "width": S, "height": S, "tags": [name, "头像", "默认", "简约清晰"]}
 
 
 LOGO_MARKS = {
@@ -1482,9 +1545,9 @@ def make_logo(item_id, name, colors, mark):
     tile.alpha_composite(LOGO_MARKS[mark](S), (0, 0))
     path = os.path.join(OUT, "logos", item_id + ".png")
     tile.save(path, "PNG")
-    return {"id": item_id, "name": name, "category": "logo",
+    return {"id": item_id, "name": name, "category": "logo", "style": "clean",
             "file": "logos/%s.png" % item_id, "thumb": "logos/%s.png" % item_id,
-            "width": S, "height": S, "tags": [name, "LOGO", "标识", mark]}
+            "width": S, "height": S, "tags": [name, "LOGO", "标识", mark, "简约清晰"]}
 
 
 # ── 小程序首页背景图（750×1334 竖幅，深色高端商务风） ───────────────────
@@ -2114,9 +2177,11 @@ def make_background(item_id, name, colors, motif, tags):
     tpath = os.path.join(OUT, "thumbs", "backgrounds", item_id + ".jpg")
     thumb.save(tpath, "JPEG", quality=80)
     return {"id": item_id, "name": name, "category": "background",
+            "style": style_of(item_id),
             "file": "backgrounds/%s.jpg" % item_id,
             "thumb": "thumbs/backgrounds/%s.jpg" % item_id,
-            "width": BG_W, "height": BG_H, "tags": tags + ["背景", "全屏", motif]}
+            "width": BG_W, "height": BG_H,
+            "tags": tags + ["背景", "全屏", motif, STYLE_NAMES[style_of(item_id)]]}
 
 
 def fetch_lucide_license():
@@ -2175,8 +2240,16 @@ def main():
             raise RuntimeError("素材 id 重复: %s（%s / %s）" % (it["id"], seen[it["id"]], it["name"]))
         seen[it["id"]] = it["name"]
 
+    # 调性分布自检：某个调性一个素材都没有，多半是归类表里写错了 id
+    for sk, sn in STYLES:
+        n = sum(1 for it in items if it.get("style") == sk)
+        print("  style %-8s %-6s %d" % (sk, sn, n))
+        if n == 0:
+            raise RuntimeError("调性 %s 没有任何素材，检查 _STYLE_GROUPS 的 id" % sk)
+
     manifest = {
-        "version": 4,
+        "version": 5,
+        "styles": [{"key": k, "name": n} for k, n in STYLES],
         "categories": [
             {"key": "icon", "name": "图标"},
             {"key": "cover", "name": "封面"},

@@ -34,11 +34,19 @@ type Item struct {
 	ID       string   `json:"id"`
 	Name     string   `json:"name"`
 	Category string   `json:"category"` // icon / cover / logo / avatar / background
+	Style    string   `json:"style"`    // 视觉调性：clean / nature / luxury / soft / vivid
 	File     string   `json:"file"`     // library 内相对路径，如 icons/icon-house.png
 	Thumb    string   `json:"thumb"`    // 预览图路径（缩略版，图标/LOGO/头像与 File 相同）
 	Width    int      `json:"width"`
 	Height   int      `json:"height"`
-	Tags     []string `json:"tags"` // 搜索标签（中文名/别名）
+	Tags     []string `json:"tags"` // 搜索标签（中文名/别名/调性名）
+}
+
+// StyleCount 某调性在当前筛选条件下的素材数（前端据此隐藏 0 结果的调性）
+type StyleCount struct {
+	Key   string `json:"key"`
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 // Query 素材分页查询条件（全部可选，缺省给出安全默认值）
@@ -46,16 +54,18 @@ type Query struct {
 	Page    int    // 1-based，<1 回落 1
 	Size    int    // 每页条数，<1 回落 DefaultPageSize，>MaxPageSize 截断
 	Type    string // 分类过滤："" 全部；icon / cover / logo / avatar / background
+	Style   string // 调性过滤："" 全部；clean / nature / luxury / soft / vivid
 	Keyword string // 关键字：匹配名称或标签（大小写不敏感，中文直接子串匹配）
 }
 
 // Result 分页结果
 type Result struct {
-	Items []Item `json:"items"`
-	Total int    `json:"total"` // 过滤后的总条数（非本页条数）
-	Page  int    `json:"page"`
-	Size  int    `json:"size"`
-	Pages int    `json:"pages"` // 总页数
+	Items       []Item       `json:"items"`
+	Total       int          `json:"total"` // 过滤后的总条数（非本页条数）
+	Page        int          `json:"page"`
+	Size        int          `json:"size"`
+	Pages       int          `json:"pages"` // 总页数
+	StyleCounts []StyleCount `json:"styleCounts"` // 当前 分类+关键字 下各调性的素材数
 }
 
 const (
@@ -68,7 +78,8 @@ const (
 // Manifest 素材清单（gen_library.py 生成）
 type Manifest struct {
 	Version    int        `json:"version"`
-	Categories []Category `json:"categories"`
+	Styles     []Category `json:"styles"`     // 视觉调性（第二筛选维度）
+	Categories []Category `json:"categories"` // 用途分类（第一筛选维度）
 	Items      []Item     `json:"items"`
 }
 
@@ -123,8 +134,11 @@ func List(q Query) Result {
 	}
 	kw := strings.ToLower(strings.TrimSpace(q.Keyword))
 	typ := strings.TrimSpace(q.Type)
+	sty := strings.TrimSpace(q.Style)
 
-	matched := make([]Item, 0, len(m.Items))
+	// 第一遍：按 分类 + 关键字 过滤，得到 styleCounts 的统计基数。
+	// 调性计数必须排除 style 本身的影响，否则前端选中某调性后其余调性全变 0。
+	base := make([]Item, 0, len(m.Items))
 	for _, it := range m.Items {
 		if typ != "" && it.Category != typ {
 			continue
@@ -132,7 +146,18 @@ func List(q Query) Result {
 		if kw != "" && !matchKeyword(it, kw) {
 			continue
 		}
-		matched = append(matched, it)
+		base = append(base, it)
+	}
+	counts := styleCounts(m, base)
+
+	matched := base
+	if sty != "" {
+		matched = make([]Item, 0, len(base))
+		for _, it := range base {
+			if it.Style == sty {
+				matched = append(matched, it)
+			}
+		}
 	}
 	total := len(matched)
 
@@ -163,12 +188,32 @@ func List(q Query) Result {
 		end = total
 	}
 	return Result{
-		Items: matched[start:end],
-		Total: total,
-		Page:  page,
-		Size:  size,
-		Pages: pages,
+		Items:       matched[start:end],
+		Total:       total,
+		Page:        page,
+		Size:        size,
+		Pages:       pages,
+		StyleCounts: counts,
 	}
+}
+
+// styleCounts 统计 base 中各调性的素材数，顺序与 manifest.styles 一致。
+// 前端据此隐藏当前条件下 0 结果的调性（例如图标分类下只有「简约清晰」）。
+func styleCounts(m *Manifest, base []Item) []StyleCount {
+	if len(m.Styles) == 0 {
+		return nil
+	}
+	idx := make(map[string]int, len(m.Styles))
+	for _, it := range base {
+		if it.Style != "" {
+			idx[it.Style]++
+		}
+	}
+	out := make([]StyleCount, 0, len(m.Styles))
+	for _, s := range m.Styles {
+		out = append(out, StyleCount{Key: s.Key, Name: s.Name, Count: idx[s.Key]})
+	}
+	return out
 }
 
 // matchKeyword 关键字匹配：名称或任一标签含关键字即命中（kw 已小写）

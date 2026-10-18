@@ -49,12 +49,15 @@ func assetFileHandler(c *gin.Context) {
 	c.Data(http.StatusOK, assets.ContentType(rel), data)
 }
 
-// libraryListHandler 返回素材清单（分页 + 分类/关键字过滤，管理员登录态）。
+// libraryListHandler 返回素材清单（分页 + 分类/调性/关键字过滤，管理员登录态）。
 //
-// 查询参数：page（缺省 1）/ size（缺省 24，上限 60）/ type（分类，空=全部）/
-// keyword（名称或标签匹配）。素材量级已达百级且会继续扩充，分页避免一次性
-// 返回全部条目；筛选放在服务端，否则「客户端过滤 + 服务端分页」会互相矛盾
-// （翻页时看得见的只是当前页里的匹配项）。
+// 查询参数：page（缺省 1）/ size（缺省 24，上限 60）/ type（用途分类，空=全部）/
+// style（视觉调性，空=全部）/ keyword（名称或标签匹配）。
+//
+// 两个筛选维度正交：type 是「用在哪」（图标/封面/LOGO/头像/背景），
+// style 是「什么气质」（简约清晰/温暖自然/轻奢尊贵/柔美清新/光影流动）。
+// 同时返回 styleCounts——当前 分类+关键字 下各调性的素材数，前端据此隐藏
+// 0 结果的调性（例如图标分类下只有「简约清晰」，就没必要把五档全列出来）。
 func libraryListHandler(c *gin.Context) {
 	m, err := assets.Load()
 	if err != nil {
@@ -67,16 +70,19 @@ func libraryListHandler(c *gin.Context) {
 		Page:    page,
 		Size:    size,
 		Type:    c.Query("type"),
+		Style:   c.Query("style"),
 		Keyword: c.Query("keyword"),
 	})
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
-		"version":    m.Version,
-		"categories": m.Categories,
-		"items":      res.Items,
-		"total":      res.Total,
-		"page":       res.Page,
-		"size":       res.Size,
-		"pages":      res.Pages,
+		"version":     m.Version,
+		"categories":  m.Categories,
+		"styles":      m.Styles,
+		"items":       res.Items,
+		"total":       res.Total,
+		"page":        res.Page,
+		"size":        res.Size,
+		"pages":       res.Pages,
+		"styleCounts": res.StyleCounts,
 	}})
 }
 

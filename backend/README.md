@@ -166,13 +166,18 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   - `manifest.json` 描述分类与素材项；`CREDITS.md` 记录图标来源与许可证。
 - **采用（adopt）模式**：`POST /api/admin/assets/adopt` 把内嵌素材经 `Uploader.SaveBytes` **复制进当前上传存储**（local → `uploads/library/<id>.<ext>`），返回与普通上传完全同构的 URL——下游（小程序 `<image>` / CDN）零感知，不引入新的静态资源域。
 - **预览图公开化**：`GET /api/assets/file/*path` 无鉴权 + `Cache-Control: immutable` 长缓存（通用素材，无租户数据；`<img>` 标签无法带 Authorization 头，故公开）。
+- **两个正交的筛选维度**：
+  - `category` 分类 = **用在哪**：图标 / 封面 / LOGO / 头像 / 背景；
+  - `style` 视觉调性 = **什么气质**：`clean` 简约清晰 / `nature` 温暖自然 / `luxury` 轻奢尊贵 / `soft` 柔美清新 / `vivid` 光影流动。
+  - 调性命名刻意用**用户能感知的形容词**，不暴露 mesh / grain / noise 等实现术语——客户不知道什么是网格渐变，但知道自己要"沉稳"还是要"温暖"。调性中文名并入搜索标签，搜「轻奢」可直接命中该档素材。
+  - 归类表见 `gen_library.py` 的 `_STYLE_GROUPS`；未登记的素材缺省 `clean`（新增素材漏标也能安全降级）。图标/LOGO/头像视觉语言统一，全部落 `clean`，故这些分类下风格行会自动隐藏。
 - **素材更新**：增删素材只需重新跑 `python3 internal/assets/gen_library.py`（需联网拉取 Lucide 图标 + 本机 `rsvg-convert`/Pillow），产物目录提交入库即可，接口与前端零改动。
 
 ### 素材库接口
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
 | GET  | /api/assets/file/*path | 否 | 素材预览图（PNG/JPEG），immutable 长缓存 |
-| GET  | /api/admin/assets/library | admin | 素材清单（**分页**）：`page`（缺省 1）/ `size`（缺省 24，上限 60）/ `type`（分类，空=全部）/ `keyword`（名称或标签匹配）→ `{items,total,page,size,pages,categories}` |
+| GET  | /api/admin/assets/library | admin | 素材清单（**分页**）：`page`（缺省 1）/ `size`（缺省 24，上限 60）/ `type`（分类，空=全部）/ `style`（视觉调性，空=全部）/ `keyword`（名称或标签匹配）→ `{items,total,page,size,pages,categories,styles,styleCounts}`。`styleCounts` 是**当前 分类+关键字 下各调性的素材数**（刻意排除 `style` 自身影响，否则选中一档后其余全变 0），前端据此隐藏 0 结果的档位 |
 | POST | /api/admin/assets/adopt | admin | 采用素材：body `{"id":"bg-deepspace"}` → 复制进上传存储，返回 `{url, item}` |
 
 > 分页与筛选都在服务端：素材已达百级且会继续扩充，一次返回全量不合适；
@@ -316,7 +321,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   - `TestAPIFlow`（默认）：SQLite 跑完整流程，按「公开接口 → 超管登录 → 审核流 → 员工管理 → 强校验 → 服务 → 内容 → 上传存储 → 改密」分段执行。
   - `TestStorageEnhanceSuccess`：用 fake `Presigner`/`Signer`/`CDNRefresher` 覆盖存储增强**成功分支**（预签名返回 `putUrl/url/key`、私有签名返回 `signed` 映射、CDN 刷新被调用）。
   - `TestTokenRefresh` / `TestCookieAuth` / `TestSingleDeviceRevocation`：分别覆盖 refresh 换发与账号级吊销、PC 端 httpOnly Cookie 鉴权与登出、单设备精确吊销（会话黑名单）。
-  - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、**分页（翻页不重复 / size 与上限 / 非法页码回落与末页夹取 / 分类与关键字过滤 / 无命中空结果）**、采用落盘（含首页背景 JPEG）、预览图公开 + immutable、封面与背景缩略图、未知素材/空参/路径穿越 404。
+  - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、**分页（翻页不重复 / size 与上限 / 非法页码回落与末页夹取 / 分类与关键字过滤 / 无命中空结果）**、**视觉调性（五档清单 / 调性过滤生效 / styleCounts 排除 style 自身 / 分类+调性组合 / 图标只落 clean 一档 / 调性中文名可搜）**、采用落盘（含首页背景 JPEG）、预览图公开 + immutable、封面与背景缩略图、未知素材/空参/路径穿越 404。
   - `TestAPIFlowMySQL`（生产契约 parity）：设置 `TEST_MYSQL_DSN` 后，连真实 MySQL、应用 `migrations/*.sql`，再跑与 SQLite **完全相同的断言**，用以校验 AutoMigrate 与生产建表 SQL 行为一致。
 - 运行：
   ```bash
