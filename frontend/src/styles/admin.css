@@ -26,13 +26,8 @@
   margin-right: 0;
 }
 
-@media (max-width: 768px) {
-  .project-dialog,
-  .resp-dialog {
-    width: 94vw !important;
-    max-width: 94vw;
-  }
-}
+/* 弹窗宽度/全屏的响应式规则已统一收敛到 styles/responsive.css（按 1200/768 断点），
+   此处不再重复，避免 94vw 与全屏 100vw 互相覆盖。 */
 
 /* ===== 列表排序操作区（项目案例 / 业绩分类 / 业务服务共用） =====
    拖拽手柄 + 上下箭头，全局定义避免在各页 scoped 样式里重复。 */

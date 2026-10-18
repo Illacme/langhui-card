@@ -22,23 +22,23 @@
         合计 1380px 超出容器，fixed="right" 的操作列直接压住「创建时间」列。
         改动列宽时请按同一口径重算，宁紧勿松。
       -->
-      <el-table :data="paged" v-loading="loading" border stripe>
+      <el-table v-if="!isPhone" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="编号" width="62" align="center" />
         <el-table-column prop="name" label="姓名" min-width="90" class-name="cell-nowrap" show-overflow-tooltip />
         <el-table-column prop="title" label="职位" width="96" class-name="cell-nowrap" show-overflow-tooltip />
         <el-table-column prop="phone" label="手机" width="120" show-overflow-tooltip />
-        <el-table-column label="座机" width="132" show-overflow-tooltip>
+        <el-table-column label="座机" width="132" v-if="!isPhone" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="landline-cell" :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" min-width="120" show-overflow-tooltip />
-        <el-table-column prop="nickname" label="微信昵称" width="100" show-overflow-tooltip>
+        <el-table-column prop="nickname" label="微信昵称" width="100" v-if="!isPhone" show-overflow-tooltip>
           <template #default="{ row }">
             <span :class="{ muted: !row.nickname }">{{ row.nickname || '—' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="openid" label="openid" width="210" show-overflow-tooltip>
+        <el-table-column prop="openid" label="openid" width="210" v-if="!isPhone" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="openid-cell" :class="{ muted: !row.openid }">{{ row.openid || '—' }}</span>
           </template>
@@ -61,7 +61,7 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="180" show-overflow-tooltip>
+        <el-table-column label="创建时间" width="180" v-if="!isPhone" show-overflow-tooltip>
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="190" fixed="right" align="center">
@@ -90,6 +90,50 @@
         </el-table-column>
       </el-table>
 
+      <!-- 手机端（<768）卡片列表：复用 paged 与既有操作函数，桌面仍走 el-table。
+           卡片只保留核心字段 + 操作，避免窄屏横向滚动。 -->
+      <div v-else class="emp-cards" v-loading="loading">
+        <div class="emp-card" v-for="row in paged" :key="row.staffId">
+          <div class="emp-card-head">
+            <el-image v-if="row.avatar" :src="row.avatar" class="emp-avatar" fit="cover" />
+            <div v-else class="emp-avatar ph">—</div>
+            <div class="emp-card-id">
+              <div class="emp-name">{{ row.name }} <span class="emp-staff">#{{ row.staffId }}</span></div>
+              <div class="emp-title">{{ row.title || '未填写职位' }}</div>
+            </div>
+            <el-tag :type="row.status === 'enabled' ? 'success' : 'info'" effect="light" size="small">
+              {{ row.status === 'enabled' ? '正常' : '已停用' }}
+            </el-tag>
+          </div>
+          <div class="emp-card-row"><span class="emp-k">手机</span><span class="emp-v">{{ row.phone }}</span></div>
+          <div class="emp-card-row" v-if="row.landline"><span class="emp-k">座机</span><span class="emp-v">{{ row.landline }}</span></div>
+          <div class="emp-card-row" v-if="row.email"><span class="emp-k">邮箱</span><span class="emp-v">{{ row.email }}</span></div>
+          <div class="emp-card-actions">
+            <el-button size="small" @click="preview(row)">预览</el-button>
+            <el-button size="small" type="primary" @click="openEdit(row)">编辑</el-button>
+            <el-button
+              v-if="row.status === 'disabled'"
+              size="small"
+              type="success"
+              :loading="actingId === row.staffId"
+              @click="enable(row)"
+              >启用</el-button
+            >
+            <el-button v-else size="small" type="warning" :loading="actingId === row.staffId" @click="disable(row)"
+              >停用</el-button
+            >
+            <el-button
+              size="small"
+              type="primary"
+              plain
+              :loading="actingId === row.staffId"
+              @click="reset(row)"
+              >重置密码</el-button
+            >
+          </div>
+        </div>
+      </div>
+
       <el-pagination
         class="table-pager"
         v-model:current-page="currentPage"
@@ -114,16 +158,16 @@
           <el-input v-model="form.name" placeholder="必填" />
         </el-form-item>
         <el-form-item label="手机" prop="phone">
-          <el-input v-model="form.phone" placeholder="必填" />
+          <el-input v-model="form.phone" type="tel" placeholder="必填" />
         </el-form-item>
         <el-form-item label="职位">
           <el-input v-model="form.title" />
         </el-form-item>
         <el-form-item label="座机">
-          <el-input v-model="form.landline" placeholder="选填，如 021-88888888" />
+          <el-input v-model="form.landline" type="tel" placeholder="选填，如 021-88888888" />
         </el-form-item>
         <el-form-item label="邮箱">
-          <el-input v-model="form.email" />
+          <el-input v-model="form.email" type="email" />
         </el-form-item>
         <el-form-item label="头像">
           <UploadField v-model="form.avatar" :multiple="false" accept="image/*" library-type="avatar" />
@@ -208,6 +252,7 @@ import {
 import { getWxacode } from '@/api/wechat'
 import UploadField from '@/components/UploadField.vue'
 import { useTable } from '@/composables/useTable'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import { formatDateTime } from '@/utils/datetime'
 
 const rows = ref<any[]>([])
@@ -223,6 +268,8 @@ const { keyword, currentPage, size, total, paged } = useTable(
 )
 const loading = ref(false)
 const actingId = ref<number | null>(null)
+// 手机端（<768）隐藏次要列，避免表格过宽；平板/桌面保留全部列并横向滚动
+const { isPhone } = useBreakpoint()
 
 const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
@@ -453,5 +500,78 @@ onMounted(load)
 .qr-img {
   width: 180px;
   height: 180px;
+}
+
+/* ===== 手机端员工卡片列表 ===== */
+.emp-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.emp-card {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.emp-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.emp-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.emp-avatar.ph {
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c0c4cc;
+}
+.emp-card-id {
+  flex: 1;
+  min-width: 0;
+}
+.emp-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+.emp-staff {
+  font-size: 12px;
+  font-weight: 400;
+  color: #909399;
+}
+.emp-title {
+  color: #909399;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.emp-card-row {
+  display: flex;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.emp-k {
+  width: 48px;
+  flex-shrink: 0;
+  color: #909399;
+}
+.emp-v {
+  color: #303133;
+  word-break: break-all;
+}
+.emp-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f2f4f7;
 }
 </style>

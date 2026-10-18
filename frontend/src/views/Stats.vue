@@ -137,4 +137,16 @@ onMounted(load)
   color: #909399;
   font-size: 12px;
 }
+/* 手机端：三张汇总卡由横排改纵向堆叠，避免窄屏被压扁 */
+@media (max-width: 767px) {
+  .stat-cards {
+    flex-direction: column;
+  }
+  .stat-card {
+    padding: 14px 16px;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
+}
 </style>

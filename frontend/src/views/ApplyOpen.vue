@@ -20,7 +20,7 @@
         本表历史上曾达 1200px（头像 80 / 状态 100 / 邮箱与驳回原因 min 160）超出容器，
         与 Employees 同款遮挡风险。改动列宽请按同一口径重算，宁紧勿松。
       -->
-      <el-table :data="paged" v-loading="loading" border stripe>
+      <el-table v-if="!isPhone" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="phone" label="手机" width="120" />
         <el-table-column prop="nickname" label="微信昵称" width="100" show-overflow-tooltip>
@@ -66,6 +66,33 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 手机端（<768）卡片列表：复用 paged 与 approve/openReject，桌面仍走 el-table -->
+      <div v-else class="apply-cards" v-loading="loading">
+        <div class="apply-card" v-for="row in paged" :key="row.id">
+          <div class="apply-card-head">
+            <div class="apply-card-id">
+              <div class="apply-name">{{ row.name }}</div>
+              <div class="apply-sub">{{ row.title || '未填写职位' }}</div>
+            </div>
+            <el-tag :type="statusTag(row.status)" effect="light" size="small">
+              {{ statusText(row.status) }}
+            </el-tag>
+          </div>
+          <div class="apply-card-row"><span class="apply-k">手机</span><span class="apply-v">{{ row.phone }}</span></div>
+          <div class="apply-card-row" v-if="row.landline"><span class="apply-k">座机</span><span class="apply-v">{{ row.landline }}</span></div>
+          <div class="apply-card-row" v-if="row.email"><span class="apply-k">邮箱</span><span class="apply-v">{{ row.email }}</span></div>
+          <div class="apply-card-row" v-if="row.nickname"><span class="apply-k">昵称</span><span class="apply-v">{{ row.nickname }}</span></div>
+          <div class="apply-card-row" v-if="row.rejectReason"><span class="apply-k">驳回</span><span class="apply-v">{{ row.rejectReason }}</span></div>
+          <div class="apply-card-actions">
+            <template v-if="row.status === 'pending'">
+              <el-button size="small" type="success" :loading="actingId === row.id" @click="approve(row)">通过</el-button>
+              <el-button size="small" type="danger" @click="openReject(row)">驳回</el-button>
+            </template>
+            <span v-else class="muted">已处理</span>
+          </div>
+        </div>
+      </div>
 
       <el-pagination
         class="table-pager"
@@ -114,6 +141,7 @@ import { ref, onMounted } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { listOpenApply, approveOpen, rejectOpen } from '@/api/apply'
 import { useTable } from '@/composables/useTable'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 import { formatDateTime } from '@/utils/datetime'
 
 const rows = ref<any[]>([])
@@ -128,6 +156,8 @@ const { keyword, currentPage, size, total, paged } = useTable(
 )
 const loading = ref(false)
 const actingId = ref<number | null>(null)
+// 手机端（<768）隐藏表格、改走卡片列表；平板/桌面保留 el-table + 横滚
+const { isPhone } = useBreakpoint()
 
 const rejectVisible = ref(false)
 const rejectReason = ref('')
@@ -225,5 +255,60 @@ onMounted(load)
   color: #909399;
   font-size: 12px;
   margin: 12px 0 0;
+}
+
+/* ===== 手机端开通审核卡片列表 ===== */
+.apply-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.apply-card {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff;
+}
+.apply-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.apply-card-id {
+  flex: 1;
+  min-width: 0;
+}
+.apply-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+.apply-sub {
+  color: #909399;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.apply-card-row {
+  display: flex;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.apply-k {
+  width: 48px;
+  flex-shrink: 0;
+  color: #909399;
+}
+.apply-v {
+  color: #303133;
+  word-break: break-all;
+}
+.apply-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #f2f4f7;
 }
 </style>

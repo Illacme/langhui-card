@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 
 import './styles/admin.css'
+import './styles/responsive.css'
 
 // Element Plus 按需引入后，组件 CSS 由 Components 插件按模板用量注入；
 // 但 ElMessage / ElMessageBox 这类「命令式 API」不会出现在模板里，

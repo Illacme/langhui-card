@@ -1,0 +1,119 @@
+/*
+ * 管理后台响应式样式（全局，非 scoped）。
+ * 与 composables/useBreakpoint.ts 的断点定义保持一致：
+ *   desktop >= 1200 / tablet 768-1199 / phone < 768。
+ * 设计定位：移动端/平板定位为「应急查看 + 轻量操作」，窄屏不破版、核心流程能走通；
+ * 桌面端（>=1200）维持原样，本文件规则只在 <1200 生效，确保零回归。
+ */
+
+/* ===== 设备工具类 ===== */
+@media (max-width: 767px) {
+  .hide-on-phone {
+    display: none !important;
+  }
+}
+@media (max-width: 1199px) {
+  .hide-on-tablet-down {
+    display: none !important;
+  }
+}
+
+/* ===== 弹窗响应式 ===== */
+/* 平板：限制最大宽度，避免超出视口（弹窗自身 width 仍由各页决定，这里只兜底上限） */
+@media (max-width: 1199px) {
+  .project-dialog,
+  .resp-dialog {
+    max-width: 92vw;
+  }
+}
+/* 手机：对话框全屏，便于舒适编辑；body 改为弹性滚动 */
+@media (max-width: 767px) {
+  .project-dialog,
+  .resp-dialog {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh;
+    margin: 0 !important;
+    top: 0 !important;
+    border-radius: 0;
+  }
+  .project-dialog .el-dialog__body,
+  .resp-dialog .el-dialog__body {
+    flex: 1 1 auto;
+    max-height: none !important;
+    overflow-y: auto;
+  }
+}
+
+/* ===== 页面工具条：窄屏换行，避免搜索框+按钮把标题挤掉或溢出 ===== */
+@media (max-width: 1199px) {
+  .page-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .bar-right {
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    justify-content: flex-start;
+  }
+  .page-bar .el-input {
+    width: 100% !important;
+    max-width: 280px;
+  }
+  .table-pager {
+    overflow-x: auto;
+  }
+}
+
+/* ===== 排序拖拽手柄：手机隐藏 =====
+   触屏拖拽不友好，窄屏仅保留上移/下移箭头（useSortableRows 已提供），避免误触。 */
+@media (max-width: 767px) {
+  .sort-cell .drag-handle {
+    display: none !important;
+  }
+}
+
+/* ===== 表单：手机端 label 顶部对齐、栅格退化单列 =====
+   弹窗内 el-form 在窄屏下 label 占满上行，输入占满下行，避免横向挤压。 */
+@media (max-width: 767px) {
+  .el-dialog .el-form .el-form-item {
+    display: block;
+  }
+  .el-dialog .el-form .el-form-item__label {
+    display: block;
+    text-align: left;
+    padding-bottom: 4px;
+    line-height: 1.4;
+  }
+}
+
+/* ===== 表格操作列：手机放大点按区 =====
+   操作列多为 el-button is-link（文字链），默认点按区偏窄易误触。
+   手机端给它们 inline-flex + 最小高度 + 间距，提升触达率而不改桌面布局。 */
+@media (max-width: 767px) {
+  .el-table .cell .el-button.is-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    margin: 2px 4px;
+  }
+}
+
+/* ===== 分页器：手机放大点按区 =====
+   el-pager 页码与上下页按钮默认 28px 偏小，触屏难点；手机端放大到 32px，
+   并放大每页条数选择器。table-pager 在 <1200 已开启横向滚动兜底。 */
+@media (max-width: 767px) {
+  .el-pagination {
+    font-size: 13px;
+  }
+  .el-pagination .el-pager li,
+  .el-pagination .btn-prev,
+  .el-pagination .btn-next {
+    min-width: 32px;
+    min-height: 32px;
+    line-height: 32px;
+  }
+  .el-pagination .el-pagination__sizes .el-select {
+    min-width: 92px;
+  }
+}

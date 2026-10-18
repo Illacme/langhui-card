@@ -89,7 +89,7 @@ async function onSubmit() {
   background: linear-gradient(135deg, #1f2d3d 0%, #2d3e50 100%);
 }
 .login-card {
-  width: 360px;
+  width: min(360px, 90vw);
 }
 .login-head {
   text-align: center;

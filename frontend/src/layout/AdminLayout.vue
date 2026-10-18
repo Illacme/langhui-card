@@ -1,6 +1,8 @@
 <template>
   <el-container class="admin-layout">
-    <el-aside width="220px" class="admin-aside">
+    <!-- 窄屏（<1200）侧栏抽屉遮罩：点遮罩或选菜单后自动收起 -->
+    <div class="aside-backdrop" :class="{ show: asideOpen }" @click="asideOpen = false" />
+    <el-aside width="220px" class="admin-aside" :class="{ open: asideOpen }">
       <div class="brand">
         <span class="brand-logo">智</span>
         <span class="brand-name">{{ brandName }}</span>
@@ -29,25 +31,46 @@
 
     <el-container>
       <el-header class="admin-header">
+        <el-button class="menu-toggle" text aria-label="菜单" @click="asideOpen = !asideOpen">
+          <el-icon><Menu /></el-icon>
+        </el-button>
         <div class="header-title">{{ currentTitle }}</div>
         <div class="header-right">
-          <span v-if="auth.companyName" class="header-company">
-            <el-icon><OfficeBuilding /></el-icon>
-            {{ auth.companyName }}
-          </span>
-          <span class="header-user">
-            <el-icon><UserFilled /></el-icon>
-            {{ auth.username || '管理员' }}
-            <el-tag size="small" :type="auth.isPlatform ? 'warning' : 'info'" effect="plain">
-              {{ auth.isPlatform ? '平台超管' : '企业管理员' }}
-            </el-tag>
-          </span>
-          <el-button text @click="showPwd = true">
-            <el-icon><Key /></el-icon> 修改密码
-          </el-button>
-          <el-button text type="danger" @click="onLogout">
-            <el-icon><SwitchButton /></el-icon> 退出
-          </el-button>
+          <template v-if="!isPhone">
+            <span v-if="auth.companyName" class="header-company">
+              <el-icon><OfficeBuilding /></el-icon>
+              {{ auth.companyName }}
+            </span>
+            <span class="header-user">
+              <el-icon><UserFilled /></el-icon>
+              {{ auth.username || '管理员' }}
+              <el-tag size="small" :type="auth.isPlatform ? 'warning' : 'info'" effect="plain">
+                {{ auth.isPlatform ? '平台超管' : '企业管理员' }}
+              </el-tag>
+            </span>
+            <el-button text @click="showPwd = true">
+              <el-icon><Key /></el-icon> 修改密码
+            </el-button>
+            <el-button text type="danger" @click="onLogout">
+              <el-icon><SwitchButton /></el-icon> 退出
+            </el-button>
+          </template>
+          <el-dropdown v-else class="header-menu" @command="onCommand">
+            <span class="header-avatar-trigger" aria-label="账户菜单">
+              <el-avatar :size="32" class="header-avatar">{{ avatarText }}</el-avatar>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-if="auth.companyName" disabled>{{ auth.companyName }}</el-dropdown-item>
+                <el-dropdown-item command="pwd">
+                  <el-icon><Key /></el-icon> 修改密码
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" divided>
+                  <el-icon><SwitchButton /></el-icon> 退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </el-header>
 
@@ -65,15 +88,21 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { UserFilled, Key, SwitchButton, Document, Van, DataLine, OfficeBuilding, School } from '@element-plus/icons-vue'
+import { UserFilled, Key, SwitchButton, Document, Van, DataLine, OfficeBuilding, School, Menu } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
 import { adminLogout, getMe } from '@/api/auth'
 import ChangePasswordDialog from '@/components/ChangePasswordDialog.vue'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const showPwd = ref(false)
+// 窄屏抽屉：<1200 时侧栏离场为抽屉，由汉堡按钮/遮罩/路由切换控制开合
+const asideOpen = ref(false)
+// 手机端（<768）把顶栏右侧的公司名/用户名/改密/退出收进头像下拉，避免顶栏拥挤
+const { isPhone } = useBreakpoint()
+const avatarText = computed(() => (auth.username || '管理员').charAt(0))
 
 // 页面刷新后恢复身份：令牌在 httpOnly Cookie 中，JS 读不到 claims，
 // 用 /api/admin/me 取回「平台超管 / 企业管理员」与当前企业（服务端为准，覆盖本地缓存）。
@@ -139,6 +168,8 @@ const menuGroups = computed(() =>
 watch(
   () => route.path,
   () => {
+    // 窄屏进入新页面时收起抽屉（选完菜单即关）
+    asideOpen.value = false
     nextTick(() => {
       const el = document.querySelector('.admin-menu .is-active')
       if (el && typeof el.scrollIntoView === 'function') {
@@ -168,6 +199,12 @@ async function onLogout() {
   }
   auth.logout()
   router.replace('/login')
+}
+
+// 手机端头像下拉指令：修改密码 / 退出（与桌面端两个按钮行为一致）
+function onCommand(cmd: string) {
+  if (cmd === 'pwd') showPwd.value = true
+  else if (cmd === 'logout') onLogout()
 }
 </script>
 
@@ -264,8 +301,62 @@ async function onLogout() {
   padding-right: 12px;
   border-right: 1px solid #ebeef5;
 }
+/* 手机端头像下拉触发器 */
+.header-avatar-trigger {
+  display: inline-flex;
+  cursor: pointer;
+  outline: none;
+}
+.header-avatar {
+  background: #409eff;
+  user-select: none;
+}
 .admin-main {
   background: #f5f7fa;
   padding: 16px;
+}
+
+/* ===== 窄屏响应式：<1200 侧栏变抽屉 =====
+   桌面（>=1200）保持原 220px 固定侧栏不变；窄屏下侧栏脱离文档流改为
+   左滑抽屉，由 .open 控制显隐，遮罩 .aside-backdrop 覆盖内容区。 */
+.menu-toggle {
+  display: none;
+  margin-right: 8px;
+}
+@media (max-width: 1199px) {
+  .menu-toggle {
+    display: inline-flex;
+  }
+  .admin-aside {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1001;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.18);
+  }
+  .admin-aside.open {
+    transform: translateX(0);
+  }
+  .aside-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease;
+  }
+  .aside-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+@media (min-width: 1200px) {
+  .aside-backdrop {
+    display: none;
+  }
 }
 </style>
