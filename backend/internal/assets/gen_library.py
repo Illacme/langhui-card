@@ -92,6 +92,46 @@ ICONS = [
     ("piggy-bank", "投资理财", "cat", ["投资", "理财", "财富"]),
     ("hammer", "工程施工", "cat", ["施工", "工程", "建造"]),
     ("mountain-snow", "山地景区", "cat", ["山地", "景区", "雪峰"]),
+    # ── 更多行业（覆盖细分领域企业）──
+    ("wheat", "粮油农产", "cat", ["粮油", "农产", "种植"]),
+    ("tractor", "农机农业", "cat", ["农机", "农业", "耕作"]),
+    ("apple", "生鲜果品", "cat", ["生鲜", "果品", "果蔬"]),
+    ("fish-symbol", "水产海鲜", "cat", ["水产", "海鲜", "渔业"]),
+    ("milk", "乳品饮料", "cat", ["乳品", "饮料", "奶制品"]),
+    ("croissant", "烘焙面点", "cat", ["烘焙", "面点", "食品"]),
+    ("utensils-crossed", "团餐宴席", "cat", ["团餐", "宴席", "食堂"]),
+    ("dog", "宠物服务", "cat", ["宠物", "兽医", "萌宠"]),
+    ("baby", "母婴护理", "cat", ["母婴", "育儿", "护理"]),
+    ("dna", "生物医药", "cat", ["生物", "医药", "基因"]),
+    ("brain", "智库咨询", "cat", ["智库", "咨询", "策略"]),
+    ("sofa", "家居软装", "cat", ["家居", "软装", "家具"]),
+    ("bed-double", "酒店客房", "cat", ["客房", "住宿", "民宿"]),
+    ("tent", "户外露营", "cat", ["户外", "露营", "拓展"]),
+    ("luggage", "旅游出行", "cat", ["旅游", "出行", "度假"]),
+    ("sailboat", "游艇帆船", "cat", ["游艇", "帆船", "水上"]),
+    ("fuel", "油品石化", "cat", ["油品", "石化", "加油站"]),
+    ("radiation", "核电放射", "cat", ["核电", "放射", "特检"]),
+    ("brick-wall", "建材砌筑", "cat", ["建材", "砌筑", "墙体"]),
+    ("traffic-cone", "市政工程", "cat", ["市政", "道路", "养护"]),
+    ("drill", "钻井机加", "cat", ["钻井", "机加", "钻孔"]),
+    ("pickaxe", "矿山采掘", "cat", ["矿山", "采掘", "矿业"]),
+    ("anvil", "冶金锻造", "cat", ["冶金", "锻造", "铸造"]),
+    ("radar", "探测雷达", "cat", ["雷达", "探测", "传感"]),
+    ("satellite-dish", "卫星通信", "cat", ["卫星", "通信", "天线"]),
+    ("radio-tower", "通信铁塔", "cat", ["铁塔", "基站", "信号"]),
+    ("cpu", "芯片半导体", "cat", ["芯片", "半导体", "电子"]),
+    ("bot", "机器人智能", "cat", ["机器人", "智能", "AI"]),
+    ("gavel", "法律律所", "cat", ["法律", "律所", "法务"]),
+    ("newspaper", "新闻出版", "cat", ["新闻", "出版", "报刊"]),
+    ("mic", "会议主持", "cat", ["会议", "主持", "会务"]),
+    ("radio", "广播电台", "cat", ["广播", "电台", "音频"]),
+    ("tv", "电视媒体", "cat", ["电视", "媒体", "栏目"]),
+    ("gamepad-2", "游戏电竞", "cat", ["游戏", "电竞", "娱乐"]),
+    ("watch", "钟表珠宝", "cat", ["钟表", "珠宝", "腕表"]),
+    ("fence", "围栏护栏", "cat", ["围栏", "护栏", "隔离"]),
+    ("fire-extinguisher", "消防设备", "cat", ["消防", "设备", "灭火"]),
+    ("heart-handshake", "公益养老", "cat", ["公益", "养老", "助残"]),
+    ("trash-2", "环卫清运", "cat", ["环卫", "清运", "保洁"]),
     # ── 业务服务 ──
     ("arrow-up-down", "电梯", "svc", ["电梯", "垂直交通", "elevator"]),
     ("activity", "运行平稳", "svc", ["运行", "平稳", "activity"]),
@@ -131,6 +171,33 @@ ICONS = [
     ("receipt", "票据凭证", "svc", ["票据", "凭证", "回单"]),
     ("hourglass", "时效承诺", "svc", ["时效", "承诺", "工期"]),
     ("megaphone", "品牌传播", "svc", ["品牌", "传播", "推广"]),
+    # ── 更多服务场景 ──
+    ("package-plus", "送货上门", "svc", ["送货", "上门", "配送安装"]),
+    ("container", "集装箱运输", "svc", ["集装箱", "海运", "货运"]),
+    ("forklift", "装卸搬运", "svc", ["装卸", "搬运", "叉车"]),
+    ("boxes", "仓储托管", "svc", ["仓储", "托管", "库存"]),
+    ("refrigerator", "冷链配送", "svc", ["冷链", "冷藏", "保鲜"]),
+    ("spray-can", "喷涂工艺", "svc", ["喷涂", "工艺", "表面处理"]),
+    ("plug-zap", "电气安装", "svc", ["电气", "安装", "布线"]),
+    ("battery-charging", "充电服务", "svc", ["充电", "补能", "充电桩"]),
+    ("battery-full", "储能备电", "svc", ["储能", "备电", "电源"]),
+    ("cable", "线缆敷设", "svc", ["线缆", "敷设", "桥架"]),
+    ("power", "配电工程", "svc", ["配电", "供电", "电力"]),
+    ("gauge", "仪表校准", "svc", ["仪表", "校准", "计量"]),
+    ("scan-line", "扫码溯源", "svc", ["扫码", "溯源", "防伪"]),
+    ("barcode", "条码标识", "svc", ["条码", "标识", "编码"]),
+    ("scan", "扫描查验", "svc", ["扫描", "查验", "识别"]),
+    ("cctv", "视频监控", "svc", ["视频", "监控", "摄像头"]),
+    ("shield-alert", "风险预警", "svc", ["风险", "预警", "防控"]),
+    ("file-search", "尽职调查", "svc", ["尽调", "调查", "核查"]),
+    ("file-check", "合规报批", "svc", ["合规", "报批", "审批"]),
+    ("scroll-text", "合同文书", "svc", ["合同", "文书", "签约"]),
+    ("party-popper", "活动策划", "svc", ["活动", "策划", "庆典"]),
+    ("mail-check", "邮件确认", "svc", ["邮件", "确认", "通知"]),
+    ("list-checks", "清单核对", "svc", ["清单", "核对", "逐项"]),
+    ("square-check-big", "验收通过", "svc", ["验收", "通过", "确认"]),
+    ("cloud-upload", "云端备份", "svc", ["云端", "备份", "同步"]),
+    ("languages", "多语翻译", "svc", ["翻译", "多语", "本地化"]),
     # ── 通用 ──
     ("image", "图片", "misc", ["图片", "照片", "image"]),
     ("users", "人群团队", "misc", ["团队", "人群", "用户"]),
@@ -158,6 +225,25 @@ ICONS = [
     ("gift", "礼遇回馈", "misc", ["礼遇", "回馈", "福利"]),
     ("box", "产品包装", "misc", ["产品", "包装", "货品"]),
     ("tag", "标签分类", "misc", ["标签", "分类", "标记"]),
+    # ── 更多通用 ──
+    ("history", "发展历程", "misc", ["历程", "发展", "沿革"]),
+    ("infinity", "永续合作", "misc", ["永续", "长期", "合作"]),
+    ("layers", "体系架构", "misc", ["体系", "架构", "层级"]),
+    ("component", "模块单元", "misc", ["模块", "单元", "组件"]),
+    ("terminal", "技术研发", "misc", ["研发", "技术", "工程"]),
+    ("binary", "数据算法", "misc", ["数据", "算法", "算力"]),
+    ("hard-drive", "数据存储", "misc", ["存储", "数据", "备份"]),
+    ("milestone", "里程碑", "misc", ["里程碑", "节点", "进展"]),
+    ("book-marked", "知识文档", "misc", ["知识", "文档", "资料"]),
+    ("contact", "客户名录", "misc", ["客户", "名录", "通讯录"]),
+    ("id-card", "证件资质", "misc", ["证件", "资质", "证照"]),
+    ("book-user", "讲师培训", "misc", ["讲师", "培训", "授课"]),
+    ("sparkles", "精工品质", "misc", ["精工", "品质", "匠心"]),
+    ("rocket", "快速上线", "misc", ["上线", "提速", "交付"]),
+    ("blend", "融合集成", "misc", ["融合", "集成", "整合"]),
+    ("search", "搜索查询", "misc", ["搜索", "查询", "检索"]),
+    ("cloud", "云托管", "misc", ["云", "托管", "SaaS"]),
+    ("link", "资源对接", "misc", ["对接", "资源", "链接"]),
 ]
 
 # 封面：渐变 + 几何 motif，无文字。
@@ -198,6 +284,24 @@ COVERS = [
     ("cover-blocks-mint", "薄荷矩阵", ((15, 118, 110), (94, 234, 212)), "blocks"),
     ("cover-arcs-rose", "玫红弧光", ((136, 19, 55), (244, 114, 182)), "arcs"),
     ("cover-goldline-emerald", "翡翠金绶", ((6, 78, 59), (16, 185, 129)), "goldline"),
+    # ── 新 motif（网阵/雷达/波纹/山形/光球/阶梯/弧线/碎点）──
+    ("cover-meshnodes", "网阵", ((30, 58, 138), (2, 132, 199)), "meshnodes"),
+    ("cover-radar", "雷达", ((6, 95, 108), (20, 184, 166)), "radar"),
+    ("cover-ripple", "波纹环", ((12, 74, 110), (56, 189, 248)), "ripple"),
+    ("cover-chevrons", "山形", ((234, 88, 12), (251, 146, 60)), "chevrons"),
+    ("cover-orbs", "光球", ((157, 23, 77), (244, 114, 182)), "orbs"),
+    ("cover-stairs", "阶梯", ((30, 41, 59), (100, 116, 139)), "stairs"),
+    ("cover-arclines", "弧线束", ((76, 29, 149), (167, 139, 250)), "arclines"),
+    ("cover-confetti", "碎点", ((190, 24, 93), (251, 113, 133)), "confetti"),
+    # ── 新 motif 的配色变体 ──
+    ("cover-meshnodes-teal", "青网阵", ((6, 95, 108), (45, 212, 191)), "meshnodes"),
+    ("cover-radar-slate", "石墨雷达", ((39, 39, 42), (113, 113, 122)), "radar"),
+    ("cover-ripple-violet", "紫波纹", ((49, 46, 129), (129, 140, 248)), "ripple"),
+    ("cover-chevrons-emerald", "翡翠山形", ((6, 78, 59), (16, 185, 129)), "chevrons"),
+    ("cover-orbs-amber", "琥珀光球", ((146, 64, 14), (251, 191, 36)), "orbs"),
+    ("cover-stairs-indigo", "靛蓝阶梯", ((30, 27, 75), (99, 102, 241)), "stairs"),
+    ("cover-arclines-rose", "玫红弧线", ((136, 19, 55), (251, 113, 133)), "arclines"),
+    ("cover-confetti-mint", "薄荷碎点", ((15, 118, 110), (153, 246, 228)), "confetti"),
 ]
 
 # LOGO：渐变圆角方块 + 白色几何标记。
@@ -231,6 +335,22 @@ LOGOS = [
     ("logo-hex-lime", "六边 · 青柠", ((163, 230, 53), (77, 148, 60)), "hex"),
     ("logo-orbit-violet", "环轨 · 紫", ((167, 139, 250), (109, 40, 217)), "orbit"),
     ("logo-tower-slate", "塔楼 · 石板", ((148, 163, 184), (51, 65, 85)), "tower"),
+    # ── 新 mark（船锚/拱桥/罗盘/尖括号/三环/九宫格）──
+    ("logo-anchor", "船锚", ((14, 116, 144), (8, 47, 73)), "anchor"),
+    ("logo-bridge", "拱桥", ((71, 85, 105), (30, 41, 59)), "bridge"),
+    ("logo-compass", "罗盘", ((217, 119, 6), (161, 98, 7)), "compass"),
+    ("logo-brackets", "尖括号", ((2, 132, 199), (12, 74, 110)), "brackets"),
+    ("logo-circles", "三环", ((20, 184, 166), (13, 148, 136)), "circles"),
+    ("logo-grid", "九宫格", ((99, 102, 241), (67, 56, 202)), "grid"),
+    # ── 更多配色变体 ──
+    ("logo-wave-amber", "波浪 · 琥珀", ((251, 191, 36), (217, 119, 6)), "wave"),
+    ("logo-flame-royal", "火焰 · 宝蓝", ((29, 78, 216), (30, 58, 138)), "flame"),
+    ("logo-leaf-teal", "叶片 · 青碧", ((13, 148, 136), (6, 95, 108)), "leaf"),
+    ("logo-crown-violet", "冠冕 · 紫", ((139, 92, 246), (91, 33, 182)), "crown"),
+    ("logo-spiral-ocean", "螺旋 · 海蓝", ((2, 132, 199), (8, 47, 73)), "spiral"),
+    ("logo-diamond-rose", "菱钻 · 玫红", ((244, 114, 182), (190, 24, 93)), "diamond"),
+    ("logo-cube-graphite", "立方 · 石墨", ((113, 113, 122), (39, 39, 42)), "cube"),
+    ("logo-peak-bronze", "山峰 · 古铜", ((180, 83, 9), (120, 53, 15)), "peak"),
 ]
 
 COVER_W, COVER_H = 960, 504
@@ -275,6 +395,26 @@ BACKGROUNDS = [
     ("bg-royal", "皇家蓝", ((12, 35, 128), (29, 78, 216)), "glow", ["皇家蓝", "深邃", "大气"]),
     ("bg-charcoal", "炭黑", ((24, 24, 27), (63, 63, 70)), "grid", ["炭黑", "沉稳", "中性"]),
     ("bg-amber", "琥珀", ((254, 243, 199), (217, 119, 6)), "diagonal", ["琥珀", "暖阳", "浅色"]),
+    # ── 新 motif（行业调性 + 更多浅色）──
+    ("bg-marble", "大理石", ((60, 60, 67), (24, 24, 27)), "marble", ["大理石", "石材", "建材"]),
+    ("bg-silk", "丝绸", ((30, 58, 138), (76, 29, 149)), "silk", ["丝绸", "柔顺", "服装"]),
+    ("bg-hexcell", "蜂巢", ((15, 23, 42), (51, 65, 85)), "hexcell", ["蜂巢", "工业", "材料"]),
+    ("bg-dotmatrix", "点阵", ((8, 47, 73), (2, 132, 199)), "dotmatrix", ["点阵", "数据", "科技"]),
+    ("bg-sunburst", "光芒", ((120, 53, 15), (217, 119, 6)), "sunburst", ["光芒", "能源", "光伏"]),
+    ("bg-topo", "等高线", ((6, 78, 59), (16, 185, 129)), "topo", ["等高线", "测绘", "工程"]),
+    ("bg-bloom", "柔光", ((76, 29, 149), (147, 51, 234)), "bloom", ["柔光", "美业", "婚庆"]),
+    ("bg-skyline-day", "晨曦", ((186, 230, 253), (125, 211, 252)), "skyline-day", ["晨曦", "地产", "浅色"]),
+    ("bg-ripple", "水波环", ((8, 51, 68), (14, 116, 144)), "ripple", ["水波", "水务", "环保"]),
+    ("bg-arcstripe", "弧纹", ((30, 27, 75), (67, 56, 202)), "arcstripe", ["弧纹", "金融", "稳重"]),
+    ("bg-sparkdust", "星尘", ((15, 23, 42), (30, 64, 175)), "sparkdust", ["星尘", "互联网", "科技"]),
+    ("bg-weave", "织纹", ((245, 245, 244), (214, 211, 209)), "weave", ["织纹", "纺织", "浅色"]),
+    # ── 新 motif 的配色变体 ──
+    ("bg-marble-white", "白云石", ((228, 228, 231), (161, 161, 170)), "marble", ["白云石", "浅色", "素雅"]),
+    ("bg-hexcell-copper", "铜蜂巢", ((66, 32, 6), (146, 64, 14)), "hexcell", ["铜", "金属", "暖调"]),
+    ("bg-silk-rose", "玫瑰丝绸", ((131, 24, 67), (190, 24, 93)), "silk", ["玫瑰", "美业", "浪漫"]),
+    ("bg-dotmatrix-royal", "宝蓝点阵", ((12, 35, 128), (29, 78, 216)), "dotmatrix", ["宝蓝", "深邃", "大气"]),
+    ("bg-bloom-lavender", "薰衣草", ((237, 233, 254), (196, 181, 253)), "bloom", ["薰衣草", "浅色", "柔和"]),
+    ("bg-sunrise", "日出", ((127, 29, 29), (251, 146, 60)), "sunburst", ["日出", "暖调", "希望"]),
 ]
 
 # 头像：员工暂无照片时的默认头像（渐变圆角方块 + 白色人形剪影）
@@ -299,6 +439,10 @@ AVATARS = [
     ("avatar-18", "默认头像 · 靛紫", ((129, 140, 248), (67, 56, 202))),
     ("avatar-19", "默认头像 · 橄榄", ((132, 204, 22), (63, 98, 18))),
     ("avatar-20", "默认头像 · 酒红", ((153, 27, 27), (127, 29, 29))),
+    ("avatar-21", "默认头像 · 玫瑰", ((251, 113, 133), (225, 29, 72))),
+    ("avatar-22", "默认头像 · 天青", ((56, 189, 248), (2, 132, 199))),
+    ("avatar-23", "默认头像 · 咖啡", ((146, 64, 14), (87, 83, 78))),
+    ("avatar-24", "默认头像 · 墨绿", ((6, 95, 108), (6, 78, 59))),
 ]
 
 
@@ -769,6 +913,121 @@ def motif_topo(img):
     img.alpha_composite(ov)
 
 
+def motif_meshnodes(img):
+    """网阵：斜向网格 + 交点节点（平台/网络/互联）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    step = 56
+    for i in range(-h // step, w // step + h // step + 1):
+        x = i * step
+        d.line([(x, 0), (x + h, h)], fill=(255, 255, 255, 38), width=2)
+        d.line([(x, h), (x + h, 0)], fill=(255, 255, 255, 38), width=2)
+    random.seed(211)
+    for _ in range(46):
+        px, py = random.randint(0, w), random.randint(0, h)
+        r = random.choice([3, 4, 5])
+        d.ellipse([px - r, py - r, px + r, py + r],
+                  fill=(255, 255, 255, random.randint(120, 220)))
+    img.alpha_composite(ov)
+
+
+def motif_radar(img):
+    """雷达：同心弧 + 扫描线（探测/数据/监测）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy = w * 0.5, h * 0.52
+    rmax = min(w, h) * 0.62
+    for i in range(1, 6):
+        r = rmax * i / 5
+        d.ellipse([cx - r, cy - r, cx + r, cy + r],
+                  outline=(255, 255, 255, 64 - i * 6), width=3)
+    d.line([(cx - rmax, cy), (cx + rmax, cy)], fill=(255, 255, 255, 50), width=2)
+    d.line([(cx, cy - rmax), (cx, cy + rmax)], fill=(255, 255, 255, 50), width=2)
+    ex, ey = cx + rmax * 0.72, cy - rmax * 0.52
+    d.line([(cx, cy), (ex, ey)], fill=(255, 255, 255, 120), width=5)
+    d.ellipse([ex - 9, ey - 9, ex + 9, ey + 9], fill=(255, 255, 255, 210))
+    img.alpha_composite(ov)
+
+
+def motif_ripple(img):
+    """波纹环：多层同心扁环（水务/传播/声学）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy, base = w * 0.5, h * 0.46, min(w, h) * 0.08
+    for i in range(9):
+        a = 150 - i * 14
+        if a <= 0:
+            break
+        r = base + i * min(w, h) * 0.075
+        d.ellipse([cx - r, cy - r * 0.62, cx + r, cy + r * 0.62],
+                  outline=(255, 255, 255, a), width=4)
+    img.alpha_composite(ov)
+
+
+def motif_chevrons(img):
+    """山形箭头：锯齿折线堆叠（进阶/增长/阶段）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    for i in range(5):
+        y = h * (0.22 + i * 0.15)
+        amp = h * 0.10
+        pts = [(w * k / 7, y + (amp if k % 2 else 0)) for k in range(8)]
+        d.line(pts, fill=(255, 255, 255, 140 - i * 20), width=6, joint="curve")
+    img.alpha_composite(ov)
+
+
+def motif_orbs(img):
+    """光球：大圆柔光斑（美业/教育/柔和调性）。"""
+    w, h = img.size
+    random.seed(307)
+    for _ in range(7):
+        r = random.randint(int(w * 0.10), int(w * 0.26))
+        cx, cy = random.randint(0, w), random.randint(0, h)
+        img.alpha_composite(_radial_glow(img.size, (cx, cy), r,
+                                         (255, 255, 255), random.randint(30, 70)))
+
+
+def motif_stairs(img):
+    """阶梯：递进矩形（成长/阶段/里程碑）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    for i in range(6):
+        bh = h * (0.16 + i * 0.13)
+        x = w * 0.10 + i * (w * 0.13)
+        y = h - bh - h * 0.10
+        d.rectangle([x, y, x + w * 0.112, h - h * 0.10],
+                    fill=(255, 255, 255, 40 + i * 16))
+    img.alpha_composite(ov)
+
+
+def motif_arclines(img):
+    """弧线束：平行细弧（秩序/设计/精密）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy = w * 0.5, h * 0.52
+    for i in range(14):
+        r = min(w, h) * (0.28 + i * 0.075)
+        d.arc([cx - r, cy - r, cx + r, cy + r], start=200, end=340,
+              fill=(255, 255, 255, 120 - i * 7), width=3)
+    img.alpha_composite(ov)
+
+
+def motif_confetti(img):
+    """碎点：随机小方块与圆点（活动/庆典/零售）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(419)
+    for _ in range(90):
+        x, y = random.randint(0, w), random.randint(0, h)
+        s = random.randint(4, 16)
+        a = random.randint(50, 170)
+        if random.random() < 0.5:
+            d.rectangle([x, y, x + s, y + s], fill=(255, 255, 255, a))
+        else:
+            d.ellipse([x, y, x + s, y + s], fill=(255, 255, 255, a))
+    img.alpha_composite(ov)
+
+
 COVER_MOTIFS = {
     "skyline": motif_skyline, "dots": motif_dots, "beams": motif_beams,
     "arcs": motif_arcs, "blocks": motif_blocks, "shield": motif_shield,
@@ -778,7 +1037,10 @@ COVER_MOTIFS = {
     "minimal": motif_minimal, "night": motif_night, "circuit": motif_circuit,
     "rings": motif_rings, "stripes": motif_stripes, "bubbles": motif_bubbles,
     "cityline": motif_cityline, "veins": motif_veins, "prism": motif_prism,
-    "topo": motif_topo,
+    "topo": motif_topo, "meshnodes": motif_meshnodes, "radar": motif_radar,
+    "ripple": motif_ripple, "chevrons": motif_chevrons, "orbs": motif_orbs,
+    "stairs": motif_stairs, "arclines": motif_arclines,
+    "confetti": motif_confetti,
 }
 
 
@@ -1092,6 +1354,96 @@ def mark_spiral(size):
     return lay
 
 
+def mark_anchor(size):
+    """船锚：航运/港航/海事。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, s = size / 2, size / 2, size * 0.30
+    lw = max(2, int(size * 0.05))
+    d.line([(cx, cy - s * 0.80), (cx, cy + s * 0.78)], fill=(255, 255, 255, 255), width=lw)
+    d.line([(cx - s * 0.55, cy - s * 0.42), (cx + s * 0.55, cy - s * 0.42)],
+           fill=(255, 255, 255, 255), width=lw)
+    d.arc([cx - s * 0.85, cy + s * 0.02, cx + s * 0.85, cy + s * 1.32],
+          start=0, end=180, fill=(255, 255, 255, 255), width=lw)
+    d.ellipse([cx - s * 0.17, cy - s * 1.12, cx + s * 0.17, cy - s * 0.70],
+              outline=(255, 255, 255, 255), width=lw)
+    return lay
+
+
+def mark_bridge(size):
+    """拱桥：基建/工程/联通。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, s = size / 2, size / 2, size * 0.32
+    lw = max(2, int(size * 0.055))
+    d.line([(cx - s * 1.12, cy + s * 0.32), (cx + s * 1.12, cy + s * 0.32)],
+           fill=(255, 255, 255, 255), width=lw)
+    d.arc([cx - s * 0.85, cy - s * 0.72, cx + s * 0.85, cy + s * 0.96],
+          start=180, end=360, fill=(255, 255, 255, 255), width=lw)
+    for sx in (-0.85, 0.85):
+        d.line([(cx + s * sx, cy + s * 0.32), (cx + s * sx, cy + s * 0.96)],
+               fill=(255, 255, 255, 255), width=lw)
+    return lay
+
+
+def mark_compass(size):
+    """罗盘：导航/咨询/方向。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, r = size / 2, size / 2, size * 0.34
+    d.ellipse([cx - r, cy - r, cx + r, cy + r],
+              outline=(255, 255, 255, 255), width=max(2, int(size * 0.045)))
+    p = size * 0.17
+    d.polygon([(cx, cy - p), (cx + p * 0.5, cy), (cx, cy + p), (cx - p * 0.5, cy)],
+              fill=(255, 255, 255, 255))
+    return lay
+
+
+def mark_brackets(size):
+    """尖括号：软件/互联网/研发。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, s = size / 2, size / 2, size * 0.30
+    lw = max(2, int(size * 0.055))
+    d.line([(cx - s * 0.30, cy - s * 0.62), (cx - s * 1.05, cy), (cx - s * 0.30, cy + s * 0.62)],
+           fill=(255, 255, 255, 255), width=lw, joint="curve")
+    d.line([(cx + s * 0.30, cy - s * 0.62), (cx + s * 1.05, cy), (cx + s * 0.30, cy + s * 0.62)],
+           fill=(255, 255, 255, 255), width=lw, joint="curve")
+    d.line([(cx - s * 0.18, cy + s * 0.55), (cx + s * 0.18, cy - s * 0.55)],
+           fill=(255, 255, 255, 255), width=lw)
+    return lay
+
+
+def mark_circles(size):
+    """三圆环：协作/团队/生态。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    cx, cy, r = size / 2, size / 2, size * 0.26
+    off = r * 0.82
+    lw = max(2, int(size * 0.05))
+    for dx, dy in ((-off, off * 0.5), (off, off * 0.5), (0, -off * 0.85)):
+        d.ellipse([cx + dx - r, cy + dy - r, cx + dx + r, cy + dy + r],
+                  outline=(255, 255, 255, 255), width=lw)
+    return lay
+
+
+def mark_grid(size):
+    """九宫格：平台/系统/矩阵。"""
+    lay = _mark_layer(size)
+    d = ImageDraw.Draw(lay)
+    s = size * 0.30
+    cx, cy = size / 2, size / 2
+    cell, gap = s * 0.58, s * 0.10
+    origin = cell * 1.5 + gap
+    for r in range(3):
+        for c in range(3):
+            x0 = cx - origin + c * (cell + gap)
+            y0 = cy - origin + r * (cell + gap)
+            d.rounded_rectangle([x0, y0, x0 + cell, y0 + cell],
+                                radius=cell * 0.22, fill=(255, 255, 255, 255))
+    return lay
+
+
 def mark_person(size):
     """白色人形剪影（头 + 肩），用于默认头像。"""
     lay = _mark_layer(size)
@@ -1119,6 +1471,8 @@ LOGO_MARKS = {
     "ringstar": mark_ringstar, "peak": mark_peak, "flow": mark_flow,
     "link": mark_link, "cube": mark_cube, "wave": mark_wave, "flame": mark_flame,
     "leaf": mark_leaf, "drop": mark_drop, "crown": mark_crown, "spiral": mark_spiral,
+    "anchor": mark_anchor, "bridge": mark_bridge, "compass": mark_compass,
+    "brackets": mark_brackets, "circles": mark_circles, "grid": mark_grid,
 }
 
 
@@ -1537,6 +1891,204 @@ def bg_linen(img):
                                      (255, 251, 235), 60))
 
 
+def bg_marble(img):
+    """大理石：斜向纹脉（建材/家居/高端）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(173)
+    for _ in range(26):
+        x, y = random.randint(-w // 4, w), random.randint(-h // 4, h)
+        pts = [(x, y)]
+        for _ in range(6):
+            x += random.randint(-int(w * 0.22), int(w * 0.22))
+            y += random.randint(int(h * 0.04), int(h * 0.16))
+            pts.append((x, y))
+        d.line(pts, fill=(255, 255, 255, random.randint(18, 46)),
+               width=random.randint(1, 6), joint="curve")
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.22), w * 0.95,
+                                     (255, 255, 255), 30))
+
+
+def bg_silk(img):
+    """丝绸：柔和 S 形波带（服装/珠宝/美业）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    for i in range(9):
+        base = h * (0.10 + i * 0.10)
+        amp = h * 0.055
+        pts = [(w * k / 24, base + math.sin(k / 24 * math.pi * 2 + i * 0.5) * amp)
+               for k in range(25)]
+        d.line(pts, fill=(255, 255, 255, 30 - i),
+               width=max(1, int(h * 0.010)), joint="curve")
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.28), w * 0.9,
+                                     (255, 255, 255), 40))
+
+
+def bg_hexcell(img):
+    """蜂巢：六边形网格（制造/工业/材料）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    r = w * 0.115
+    dx, dy = r * 1.5, r * math.sqrt(3)
+    row, y = 0, -dy
+    while y < h + dy:
+        x = -dx + (0.75 * r if row % 2 else 0)
+        while x < w + dx:
+            pts = [(x + r * math.cos(math.pi / 3 * k), y + r * math.sin(math.pi / 3 * k))
+                   for k in range(6)]
+            d.line(pts + [pts[0]], fill=(255, 255, 255, 34), width=2)
+            x += dx
+        y += dy
+        row += 1
+    img.alpha_composite(ov)
+
+
+def bg_dotmatrix(img):
+    """点阵：规则圆点阵列（数据/科技/互联网）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    step, row = 42, 0
+    for y in range(0, h + step, step):
+        ox = step / 2 if row % 2 else 0
+        a = 46 if row % 2 else 30
+        for x in range(0, w + step, step):
+            d.ellipse([x + ox - 2.5, y - 2.5, x + ox + 2.5, y + 2.5],
+                      fill=(255, 255, 255, a))
+        row += 1
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.24), w * 0.95,
+                                     (255, 255, 255), 34))
+
+
+def bg_sunburst(img):
+    """光芒：放射光束（能源/光伏/照明）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy, rmax = w * 0.5, h * 0.24, w * 1.5
+    for i in range(22):
+        ang = i * (2 * math.pi / 22)
+        d.line([(cx, cy), (cx + rmax * math.cos(ang), cy + rmax * math.sin(ang))],
+               fill=(255, 255, 255, 26), width=int(w * 0.030))
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (cx, cy), w * 0.85,
+                                     (255, 236, 170), 80))
+
+
+def bg_topo(img):
+    """等高线：层叠曲线（测绘/工程/地质）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    for i in range(16):
+        base = h * (0.06 + i * 0.062)
+        amp = h * (0.03 + i * 0.006)
+        pts = []
+        for k in range(31):
+            x = w * k / 30
+            y = (base + math.sin(k / 30 * math.pi * 2 + i * 0.42) * amp
+                 + math.sin(k / 30 * math.pi * 4 + i * 0.7) * amp * 0.35)
+            pts.append((x, y))
+        d.line(pts, fill=(255, 255, 255, 62 - i * 2), width=2, joint="curve")
+    img.alpha_composite(ov)
+
+
+def bg_bloom(img):
+    """柔光绽放：多团柔光，带轻微色偏（美业/婚庆/教育）。"""
+    w, h = img.size
+    random.seed(179)
+    tints = [(196, 181, 253), (249, 168, 212), (165, 180, 252),
+             (253, 186, 116), (147, 197, 253)]
+    for i in range(6):
+        r = random.randint(int(w * 0.26), int(w * 0.44))
+        cx = random.randint(int(w * 0.12), int(w * 0.88))
+        cy = random.randint(int(h * 0.06), int(h * 0.88))
+        img.alpha_composite(_radial_glow(img.size, (cx, cy), r, tints[i % 5],
+                                         random.randint(90, 130)))
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.30), w * 0.75,
+                                     (255, 255, 255), 36))
+
+
+def bg_skyline_day(img):
+    """晨曦天际线（浅色）：底部建筑剪影 + 低垂暖光（地产/建筑）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(181)
+    x = -20
+    while x < w + 20:
+        bw = random.randint(60, 130)
+        bh = random.randint(int(h * 0.10), int(h * 0.26))
+        top = h - bh
+        d.rectangle([x, top, x + bw, h], fill=(71, 85, 105, 105))
+        for wy in range(top + 18, h - 16, 30):
+            for wx in range(x + 12, x + bw - 12, 26):
+                if random.random() < 0.35:
+                    d.rectangle([wx, wy, wx + 10, wy + 13],
+                                fill=(255, 255, 255, random.randint(70, 150)))
+        x += bw + random.randint(8, 26)
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.16), w * 1.0,
+                                     (255, 214, 170), 72))
+
+
+def bg_ripple(img):
+    """水波环：同心扁环（水务/环保/声学）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy = w * 0.5, h * 0.36
+    for i in range(12):
+        a = 66 - i * 4
+        if a <= 0:
+            break
+        r = w * (0.10 + i * 0.105)
+        d.ellipse([cx - r, cy - r * 0.72, cx + r, cy + r * 0.72],
+                  outline=(255, 255, 255, a), width=3)
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (cx, cy), w * 0.8,
+                                     (190, 242, 255), 40))
+
+
+def bg_arcstripe(img):
+    """弧形条纹：宽弧带（金融/咨询/稳重）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    cx, cy = w * 0.5, h * 0.18
+    for i in range(7):
+        r = w * (0.55 + i * 0.20)
+        d.arc([cx - r, cy - r, cx + r, cy + r], start=20, end=160,
+              fill=(255, 255, 255, 40 - i * 4), width=int(h * 0.075))
+    img.alpha_composite(ov)
+
+
+def bg_sparkdust(img):
+    """星尘：细密亮点 + 中心柔光（科技/互联网）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    random.seed(191)
+    for _ in range(220):
+        x, y = random.randint(0, w), random.randint(0, h)
+        s = random.choice([1, 1, 2, 2, 3])
+        d.ellipse([x - s, y - s, x + s, y + s],
+                  fill=(255, 255, 255, random.randint(40, 190)))
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.22), w * 0.9,
+                                     (199, 210, 254), 46))
+
+
+def bg_weave(img):
+    """织纹（浅色）：经纬交错细线（纺织/服装/手作）。"""
+    ov, d = overlay(img)
+    w, h = img.size
+    step = 26
+    for x in range(0, w + step, step):
+        d.line([(x, 0), (x, h)], fill=(120, 110, 100, 26), width=3)
+    for y in range(0, h + step, step):
+        d.line([(0, y), (w, y)], fill=(120, 110, 100, 20), width=3)
+    img.alpha_composite(ov)
+    img.alpha_composite(_radial_glow(img.size, (w * 0.5, h * 0.20), w * 0.95,
+                                     (255, 255, 255), 42))
+
+
 BG_MOTIFS = {
     "stars": bg_stars, "mountain": bg_mountain, "city": bg_city, "bokeh": bg_bokeh,
     "waves": bg_waves, "grid": bg_grid, "diagonal": bg_diagonal, "glow": bg_glow,
@@ -1544,6 +2096,10 @@ BG_MOTIFS = {
     "canyon": bg_canyon, "forest": bg_forest, "ink": bg_ink, "geo": bg_geo,
     "lines": bg_lines, "nebula": bg_nebula, "noir": bg_noir, "ocean": bg_ocean,
     "pearl": bg_pearl, "ridge": bg_ridge, "tech": bg_tech, "linen": bg_linen,
+    "marble": bg_marble, "silk": bg_silk, "hexcell": bg_hexcell,
+    "dotmatrix": bg_dotmatrix, "sunburst": bg_sunburst, "topo": bg_topo,
+    "bloom": bg_bloom, "skyline-day": bg_skyline_day, "ripple": bg_ripple,
+    "arcstripe": bg_arcstripe, "sparkdust": bg_sparkdust, "weave": bg_weave,
 }
 
 
@@ -1620,7 +2176,7 @@ def main():
         seen[it["id"]] = it["name"]
 
     manifest = {
-        "version": 3,
+        "version": 4,
         "categories": [
             {"key": "icon", "name": "图标"},
             {"key": "cover", "name": "封面"},

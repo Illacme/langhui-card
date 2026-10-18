@@ -32,12 +32,12 @@ func TestAssetLibrary(t *testing.T) {
 	require.Len(t, data["categories"].([]interface{}), 5, "图标/封面/LOGO/头像/背景 五个分类")
 	items := data["items"].([]interface{})
 	total := int(data["total"].(float64))
-	require.GreaterOrEqual(t, total, 200, "素材应覆盖五大类两百项以上")
+	require.GreaterOrEqual(t, total, 340, "素材应覆盖五大类三百项以上")
 	require.EqualValues(t, 1, data["page"])
 	require.EqualValues(t, 24, data["size"], "缺省每页 24 条")
 	require.EqualValues(t, 24, len(items), "第一页按 size 截断")
 	pages := int(data["pages"].(float64))
-	require.GreaterOrEqual(t, pages, 8, "两百项素材应有多页")
+	require.GreaterOrEqual(t, pages, 14, "三百项素材应有多页")
 
 	// 2.1 翻页：第 2 页换一批素材，且不与第 1 页重复
 	_, body = plat.doWithCookie("GET", "/api/admin/assets/library?page=2", nil)
@@ -77,7 +77,7 @@ func TestAssetLibrary(t *testing.T) {
 	bgData := body["data"].(map[string]interface{})
 	bgItems := bgData["items"].([]interface{})
 	bgTotal := int(bgData["total"].(float64))
-	require.GreaterOrEqual(t, bgTotal, 30, "背景分类应覆盖三十款")
+	require.GreaterOrEqual(t, bgTotal, 40, "背景分类应覆盖四十款")
 	require.Less(t, bgTotal, total, "分类过滤后总数应小于全量")
 	for _, it := range bgItems {
 		m := it.(map[string]interface{})
