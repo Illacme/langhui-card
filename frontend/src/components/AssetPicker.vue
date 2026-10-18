@@ -1,7 +1,9 @@
 <template>
   <!-- 常用素材库选择器：点一下即采用并填入（单选），或多选后批量添加。
        素材由后端内嵌（Lucide 图标 + 通用封面/LOGO/头像/背景），采用后与普通上传同构。
-       列表走服务端分页（page/size/type/keyword），素材扩充到百级也不会一次拉全量。 -->
+       列表走服务端分页（page/size/type/style/keyword），素材扩充到百级也不会一次拉全量。
+       两个筛选维度：分类 tab = 用在哪，风格行 = 什么气质（简约清晰/温暖自然/轻奢尊贵/
+       柔美清新/光影流动）。风格行只显示当前条件下有素材的档位，只有一档时整行隐藏。 -->
   <el-dialog
     v-model="visible"
     title="素材库"
@@ -25,6 +27,16 @@
           @input="onKeywordInput"
           @clear="onKeywordInput"
         />
+      </div>
+
+      <div v-if="visibleStyles.length > 1" class="picker-styles">
+        <span class="style-label">风格</span>
+        <el-radio-group v-model="styleKey" size="small" @change="onStyleChange">
+          <el-radio-button label="all">全部</el-radio-button>
+          <el-radio-button v-for="s in visibleStyles" :key="s.key" :label="s.key">
+            {{ s.name }} {{ s.count }}
+          </el-radio-button>
+        </el-radio-group>
       </div>
 
       <div v-loading="loading" class="picker-grid">
@@ -85,6 +97,7 @@ import {
   libraryFileUrl,
   type LibraryCategory,
   type LibraryItem,
+  type StyleCount,
 } from '@/api/assets'
 
 const props = defineProps({
@@ -106,6 +119,10 @@ const loading = ref(false)
 const categories = ref<LibraryCategory[]>([])
 const items = ref<LibraryItem[]>([])
 const tab = ref('all')
+// 视觉调性（第二筛选维度）。styleCounts 由服务端按当前 分类+关键字 回算，
+// 前端只展示 count>0 的调性；只有一档可选时整行隐藏，避免无意义的筛选。
+const styleKey = ref('all')
+const styleCounts = ref<StyleCount[]>([])
 const keyword = ref('')
 const page = ref(1)
 const size = ref(24)
@@ -114,6 +131,8 @@ const pages = ref(0)
 const selected = ref<string[]>([])
 const adoptingId = ref('')
 const batchAdopting = ref(false)
+
+const visibleStyles = computed(() => styleCounts.value.filter((s) => s.count > 0))
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -125,15 +144,23 @@ async function fetchPage() {
       page: page.value,
       size: size.value,
       type: tab.value,
+      style: styleKey.value,
       keyword: keyword.value.trim(),
     })
     if (resp.code === 0 && resp.data) {
       categories.value = resp.data.categories || []
+      styleCounts.value = resp.data.styleCounts || []
       items.value = resp.data.items || []
       total.value = resp.data.total || 0
       page.value = resp.data.page || page.value
       size.value = resp.data.size || size.value
       pages.value = resp.data.pages || 0
+      // 当前调性在新条件下无素材（例如切到图标分类、或搜索命中面很窄）：
+      // 回落「全部」重拉一次，避免停在空白结果页。all 必然可用，不会递归。
+      if (styleKey.value !== 'all' && !visibleStyles.value.some((s) => s.key === styleKey.value)) {
+        styleKey.value = 'all'
+        return fetchPage()
+      }
     }
   } catch {
     // 拦截器已提示
@@ -149,6 +176,7 @@ watch(
   (v) => {
     if (!v) return
     tab.value = props.defaultCategory || 'all'
+    styleKey.value = 'all'
     keyword.value = ''
     page.value = 1
     selected.value = []
@@ -158,6 +186,11 @@ watch(
 )
 
 function onTabChange() {
+  page.value = 1
+  fetchPage()
+}
+
+function onStyleChange() {
   page.value = 1
   fetchPage()
 }
@@ -250,6 +283,18 @@ function onClosed() {
 }
 .picker-search {
   width: 220px;
+}
+.picker-styles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.style-label {
+  font-size: 13px;
+  color: #909399;
+  flex-shrink: 0;
 }
 .picker-grid {
   display: grid;

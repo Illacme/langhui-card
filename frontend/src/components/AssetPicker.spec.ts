@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import { nextTick, defineComponent } from 'vue'
+import { nextTick, defineComponent, provide, inject } from 'vue'
 import AssetPicker from './AssetPicker.vue'
 
 // 素材选择器：mock 掉素材 API（清单 / 采用）与 UI 反馈层；
@@ -31,16 +31,30 @@ const ElDialog = defineComponent({
   emits: ['update:modelValue'],
   template: `<div v-if="modelValue" class="el-dialog"><slot /><slot name="footer" /></div>`,
 })
+// radio-group / radio-button 通过 provide/inject 打通，让点击子按钮能触发
+// group 的 update:modelValue + change——否则 tab / 风格切换在测试里点不动。
 const ElRadioGroup = defineComponent({
   name: 'ElRadioGroup',
   props: ['modelValue'],
   emits: ['update:modelValue', 'change'],
+  setup(_props, { emit }) {
+    provide('radioGroup', {
+      setValue(v: string) {
+        emit('update:modelValue', v)
+        emit('change', v)
+      },
+    })
+    return {}
+  },
   template: `<div class="el-radio-group"><slot /></div>`,
 })
 const ElRadioButton = defineComponent({
   name: 'ElRadioButton',
   props: ['label'],
-  template: `<button class="el-radio-button"><slot /></button>`,
+  setup() {
+    return { group: inject<any>('radioGroup') }
+  },
+  template: `<button class="el-radio-button" @click="group?.setValue(label)"><slot /></button>`,
 })
 const ElInput = defineComponent({
   name: 'ElInput',
@@ -84,11 +98,12 @@ const mountOpts = {
   },
 }
 
-function item(id: string, name: string, category: string, tags: string[] = []) {
+function item(id: string, name: string, category: string, tags: string[] = [], style = 'clean') {
   return {
     id,
     name,
     category,
+    style,
     file: `${category}s/${id}.png`,
     thumb: `${category}s/${id}.png`,
     width: 256,
@@ -97,15 +112,16 @@ function item(id: string, name: string, category: string, tags: string[] = []) {
   }
 }
 
-// 30 项（26 图标 + 封面/LOGO/头像/背景各若干）→ size=24 时共 2 页，可测翻页
+// 30 项（26 图标 + 封面/LOGO/背景各若干）→ size=24 时共 2 页，可测翻页。
+// 非图标素材刻意分散到不同调性，用于验证风格筛选行。
 const LIB_ITEMS = [
   ...Array.from({ length: 26 }, (_, i) =>
     item(`icon-${i + 1}`, `图标${i + 1}`, 'icon', ['图标'])
   ),
-  item('cover-skyline', '天际线', 'cover', ['封面']),
-  item('logo-building', '建筑', 'logo', ['LOGO']),
-  item('bg-deepspace', '深空', 'background', ['背景']),
-  item('bg-glow', '光晕', 'background', ['背景']),
+  item('cover-skyline', '天际线', 'cover', ['封面'], 'nature'),
+  item('logo-building', '建筑', 'logo', ['LOGO'], 'luxury'),
+  item('bg-deepspace', '深空', 'background', ['背景'], 'clean'),
+  item('bg-glow', '光晕', 'background', ['背景'], 'vivid'),
 ]
 
 const CATEGORIES = [
@@ -116,13 +132,23 @@ const CATEGORIES = [
   { key: 'background', name: '背景' },
 ]
 
-// 模拟服务端：按 type / keyword 过滤后分页（与 backend assets.List 行为一致）
+const STYLES = [
+  { key: 'clean', name: '简约清晰' },
+  { key: 'nature', name: '温暖自然' },
+  { key: 'luxury', name: '轻奢尊贵' },
+  { key: 'soft', name: '柔美清新' },
+  { key: 'vivid', name: '光影流动' },
+]
+
+// 模拟服务端：按 type / style / keyword 过滤后分页（与 backend assets.List 行为一致）。
+// styleCounts 在「分类+关键字」结果上统计（不含 style 本身），供前端隐藏 0 结果的调性。
 function fakeList(params: Record<string, any> = {}) {
   const page = Number(params?.page) || 1
   const size = Number(params?.size) || 24
   const type = params?.type && params.type !== 'all' ? params.type : ''
+  const style = params?.style && params.style !== 'all' ? params.style : ''
   const kw = String(params?.keyword || '').trim().toLowerCase()
-  let matched = LIB_ITEMS.filter((it) => {
+  const base = LIB_ITEMS.filter((it) => {
     if (type && it.category !== type) return false
     if (kw) {
       const hay = [it.name, ...it.tags].join(' ').toLowerCase()
@@ -130,19 +156,26 @@ function fakeList(params: Record<string, any> = {}) {
     }
     return true
   })
+  const styleCounts = STYLES.map((s) => ({
+    ...s,
+    count: base.filter((it) => it.style === s.key).length,
+  }))
+  const matched = style ? base.filter((it) => it.style === style) : base
   const total = matched.length
   const pages = Math.max(1, Math.ceil(total / size))
   const start = (page - 1) * size
   return Promise.resolve({
     code: 0,
     data: {
-      version: 2,
+      version: 5,
       categories: CATEGORIES,
+      styles: STYLES,
       items: matched.slice(start, start + size),
       total,
       page,
       size,
       pages,
+      styleCounts,
     },
   })
 }
@@ -264,5 +297,82 @@ describe('AssetPicker', () => {
     await nextTick()
     expect(w.findAll('.asset-card')).toHaveLength(1)
     expect(w.text()).toContain('深空')
+  })
+
+  it('风格行只渲染当前条件下有素材的调性（0 项的不显示）', async () => {
+    const w = mount(AssetPicker, { props: { modelValue: true }, ...mountOpts })
+    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
+    await nextTick()
+    await nextTick()
+    const bar = w.find('.picker-styles')
+    expect(bar.exists()).toBe(true)
+    const txt = bar.text()
+    expect(txt).toContain('简约清晰')
+    expect(txt).toContain('温暖自然')
+    expect(txt).toContain('轻奢尊贵')
+    expect(txt).toContain('光影流动')
+    expect(txt).not.toContain('柔美清新') // 全库 0 项，不应占一个档位
+  })
+
+  it('切换风格：请求带 style 且只回填该调性的素材', async () => {
+    const w = mount(AssetPicker, {
+      props: { modelValue: true, defaultCategory: 'background' },
+      ...mountOpts,
+    })
+    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
+    await nextTick()
+    await nextTick()
+    const btn = w.findAll('.el-radio-button').find((b) => b.text().includes('光影流动'))
+    expect(btn).toBeTruthy()
+    await btn!.trigger('click')
+    await vi.waitFor(() =>
+      expect(listLibrary).toHaveBeenCalledWith(
+        expect.objectContaining({ style: 'vivid', page: 1 })
+      )
+    )
+    await nextTick()
+    await nextTick()
+    expect(w.findAll('.asset-card')).toHaveLength(1)
+    expect(w.text()).toContain('光晕')
+    expect(w.text()).not.toContain('深空')
+  })
+
+  it('单一调性的分类隐藏风格行（图标全部为简约清晰）', async () => {
+    const w = mount(AssetPicker, {
+      props: { modelValue: true, defaultCategory: 'icon' },
+      ...mountOpts,
+    })
+    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
+    await nextTick()
+    await nextTick()
+    expect(w.find('.picker-styles').exists()).toBe(false)
+  })
+
+  it('已选调性在新条件下无素材时自动回落「全部」，不停在空结果页', async () => {
+    const w = mount(AssetPicker, {
+      props: { modelValue: true, defaultCategory: 'background' },
+      ...mountOpts,
+    })
+    await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
+    await nextTick()
+    await nextTick()
+    const vividBtn = w.findAll('.el-radio-button').find((b) => b.text().includes('光影流动'))
+    await vividBtn!.trigger('click')
+    await vi.waitFor(() =>
+      expect(listLibrary).toHaveBeenCalledWith(expect.objectContaining({ style: 'vivid' }))
+    )
+    await nextTick()
+    await nextTick()
+    // 切到图标分类：该调性下无素材 → 自动回落 all 并重新拉取
+    const iconBtn = w.findAll('.el-radio-button').find((b) => b.text().trim() === '图标')
+    await iconBtn!.trigger('click')
+    await vi.waitFor(() =>
+      expect(listLibrary).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'icon', style: 'all' })
+      )
+    )
+    await nextTick()
+    await nextTick()
+    expect(w.findAll('.asset-card').length).toBeGreaterThan(0)
   })
 })

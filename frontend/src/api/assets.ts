@@ -10,10 +10,23 @@ export interface LibraryCategory {
   name: string
 }
 
+// 视觉调性（第二筛选维度）：与 category「用在哪」正交，描述素材的「气质」。
+// 命名用用户能直接感知的形容词，不暴露 mesh / grain 等实现术语。
+export interface LibraryStyle {
+  key: string // clean / nature / luxury / soft / vivid
+  name: string // 简约清晰 / 温暖自然 / 轻奢尊贵 / 柔美清新 / 光影流动
+}
+
+// 某调性在当前筛选条件下的素材数（前端据此隐藏 0 结果的调性）
+export interface StyleCount extends LibraryStyle {
+  count: number
+}
+
 export interface LibraryItem {
   id: string
   name: string
   category: string // icon / cover / logo / avatar / background
+  style: string // 视觉调性，见 LibraryStyle.key
   file: string
   thumb: string // 预览图相对路径（封面/背景为缩略版）
   width: number
@@ -26,6 +39,7 @@ export interface LibraryQuery {
   page?: number // 1-based，缺省 1
   size?: number // 每页条数，缺省 24，上限 60
   type?: string // 分类过滤：空/'all' = 全部
+  style?: string // 调性过滤：空/'all' = 全部
   keyword?: string // 名称或标签匹配
 }
 
@@ -33,11 +47,13 @@ export interface LibraryQuery {
 export interface LibraryData {
   version: number
   categories: LibraryCategory[]
+  styles: LibraryStyle[]
   items: LibraryItem[]
   total: number
   page: number
   size: number
   pages: number
+  styleCounts?: StyleCount[]
 }
 
 // 素材清单（分页，管理员登录态）
@@ -47,6 +63,7 @@ export function listLibrary(params: LibraryQuery = {}) {
   if (params.size) q.size = params.size
   // 前端 tab 用 'all' 表示全部，服务端按空值处理
   if (params.type && params.type !== 'all') q.type = params.type
+  if (params.style && params.style !== 'all') q.style = params.style
   if (params.keyword) q.keyword = params.keyword
   return http.get<{ code: number; data?: LibraryData }>('/admin/assets/library', {
     params: q,

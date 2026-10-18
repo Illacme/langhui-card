@@ -36,7 +36,7 @@ frontend/
     ├── layout/AdminLayout.vue # 侧边菜单 + 顶栏（改密/退出）
     ├── components/
     │   ├── UploadField.vue   # 通用上传组件（直传预签名 + 回退普通上传 + 素材库入口）
-    │   ├── AssetPicker.vue   # 开源素材库选择器（分类 tab + 搜索 + 单选/多选采用）
+    │   ├── AssetPicker.vue   # 开源素材库选择器（分类 tab + 风格行 + 搜索 + 分页 + 单选/多选采用）
     │   └── ChangePasswordDialog.vue
     └── views/
         ├── Login.vue
@@ -87,10 +87,11 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 ## 开源素材库（减少找图/处理图成本）
 
-所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像、**小程序首页背景**）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：分类 tab（全部 + 图标/封面/LOGO/头像/背景）+ 关键字搜索 + 卡片网格 + **底部分页器**，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
+所有需要图片的表单（业绩分类图标、业务服务图标、项目封面/相册、公司简介封面、公司信息 LOGO、员工头像、**小程序首页背景**）在 `UploadField` 上方都提供「从素材库选择」入口，点击弹出 `AssetPicker.vue` 选择器：**分类 tab**（全部 + 图标/封面/LOGO/头像/背景）+ **风格行**（简约清晰/温暖自然/轻奢尊贵/柔美清新/光影流动）+ 关键字搜索 + 卡片网格 + **底部分页器**，**单选即采用并回填，多选累计后批量添加**（超出 `limit` 自动截断并提示）。
 
-- 素材清单走**服务端分页**：`GET /api/admin/assets/library?page=&size=&type=&keyword=`，返回 `{items,total,page,size,pages}`；翻页 / 切分类 / 搜索（300ms 防抖）都会重新请求并重置到第 1 页，已选中的素材跨页保留。
-- 当前内置 **212 项**（104 图标 / 32 封面 / 26 LOGO / 20 头像 / 30 背景，含深浅两色系），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
+- **两个筛选维度正交**：分类 tab = "用在哪"，风格行 = "什么气质"。风格行只渲染当前条件下 `count>0` 的档位（服务端回传 `styleCounts`），只有一档可选时整行隐藏——例如图标分类下视觉语言统一，不会摆一排点不出东西的筛选项。已选调性在新条件下无素材时（如切分类、搜索收窄）自动回落「全部」，不会停在空结果页。
+- 素材清单走**服务端分页**：`GET /api/admin/assets/library?page=&size=&type=&style=&keyword=`，返回 `{items,total,page,size,pages,styleCounts}`；翻页 / 切分类 / 切风格 / 搜索（300ms 防抖）都会重新请求并重置到第 1 页，已选中的素材跨页保留。
+- 当前内置 **347 项**（187 图标 / 48 封面 / 40 LOGO / 24 头像 / 48 背景，含深浅两色系），预览图走公开只读端点 `GET /api/assets/file/*path`（immutable 长缓存）。
 - 采用走 `POST /api/admin/assets/adopt`：后端把内嵌素材复制进当前上传存储，返回与手动上传**完全同构**的 URL，后续展示/CDN 链路零差异。
 - 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar` / `background`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
 
@@ -152,7 +153,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/editor/wxVideoModule.spec.ts`：`<wx-video channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致）。
 - `src/views/Login.spec.ts`：登录页视图层用例——表单校验提示、登录成功后写 Pinia + 跳转、`code=401` 时展示错误并不写登录态（jsdom + Element Plus 组件挂载）。
 - `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
-- `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**。
+- `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**、**风格行只渲染 count>0 的档位**、**切换风格带 style 请求**、**单一调性分类隐藏风格行**、**已选调性无素材时自动回落全部**（11 例）。
 - `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
 
 小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：
