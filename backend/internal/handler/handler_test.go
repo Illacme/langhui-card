@@ -129,7 +129,8 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	RegisterApply(r, db)
 	RegisterContent(r, db)
 	RegisterCompanies(r, db)
-	RegisterAdmins(r, db) // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
+	RegisterAdmins(r, db)    // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
+	RegisterAuditLogs(r, db) // 操作审计日志（只读查询）
 
 	// 静态托管需要目录存在
 	require.NoError(t, os.MkdirAll(cfg.UploadDir, 0755))
@@ -160,7 +161,7 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
-		&model.Company{}, &setting.Setting{},
+		&model.Company{}, &setting.Setting{}, &model.AuditLog{},
 	))
 	// 1 号租户（朗汇）：公开接口缺省落点；存量行为不随多租户改造而变
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
@@ -991,7 +992,7 @@ func newSeedDB(t *testing.T) *gorm.DB {
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
-		&model.Company{}, &setting.Setting{},
+		&model.Company{}, &setting.Setting{}, &model.AuditLog{},
 	))
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 	return db

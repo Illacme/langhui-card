@@ -111,7 +111,7 @@ CI 见 `.github/workflows/ci.yml`，四个 job：
 - **前端 (Vue)**：`npm ci` + `npm run build` + `npm test`（Vitest；含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
 - **前端类型检查 (vue-tsc)**：`vue-tsc --noEmit`，历史 4 个 `@wangeditor/*` 类型错误已修复，**现为阻塞门禁**。
 
-> 分支保护与协作规范见 `docs/branch-protection.md`；接口契约见 `docs/openapi.yaml`（OpenAPI 3.0.3，47 paths）。
+> 分支保护与协作规范见 `docs/branch-protection.md`；接口契约见 `docs/openapi.yaml`（OpenAPI 3.0.3，56 paths）。
 
 ## 安全与已知限制
 
@@ -125,6 +125,10 @@ CI 见 `.github/workflows/ci.yml`，四个 job：
 - **可观测性**：`X-Request-Id` 贯穿请求（响应头带回，便于报障定位）；每请求一行访问日志（方法/路径/状态/耗时/IP，5xx 单独 `[ACCESS-5XX]` 前缀供告警匹配）；`METRICS_ENABLED=1` 可选开启 `/metrics`（Prometheus 文本格式）。
 - **运维脚本**：`scripts/backup.sh` 做 MySQL 逻辑备份（mysqldump → gzip → 按保留天数轮转，可入 crontab）。
 - **测试覆盖**：后端 httptest 集成（SQLite 零外部依赖 + 可选 MySQL parity）+ MinIO/OSS 假服务单测；前端含视图层组件测试；小程序纯逻辑测试经前端 Vitest 运行。
+- **操作审计**：后台写操作（改系统设置 / 管理员增删改 / 企业启停 / 改密码）与**登录失败**
+  全部记进 `audit_log`，平台超管可在「平台管理 → 操作日志」按动作 / 操作人 / 结果筛选查询。
+  敏感值只记「已修改」不落明文（否则审计表会变成新的泄密面）；只提供查询、不提供修改——
+  审计记录一旦可改就等于没有审计。
 - **平台超管账号管理**：PC 后台「平台管理 → 账号管理」可改用户名、新增平台超管、重置他人密码、删除账号（护栏：不能删自己、至少保留一个平台超管）。改自己密码仍走右上角「修改密码」（需原密码）。
 
 当前版本**已知边界**（需基建/流程配合，尚未在本仓库落地）：

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"langhui/internal/audit"
 	"langhui/internal/auth"
 	"langhui/internal/middleware"
 	"langhui/internal/model"
@@ -357,6 +358,11 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		h, _ := auth.HashPassword(req.New)
 		// 改密同时自增安全戳 → 旧令牌立即失效，需重新登录
 		db.Model(&a).Updates(map[string]interface{}{"password_hash": h, "token_version": a.TokenVersion + 1})
+		// 审计只记「谁改了自己的密码」，绝不记新旧密码
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionPassword, TargetType: "admin", TargetID: strconv.FormatInt(adminID, 10),
+			Detail: map[string]any{"username": a.Username},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 

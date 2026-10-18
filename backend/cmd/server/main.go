@@ -79,6 +79,7 @@ func main() {
 	handler.RegisterContent(r, db)   // 企业内容管理（公司信息/简介/分类/项目/服务/布局，按租户隔离）
 	handler.RegisterCompanies(r, db) // 企业管理（平台超管）：开通/停用企业、企业管理员管理
 	handler.RegisterAdmins(r, db)    // 平台超管账号管理：列表/新增/改用户名/重置密码/删除
+	handler.RegisterAuditLogs(r, db) // 操作审计日志（只读查询：平台超管）
 
 	// 文件上传：存储驱动可配（local 默认 / minio / oss），业务代码不变。
 	// 驱动初始化失败时降级本地（而不是 Fatal）：凭据在界面里改错的情况下，
@@ -97,7 +98,7 @@ func main() {
 	handler.RegisterStorage(r, db, up, refresher, cfg) // 直传预签名 / 私有桶签名 / CDN 刷新 / 本地私有文件流
 	handler.RegisterAssets(r, db, up)                  // 常用素材库（内嵌图标/封面/LOGO）：清单 / 采用 / 预览图
 	handler.RegisterWechat(r, cfg, up)                 // GET /api/wechat/wxacode（小程序码，按 staffId）
-	handler.RegisterSettings(r, db, cfg) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	handler.RegisterSettings(r, db, cfg)               // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	log.Printf("listen :%s (storage driver=%s)", cfg.Port, cfg.StorageDriver)
 	if err := r.Run(":" + cfg.Port); err != nil {

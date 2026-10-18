@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"langhui/internal/audit"
 	"langhui/internal/auth"
 	"langhui/internal/middleware"
 	"langhui/internal/model"
@@ -151,6 +152,10 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 				return
 			}
 		}
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionCompanyCreate, TargetType: "company", TargetID: strconv.FormatInt(comp.ID, 10),
+			Detail: map[string]any{"name": comp.Name, "admin": req.AdminUsername},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"id": comp.ID, "name": comp.Name, "shortName": comp.ShortName}})
 	})
 
@@ -175,6 +180,10 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
 			return
 		}
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionCompanyUpdate, TargetType: "company", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"name": req.Name, "shortName": req.ShortName},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
@@ -196,6 +205,10 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
 			return
 		}
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionCompanyStatus, TargetType: "company", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"status": req.Status},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
@@ -242,6 +255,10 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "创建失败"})
 			return
 		}
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionCompanyAdminAdd, TargetType: "admin", TargetID: strconv.FormatInt(a.ID, 10),
+			Detail: map[string]any{"username": a.Username, "companyId": id},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"id": a.ID, "username": a.Username}})
 	})
 }

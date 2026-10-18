@@ -171,8 +171,8 @@ type OpenApply struct {
 	Title        string    `gorm:"column:title" json:"title"`
 	Landline     string    `gorm:"column:landline" json:"landline"` // 座机（选填）
 	Avatar       string    `gorm:"column:avatar" json:"avatar"`
-	OpenID       string    `gorm:"column:openid" json:"openid"`     // 提交申请时的微信 openid
-	Nickname     string    `gorm:"column:nickname" json:"nickname"` // 提交申请时的微信昵称
+	OpenID       string    `gorm:"column:openid" json:"openid"`                 // 提交申请时的微信 openid
+	Nickname     string    `gorm:"column:nickname" json:"nickname"`             // 提交申请时的微信昵称
 	Status       string    `gorm:"column:status;default:pending" json:"status"` // pending/approved/rejected
 	RejectReason string    `gorm:"column:reject_reason" json:"rejectReason"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
@@ -189,3 +189,31 @@ type CardModifyApply struct {
 	RejectReason string    `gorm:"column:reject_reason" json:"rejectReason"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"createdAt"`
 }
+
+// AuditLog 管理操作审计日志。
+//
+// 定位：回答「谁在什么时候、对什么对象、做了什么、成功没有」。
+// 覆盖后台的**写操作**（含失败/被拒的尝试）与登录失败——只读查询不记，否则日志量会淹没有用信息。
+//
+// 设计取舍：
+//   - actor_name 冗余存一份用户名：账号被删除后仍能追溯是谁干的（只存 id 就成了悬空引用）。
+//   - detail 只记**变更摘要**，且敏感值（密钥 / 密码 / 连接串）一律不落库，只记「已修改」。
+//     否则审计表本身会变成新的泄密面——这与其存在的初衷相悖。
+//   - 本表只追加不修改：审计记录被篡改就等于没有审计。
+type AuditLog struct {
+	ID         int64     `gorm:"primaryKey;autoIncrement;column:id" json:"id"`
+	ActorType  string    `gorm:"column:actor_type;size:16;index" json:"actorType"` // admin / employee / anonymous
+	ActorID    int64     `gorm:"column:actor_id;index" json:"actorId"`             // admin.id 或 employee.staff_id
+	ActorName  string    `gorm:"column:actor_name;size:64" json:"actorName"`       // 冗余用户名（账号删除后仍可追溯）
+	CompanyID  int64     `gorm:"column:company_id;index" json:"companyId"`         // 操作者所属租户（0=平台）
+	Action     string    `gorm:"column:action;size:32;index" json:"action"`        // 见 internal/audit 的动作常量
+	TargetType string    `gorm:"column:target_type;size:32" json:"targetType"`     // setting / admin / company / employee ...
+	TargetID   string    `gorm:"column:target_id;size:64" json:"targetId"`         // 目标标识（字符串以便覆盖非数字主键）
+	Detail     string    `gorm:"column:detail;type:text" json:"detail"`            // JSON 变更摘要（敏感值只记「已修改」）
+	IP         string    `gorm:"column:ip;size:64" json:"ip"`
+	Result     string    `gorm:"column:result;size:16" json:"result"` // success / fail
+	CreatedAt  time.Time `gorm:"column:created_at;index" json:"createdAt"`
+}
+
+// TableName 显式指定表名（避免 GORM 复数化）。
+func (AuditLog) TableName() string { return "audit_log" }

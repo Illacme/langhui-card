@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"langhui/internal/audit"
 	"langhui/internal/auth"
 	"langhui/internal/middleware"
 	"langhui/internal/model"
@@ -66,6 +67,10 @@ func RegisterAdmins(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "创建失败"})
 			return
 		}
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionAdminCreate, TargetType: "admin", TargetID: strconv.FormatInt(a.ID, 10),
+			Detail: map[string]any{"username": a.Username},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"id": a.ID, "username": a.Username}})
 	})
 
@@ -95,6 +100,10 @@ func RegisterAdmins(r *gin.Engine, db *gorm.DB) {
 			return
 		}
 		db.Model(&a).Update("username", req.Username)
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionAdminRename, TargetType: "admin", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"from": a.Username, "to": req.Username},
+		})
 		// 令牌里不含用户名，改名不必踢会话；回传 self 供前端刷新顶栏展示
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok", "self": id == c.GetInt64("staffId")})
 	})
@@ -118,6 +127,11 @@ func RegisterAdmins(r *gin.Engine, db *gorm.DB) {
 		// 安全戳自增 → 该账号已签发的所有令牌立即失效（重置自己则需重新登录）
 		db.Model(&a).Updates(map[string]interface{}{
 			"password_hash": hash, "token_version": a.TokenVersion + 1,
+		})
+		// 审计只记「给谁重置了」，绝不记新密码
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionAdminReset, TargetType: "admin", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"username": a.Username, "self": id == c.GetInt64("staffId")},
 		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok", "self": id == c.GetInt64("staffId")})
 	})
@@ -146,6 +160,11 @@ func RegisterAdmins(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "删除失败"})
 			return
 		}
+		// 用户名写进详情：账号行已删，只留 id 就追溯不到是谁
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionAdminDelete, TargetType: "admin", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"username": a.Username},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 }

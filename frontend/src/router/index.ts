@@ -105,6 +105,13 @@ const routes = [
         component: () => import('@/views/platform/Accounts.vue'),
         meta: { title: '账号管理', group: '平台管理', platformOnly: true },
       },
+      {
+        // 操作日志：后台写操作与登录失败留痕（只读查询）。
+        path: 'platform/audit-logs',
+        name: 'audit-logs',
+        component: () => import('@/views/platform/AuditLogs.vue'),
+        meta: { title: '操作日志', group: '平台管理', platformOnly: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/apply/open' },

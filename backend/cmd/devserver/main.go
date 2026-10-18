@@ -52,6 +52,7 @@ var devModels = []interface{}{
 	&model.OpenApply{}, &model.CardModifyApply{},
 	&model.RevokedSession{}, &model.Company{},
 	&setting.Setting{}, // 系统设置表（后台「系统设置」界面维护运行参数）
+	&model.AuditLog{},  // 操作审计日志（后台写操作与登录失败留痕）
 }
 
 func main() {
@@ -130,6 +131,7 @@ func main() {
 	handler.RegisterContent(r, db)
 	handler.RegisterCompanies(r, db) // 企业管理（平台超管）
 	handler.RegisterAdmins(r, db)    // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
+	handler.RegisterAuditLogs(r, db) // 操作审计日志（只读查询：平台超管）
 
 	up := &storage.LocalUploader{
 		Dir:      cfg.UploadDir,
@@ -208,39 +210,39 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	projects := []model.ProjectCase{
 		{ID: 101, CompanyID: 1, CategoryID: 1, Name: "大兴临空服务中心", Summary: "临空经济区地标机电总包",
 			Detail: "<p>大兴临空服务中心项目涵盖多栋客货梯与自动扶梯的供货、安装与维保，满足高客流交通枢纽的可靠运行需求。</p>",
-			Cover: assets["cover-daxing.png"], Album: `["` + assets["album-1.png"] + `","` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-daxing.png"], Album: `["` + assets["album-1.png"] + `","` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: true, Enabled: true, Sort: 1},
 		{ID: 102, CompanyID: 1, CategoryID: 3, Name: "某医院电梯项目", Summary: "医疗楼宇专用电梯解决方案",
 			Detail: "<p>某医院电梯项目提供医疗专用电梯的定制、安装与运维，兼顾洁净、安静与应急响应。</p>",
-			Cover: assets["cover-hospital.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-hospital.png"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: true, Enabled: true, Sort: 2},
 		{ID: 103, CompanyID: 1, CategoryID: 1, Name: "某高层住宅电梯项目", Summary: "住宅客梯批量交付",
 			Detail: "<p>为高层住宅提供客梯的批量供货与安装，统一调度的群控方案提升高峰运力。</p>",
-			Cover: assets["cover-p1b.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p1b.png"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 2},
 		{ID: 104, CompanyID: 1, CategoryID: 2, Name: "市民服务中心电梯工程", Summary: "政务大厅无机房客梯",
 			Detail: "<p>市民服务中心采用无机房客梯，节省机房空间，满足政务服务大厅的无障碍通行需求。</p>",
-			Cover: assets["cover-p2.png"], Album: `["` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-p2.png"], Album: `["` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 		{ID: 105, CompanyID: 1, CategoryID: 3, Name: "某学校电梯项目", Summary: "校园电梯安全改造",
 			Detail: "<p>针对校园既有电梯的安全改造，升级制动与监控，保障师生乘梯安全。</p>",
-			Cover: assets["cover-p3b.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p3b.png"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 3},
 		{ID: 106, CompanyID: 1, CategoryID: 4, Name: "商业综合体扶梯项目", Summary: "商场自动扶梯群控",
 			Detail: "<p>商业综合体部署自动扶梯群控系统，结合客流分析优化运行节奏，节能高效。</p>",
-			Cover: assets["cover-p4.png"], Album: `["` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-p4.png"], Album: `["` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 		{ID: 107, CompanyID: 1, CategoryID: 5, Name: "地铁站点电梯项目", Summary: "轨道交通垂直交通",
 			Detail: "<p>地铁站点垂直交通方案，重载电梯与扶梯满足大客流高频率运行。</p>",
-			Cover: assets["cover-p5.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p5.png"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 		{ID: 108, CompanyID: 1, CategoryID: 6, Name: "智能仓储货梯项目", Summary: "物流仓储货梯定制",
 			Detail: "<p>为智能仓储定制货梯，对接 AGV 与 WMS，实现物料垂直转运自动化。</p>",
-			Cover: assets["cover-p6.png"], Album: `["` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-p6.png"], Album: `["` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 		{ID: 109, CompanyID: 1, CategoryID: 7, Name: "别墅家用电梯项目", Summary: "私人住宅别墅电梯",
 			Detail: "<p>私人别墅家用电梯，定制轿厢与静音驱动，兼顾美观与乘坐舒适。</p>",
-			Cover: assets["cover-p7.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p7.png"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 	}
 	for _, p := range projects {
@@ -268,7 +270,7 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 		hash, _ := auth.HashPassword("langhui123")
 		emp := model.Employee{
 			CompanyID: 1,
-			Name: "高立新", Title: "业务经理", Phone: "13832603521", Landline: "0316-823950",
+			Name:      "高立新", Title: "业务经理", Phone: "13832603521", Landline: "0316-823950",
 			Email:  "138266603521@163.com",
 			Avatar: assets["avatar-gaolixin.png"], PasswordHash: hash, Status: "enabled",
 		}

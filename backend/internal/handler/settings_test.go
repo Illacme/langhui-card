@@ -412,3 +412,100 @@ func loginEmployee(t *testing.T, c *testClient) string {
 	require.EqualValues(t, 0, body["code"])
 	return body["token"].(string)
 }
+
+// TestAuditLogRecordsAdminOperations 审计日志的核心价值：后台高危操作必须留痕。
+// 覆盖「改系统设置 / 新增超管 / 重置他人密码 / 删除超管」，并断言能按 action 过滤查到。
+func TestAuditLogRecordsAdminOperations(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	// 1) 改系统设置
+	_, body := c.do("PUT", "/api/admin/settings", map[string]string{"brand_name": "审计测试"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+
+	// 2) 新增平台超管 → 重置其密码 → 删除
+	_, body = c.do("POST", "/api/admin/platform-admins",
+		map[string]interface{}{"username": "audit-boss", "password": "pwd12345"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	newID := fmt.Sprint(body["data"].(map[string]interface{})["id"])
+
+	_, body = c.do("POST", "/api/admin/platform-admins/"+newID+"/password",
+		map[string]interface{}{"password": "another-pwd"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+
+	_, body = c.do("DELETE", "/api/admin/platform-admins/"+newID, nil, adminToken)
+	require.EqualValues(t, 0, body["code"])
+
+	// 3) 查询审计日志：四条动作都在，且操作人是当前登录的超管
+	_, body = c.do("GET", "/api/admin/audit-logs", nil, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	list := body["data"].(map[string]interface{})["list"].([]interface{})
+	require.NotEmpty(t, list)
+
+	actions := map[string]bool{}
+	for _, it := range list {
+		m := it.(map[string]interface{})
+		actions[m["action"].(string)] = true
+		require.Equal(t, "admin", m["actorType"], "后台操作的操作人类型应为 admin")
+		// 操作人姓名必须直接可读：只留 actor_id 的话还得自己回 admin 表对号，等于没记
+		require.Equal(t, "admin", m["actorName"])
+	}
+	for _, a := range []string{
+		"setting.update", "admin.create", "admin.reset_password", "admin.delete",
+	} {
+		require.True(t, actions[a], "缺少审计记录: %s", a)
+	}
+
+	// 4) 按 action 过滤可用
+	_, body = c.do("GET", "/api/admin/audit-logs?action=admin.delete", nil, adminToken)
+	filtered := body["data"].(map[string]interface{})["list"].([]interface{})
+	require.Len(t, filtered, 1)
+	// 账号已删除，详情里仍应留着用户名（只存 id 就追溯不到删的是谁）
+	require.Contains(t, filtered[0].(map[string]interface{})["detail"], "audit-boss")
+}
+
+// TestAuditLogNeverStoresSecretValues 审计表不能变成新的泄密面：
+// 改敏感配置时只记「已修改」，绝不落明文（否则密钥会以明文形式长期留在库里）。
+func TestAuditLogNeverStoresSecretValues(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	const secret = "super-secret-value-7788"
+	_, body := c.do("PUT", "/api/admin/settings", map[string]string{
+		"wx_appsecret": secret,
+		"brand_name":   "明文可记",
+	}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+
+	_, body = c.do("GET", "/api/admin/audit-logs?action=setting.update", nil, adminToken)
+	list := body["data"].(map[string]interface{})["list"].([]interface{})
+	require.NotEmpty(t, list)
+	detail := list[0].(map[string]interface{})["detail"].(string)
+	require.NotContains(t, detail, secret, "审计详情绝不能出现密钥明文")
+	require.Contains(t, detail, "明文可记", "非敏感项仍应记录变更值")
+}
+
+// TestAuditLogRecordsFailedLogin 登录失败要留痕：连续失败是爆破信号。
+func TestAuditLogRecordsFailedLogin(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	// 用另一个 client 打错密码（避免污染主 client 的 cookie 身份）
+	other := newTestClient(r, t)
+	_, body := other.do("POST", "/api/admin/login",
+		map[string]interface{}{"username": "admin", "password": "definitely-wrong"}, "")
+	require.EqualValues(t, 1, body["code"])
+
+	_, body = c.do("GET", "/api/admin/audit-logs?action=login.fail", nil, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	list := body["data"].(map[string]interface{})["list"].([]interface{})
+	require.NotEmpty(t, list)
+	m := list[0].(map[string]interface{})
+	require.Equal(t, "fail", m["result"])
+	// 登录失败时还没有登录身份，操作人应降级为 anonymous，但目标账号名要留下
+	require.Equal(t, "anonymous", m["actorType"])
+	require.Equal(t, "admin", m["targetId"])
+}

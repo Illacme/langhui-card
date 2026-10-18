@@ -1,0 +1,153 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { defineComponent, nextTick } from 'vue'
+
+vi.mock('@/api/audit', async (orig) => {
+  const actual = (await orig()) as Record<string, unknown>
+  return { ...actual, listAuditLogs: vi.fn() }
+})
+vi.mock('element-plus', () => ({
+  ElMessage: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+}))
+vi.mock('@element-plus/icons-vue', () => ({ Refresh: {}, Plus: {}, Search: {} }))
+
+import { listAuditLogs, actionLabel } from '@/api/audit'
+import AuditLogs from './AuditLogs.vue'
+
+// 夹具：覆盖「成功 / 失败」与「未登录」三种形态
+const page1 = {
+  total: 2,
+  page: 1,
+  size: 20,
+  list: [
+    {
+      id: 2,
+      actorType: 'admin',
+      actorId: 1,
+      actorName: 'admin',
+      companyId: 0,
+      action: 'setting.update',
+      targetType: 'setting',
+      targetId: 'wx_appsecret',
+      detail: '{"wx_appsecret":"******"}',
+      ip: '127.0.0.1',
+      result: 'success',
+      createdAt: '2026-10-19 06:00:00',
+    },
+    {
+      id: 1,
+      actorType: 'anonymous',
+      actorId: 0,
+      actorName: 'admin',
+      companyId: 0,
+      action: 'login.fail',
+      targetType: 'admin',
+      targetId: 'admin',
+      detail: '{"reason":"密码错误"}',
+      ip: '10.0.0.9',
+      result: 'fail',
+      createdAt: '2026-10-19 05:59:00',
+    },
+  ],
+}
+
+// 轻量 stub：表格与分页器只需渲染不报错，断言走请求参数与纯函数
+const ElCard = defineComponent({ name: 'ElCard', template: `<div class="el-card"><slot /></div>` })
+const ElAlert = defineComponent({ name: 'ElAlert', template: `<div class="el-alert"><slot /></div>` })
+const ElTable = defineComponent({ name: 'ElTable', props: ['data'], template: `<div class="el-table"><slot /></div>` })
+const ElTableColumn = defineComponent({ name: 'ElTableColumn', template: `<div class="el-table-column" />` })
+const ElSelect = defineComponent({
+  name: 'ElSelect',
+  props: ['modelValue'],
+  emits: ['update:modelValue', 'change'],
+  // 注意：v-model 靠 update:modelValue 生效，只 emit change 的话页面里的值不会变，
+  // 筛选断言就会拿到旧值（这里两个事件都要发）。
+  template: `<select class="el-select" :value="modelValue"
+    @change="$emit('update:modelValue', $event.target.value); $emit('change', $event.target.value)"><slot /></select>`,
+})
+const ElOption = defineComponent({
+  name: 'ElOption',
+  props: ['label', 'value'],
+  template: `<option :value="value">{{ label }}</option>`,
+})
+const ElTag = defineComponent({ name: 'ElTag', props: ['type'], template: `<span class="el-tag"><slot /></span>` })
+const ElButton = defineComponent({
+  name: 'ElButton',
+  props: ['type', 'loading'],
+  template: `<button class="el-button"><slot /></button>`,
+})
+const ElPagination = defineComponent({ name: 'ElPagination', template: `<div class="el-pagination" />` })
+
+const mountOpts = {
+  global: {
+    stubs: {
+      'el-card': ElCard,
+      'el-alert': ElAlert,
+      'el-table': ElTable,
+      'el-table-column': ElTableColumn,
+      'el-select': ElSelect,
+      'el-option': ElOption,
+      'el-tag': ElTag,
+      'el-button': ElButton,
+      'el-pagination': ElPagination,
+    },
+  },
+}
+
+async function setup() {
+  const w = mount(AuditLogs, mountOpts)
+  await vi.waitFor(() => expect(listAuditLogs).toHaveBeenCalled())
+  await nextTick()
+  return w
+}
+
+describe('AuditLogs 操作日志', () => {
+  beforeEach(() => {
+    vi.mocked(listAuditLogs).mockReset()
+    vi.mocked(listAuditLogs).mockImplementation(async () => ({ code: 0, data: page1 }) as any)
+  })
+
+  it('挂载即按默认分页查询一次', async () => {
+    await setup()
+    expect(listAuditLogs).toHaveBeenCalledWith({ page: 1, size: 20 })
+  })
+
+  it('按动作筛选：带上 action 并回到第 1 页', async () => {
+    const w = await setup()
+    vi.mocked(listAuditLogs).mockClear()
+    await w.findAll('select.el-select')[0].setValue('setting.update')
+    await nextTick()
+    expect(listAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'setting.update', page: 1 }),
+    )
+  })
+
+  it('按结果筛选：只带 result，未选的筛选项不传', async () => {
+    const w = await setup()
+    vi.mocked(listAuditLogs).mockClear()
+    await w.findAll('select.el-select')[1].setValue('fail')
+    await nextTick()
+    const arg = vi.mocked(listAuditLogs).mock.calls[0][0]
+    expect(arg.result).toBe('fail')
+    expect(arg.action).toBeUndefined()
+    expect(arg.actorType).toBeUndefined()
+  })
+
+  it('刷新按钮重新拉取', async () => {
+    const w = await setup()
+    vi.mocked(listAuditLogs).mockClear()
+    const btn = w.findAll('button.el-button').find((b) => b.text().includes('刷新'))!
+    await btn.trigger('click')
+    await vi.waitFor(() => expect(listAuditLogs).toHaveBeenCalled())
+  })
+})
+
+describe('actionLabel 动作中文名', () => {
+  it('已登记的动作显示中文，未登记的回退原键', () => {
+    expect(actionLabel('setting.update')).toBe('修改系统设置')
+    expect(actionLabel('admin.reset_password')).toBe('重置管理员密码')
+    expect(actionLabel('login.fail')).toBe('登录失败')
+    // 后端新增动作而前端没同步时，回退显示键名而不是空白——界面宁可丑也不能丢信息
+    expect(actionLabel('some.new.action')).toBe('some.new.action')
+  })
+})

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"langhui/internal/audit"
 	"langhui/internal/auth"
 	"langhui/internal/config"
 	"langhui/internal/middleware"
@@ -59,6 +60,11 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			return
 		}
 		if !auth.CheckPassword(e.PasswordHash, req.Password) {
+			// 登录失败必须留痕：连续失败是爆破信号，没有日志就只能靠猜
+			audit.Record(db, c, audit.Entry{
+				Action: audit.ActionLoginFail, TargetType: "employee", TargetID: req.Phone,
+				Result: audit.ResultFail, ActorName: e.Name,
+			})
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码错误"})
 			return
 		}
@@ -94,10 +100,20 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		}
 		var a model.Admin
 		if err := db.First(&a, "username = ?", req.Username).Error; err != nil {
+			audit.Record(db, c, audit.Entry{
+				Action: audit.ActionLoginFail, TargetType: "admin", TargetID: req.Username,
+				Result: audit.ResultFail, ActorName: req.Username,
+				Detail: map[string]any{"reason": "账号不存在"},
+			})
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "账号不存在"})
 			return
 		}
 		if !auth.CheckPassword(a.PasswordHash, req.Password) {
+			audit.Record(db, c, audit.Entry{
+				Action: audit.ActionLoginFail, TargetType: "admin", TargetID: req.Username,
+				Result: audit.ResultFail, ActorName: req.Username,
+				Detail: map[string]any{"reason": "密码错误"},
+			})
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码错误"})
 			return
 		}

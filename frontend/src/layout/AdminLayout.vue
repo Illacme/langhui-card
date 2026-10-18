@@ -161,6 +161,8 @@ const allMenuGroups = [
       { path: '/platform/settings', title: '系统设置' },
       // 账号管理：平台超管账号改名 / 新增 / 重置密码 / 删除
       { path: '/platform/accounts', title: '账号管理' },
+      // 操作日志：后台写操作与登录失败审计（只读）
+      { path: '/platform/audit-logs', title: '操作日志' },
     ],
   },
 ]

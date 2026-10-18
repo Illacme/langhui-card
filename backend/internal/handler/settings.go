@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"langhui/internal/audit"
 	"langhui/internal/config"
 	"langhui/internal/middleware"
 	"langhui/internal/setting"
@@ -64,6 +65,11 @@ func RegisterSettings(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		restartKeys := make([]string, 0)
 		for k, v := range req {
 			if err := setting.Upsert(k, v); err != nil {
+				// 失败也记一笔：非法提交（含试图改只读项 / 提交掩码）本身就是需要追溯的行为
+				audit.Record(db, c, audit.Entry{
+					Action: audit.ActionSettingUpdate, TargetType: "setting", TargetID: k,
+					Result: audit.ResultFail, Detail: map[string]any{"keys": keysOf(req), "error": err.Error()},
+				})
 				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 				return
 			}
@@ -72,6 +78,11 @@ func RegisterSettings(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			}
 		}
 		sort.Strings(restartKeys)
+		// 审计：记录改了哪些项，敏感项（密钥）只记「已修改」不落明文
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionSettingUpdate, TargetType: "setting",
+			Detail: audit.DetailKeys(req, setting.IsSecret),
+		})
 		msg := "保存成功"
 		if len(restartKeys) > 0 {
 			// 明确告知哪些项不会立刻生效，避免「改了没反应」的误解
@@ -80,4 +91,14 @@ func RegisterSettings(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": msg, "data": gin.H{"restartKeys": restartKeys}})
 	})
+}
+
+// keysOf 取提交里的设置项 key 列表（审计用：失败时不记录值，只记动过哪些项）。
+func keysOf(m map[string]string) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

@@ -476,6 +476,12 @@ func All() []Item {
 	return out
 }
 
+// IsSecret 该项是否为敏感项（密钥 / 连接串）：接口只回传掩码，审计详情也不能记明文。
+func IsSecret(key string) bool {
+	d, ok := registryByKey[key]
+	return ok && d.Secret
+}
+
 // IsRestart 该项保存后是否需重启进程才生效（云存储 / CDN 客户端在启动时构造）。
 // PUT 接口据此在返回 message 里点名提示，避免管理员误以为「改了没生效」。
 func IsRestart(key string) bool {

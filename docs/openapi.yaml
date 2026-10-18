@@ -1600,6 +1600,285 @@ paths:
                       url:
                         type: string
 
+  # ===== 系统设置（运行参数后台化）=====
+  # 配置项分三档：即时生效 / 需重启 / 只读（详见 backend/internal/setting 包注释）。
+  # 敏感项（密钥 / 连接串）只回传掩码 "******"，真实值永不出现在响应里。
+  /api/public/settings:
+    get:
+      summary: 公开配置（无需登录）
+      description: |
+        仅下发非敏感的三项：brand_name / miniprogram_base_url / pinned_company_id。
+        小程序冷启动与 PC 登录页取品牌名都走这个接口，因此**不能要求登录**。
+      tags: [设置]
+      responses:
+        "200":
+          description: code=0，data 为 key→value 映射
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: object
+                    additionalProperties:
+                      type: string
+
+  /api/admin/settings:
+    get:
+      summary: 读取全部可配置项（平台超管）
+      description: |
+        返回 registry 全量项（当前 34 项），每项带生效方式元数据：
+        - secret：敏感项，value 恒为掩码 "******"（真实值不下发）
+        - restart：保存后需重启进程才生效（云存储 / CDN 客户端在启动时构造）
+        - readOnly：只读项（db_dsn / jwt_key / cookie_*），PUT 会被拒绝
+        - envVar：对应环境变量名（留空时回退它）
+        - configured：当前是否已有有效值
+      tags: [设置]
+      responses:
+        "200":
+          description: code=0，data 为设置项数组
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SettingItem"
+    put:
+      summary: 批量更新配置（平台超管）
+      description: |
+        只提交变更项（map[key]value，值统一为字符串）。语义：
+        - 非敏感项：提交空串 = 清空并回退同名环境变量
+        - 敏感项：留空 = 不修改；提交掩码 "******" 会被拒绝（避免把掩码写成真值）
+        - readOnly 项一律拒绝，msg 里提示改用环境变量
+        回包 data.restartKeys 点名「需重启才生效」的项，前端据此提示。
+      tags: [设置]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: string
+              example: { "brand_name": "朗汇机电", "upload_max_mb": "20" }
+      responses:
+        "200":
+          description: code=0 保存成功；code=1 校验失败（类型非法 / 未知 key / 只读项 / 掩码值）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  msg:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      restartKeys:
+                        type: array
+                        items:
+                          type: string
+
+  # ===== 平台超管账号管理 =====
+  /api/admin/platform-admins:
+    get:
+      summary: 平台超管列表（company_id=0）
+      tags: [账号]
+      responses:
+        "200":
+          description: code=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformAdmin"
+    post:
+      summary: 新增平台超管
+      description: 用户名全表唯一（含企业管理员）。护栏不能绕过：至少一个平台超管。
+      tags: [账号]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: code=0（data.id / data.username）；code=1 用户名已存在
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        format: int64
+                      username:
+                        type: string
+
+  /api/admin/platform-admins/{id}:
+    put:
+      summary: 改用户名（可改自己或同级账号）
+      description: |
+        限定 company_id=0，改不到企业管理员头上。令牌里不含用户名，改名不踢会话；
+        self=true 表示改的是当前登录账号（前端据此刷新顶栏）。
+      tags: [账号]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+      responses:
+        "200":
+          description: code=0（data.self）；code=1 用户名已存在 / 账号不存在
+    delete:
+      summary: 删除平台超管
+      description: 护栏：不能删当前登录账号；至少保留一个平台超管。
+      tags: [账号]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: code=0；code=1 违反护栏
+
+  /api/admin/platform-admins/{id}/password:
+    post:
+      summary: 重置密码（不需原密码，用于给别人重置）
+      description: |
+        安全戳自增 → 该账号所有会话立即失效。改**自己**的密码走 PUT /api/admin/password（需校验原密码）。
+      tags: [账号]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        "200":
+          description: code=0（data.self=true 时前端应登出重登）
+
+  # ===== 操作审计日志（只读）=====
+  /api/admin/audit-logs:
+    get:
+      summary: 查询操作审计日志（平台超管）
+      description: |
+        记录后台写操作与登录失败：谁在什么时候、对什么对象做了什么、成功没有。
+        **只提供查询**：审计记录一旦可改就等于没有审计。
+        敏感值（密钥 / 密码 / 连接串）在 detail 里只记「已修改」，绝不落明文。
+      tags: [审计]
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: action
+          in: query
+          required: false
+          description: 如 setting.update / admin.reset_password / login.fail
+          schema:
+            type: string
+        - name: actorType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [admin, employee, anonymous]
+        - name: actorId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: result
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [success, fail]
+      responses:
+        "200":
+          description: code=0；code=403 非平台超管
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      size:
+                        type: integer
+                      list:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/AuditLog"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1849,6 +2128,90 @@ components:
           enum: [pending, approved, rejected]
         rejectReason:
           type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    SettingItem:
+      type: object
+      description: |
+        系统设置项（GET /api/admin/settings）。三档生效方式见 secret / restart / readOnly。
+      properties:
+        key:
+          type: string
+        group:
+          type: string
+          enum: [general, miniprogram, upload, wechat, auth, storage, security, feature]
+        type:
+          type: string
+          enum: [int, string, bool, string_slice]
+        description:
+          type: string
+        value:
+          type: string
+          description: 当前值；敏感项（secret=true）恒为掩码 "******"
+        secret:
+          type: boolean
+        restart:
+          type: boolean
+          description: 保存后需重启进程才生效
+        readOnly:
+          type: boolean
+          description: 只读项，PUT 会被拒绝（只能改环境变量）
+        envVar:
+          type: string
+          description: 对应环境变量名；留空时回退它
+        configured:
+          type: boolean
+
+    PlatformAdmin:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditLog:
+      type: object
+      description: |
+        操作审计记录。只追加不修改；敏感值在 detail 里只记「已修改」。
+      properties:
+        id:
+          type: integer
+          format: int64
+        actorType:
+          type: string
+          enum: [admin, employee, anonymous]
+        actorId:
+          type: integer
+          format: int64
+        actorName:
+          type: string
+          description: 冗余用户名：账号被删除后仍可追溯是谁操作的
+        companyId:
+          type: integer
+          format: int64
+        action:
+          type: string
+          example: setting.update
+        targetType:
+          type: string
+          example: admin
+        targetId:
+          type: string
+        detail:
+          type: string
+          description: JSON 变更摘要；敏感值脱敏为 "******"
+        ip:
+          type: string
+        result:
+          type: string
+          enum: [success, fail]
         createdAt:
           type: string
           format: date-time

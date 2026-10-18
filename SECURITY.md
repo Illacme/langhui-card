@@ -36,7 +36,8 @@
 - Cookie 为 `SameSite=Lax`（同源部署已足够缓解 CSRF）；若未来跨域部署或需更强保证，可加 double-submit CSRF Token。
 - 生产须设 `COOKIE_SECURE=true`（HTTPS）并前置反向代理；跨子域共享登录态才需设 `COOKIE_DOMAIN`。
 - 黑名单表 `revoked_sessions` 暂无自动清理任务，可后续加定时 SQL（按 `expires_at` 删除过期行）。
-- 无集中式密钥管理 / 审计日志 / 监控告警；生产需 HTTPS 与反向代理。
+- ~~无集中式密钥管理 / 审计日志 / 监控告警~~：**审计日志已落地**（`audit_log` 表 + 「平台管理 → 操作日志」），
+  覆盖后台写操作与登录失败，敏感值脱敏不落明文、只提供查询。仍未落地的是集中式密钥管理与完整监控告警栈。
 - 多实例部署下，小程序码 / access_token 等内存缓存不共享，需引入 Redis。
 
 > 上线前务必修改默认 `JWT_KEY` 与初始超管口令 `ADMIN_PASS`（服务启动时会打印 `[SECURITY]` 告警）。
