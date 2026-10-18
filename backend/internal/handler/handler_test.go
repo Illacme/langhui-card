@@ -138,7 +138,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	RegisterStorage(r, db, up, refresher, cfg)
 	RegisterAssets(r, db, up) // 常用素材库（内嵌 Lucide 图标 + 通用封面/LOGO）
 	RegisterWechat(r, cfg, up)
-	RegisterSettings(r, db) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	RegisterSettings(r, db, cfg) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	return r
 }

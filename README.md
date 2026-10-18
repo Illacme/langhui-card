@@ -55,8 +55,14 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 
 ## 系统设置（运行参数后台化）
 
-产品运行参数不再写死在代码里，平台超管可在 PC 后台「平台管理 → 系统设置」界面维护，
-**保存即时生效、无需重启**：
+产品运行参数不再写死在代码里，平台超管可在 PC 后台「平台管理 → 系统设置」界面维护。
+配置分**三档生效方式**（界面上用标签标明，保存时接口也会点名提示）：
+
+| 档位 | 含义 | 配置项 |
+| --- | --- | --- |
+| 即时生效 | 保存即写入内存缓存，无需重启 | 下表「常规」全部 |
+| 需重启 | 客户端在启动时构造，重启后才生效 | `storage_*`、`cdn_*`、`upload_dir`、`upload_base_url` |
+| 只读 | 界面只**掩码展示当前值**并提示改法，改它要动环境变量后重启 | `db_dsn`、`jwt_key`、`cookie_secure`、`cookie_domain` |
 
 | 分组 | 配置项 | 说明 |
 | --- | --- | --- |
@@ -66,14 +72,29 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 上传 | `upload_max_mb` | 单文件上传上限（MB） |
 | 上传 | `upload_allow_ext` | 允许上传的扩展名（逗号分隔） |
 | 微信 | `wxacode_ttl_hours` | 小程序码缓存有效期（小时） |
-| 微信 | `wx_appid` | 小程序 AppID（留空则回退环境变量 `WX_APPID`） |
-| 功能开关 | `metrics_enabled` | 是否开放 `/metrics`（Prometheus 指标）；留空则跟随环境变量 `METRICS_ENABLED` |
+| 微信 | `wx_appid` | 小程序 AppID（留空回退 `WX_APPID`，改完即时生效） |
+| 微信 | `wx_appsecret` | 小程序 AppSecret（敏感；留空回退 `WX_APPSECRET`，改完即时生效） |
+| 文件存储与 CDN | `storage_driver` | `local` / `minio` / `oss`（留空回退 `STORAGE_DRIVER`，**需重启**） |
+| 文件存储与 CDN | `storage_endpoint` / `storage_bucket` | 对象存储端点与桶名（MinIO 与 OSS 共用这两个字段） |
+| 文件存储与 CDN | `storage_access_key` / `storage_secret_key` | 对象存储凭据（后者敏感，界面只回传掩码） |
+| 文件存储与 CDN | `storage_use_ssl` / `storage_public` | MinIO 走 HTTPS / 是否公开桶（私有桶走限时签名） |
+| 文件存储与 CDN | `upload_dir` / `upload_base_url` | 本地存储目录 / 上传文件公开访问基址 |
+| 文件存储与 CDN | `cdn_enabled` / `cdn_access_key_id` / `cdn_access_key_secret` / `cdn_endpoint` | CDN 缓存刷新（覆盖写后使边缘缓存失效） |
+| 安全与基础设施 | `db_dsn` / `jwt_key` / `cookie_secure` / `cookie_domain` | **只读**，仅掩码展示当前值，修改走环境变量后重启 |
+| 功能开关 | `metrics_enabled` | 是否开放 `/metrics`（Prometheus 指标）；留空则跟随 `METRICS_ENABLED` |
 | 功能开关 | `independent_lock` | 独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员） |
 
-> **密钥类不进界面**：数据库地址、JWT 密钥、云存储 / CDN 凭据、微信 AppSecret 等
-> 始终走环境变量（见 `.env.example`），不落库、不可在界面编辑，避免敏感信息泄漏。
+> **为什么分三档？** 判据是「改错能否自愈」，不是「是否敏感」：
+> - 云存储 / CDN 凭据填错最坏是上传失败，**改回来重启即可**，所以允许在界面维护；
+> - `DB_DSN` / `JWT_KEY` 改错会把「改回来的入口」一起弄丢（连不上库 → 读不出配置；
+>   会话全失效 → 登不进后台），所以只展示不编辑；
+> - 敏感项（密钥 / 连接串）接口**只回传掩码**，真实值永不出现在响应里；界面输入框留空 = 不修改。
+>
+> 另：云存储驱动初始化失败时会**降级为本地磁盘**而不是让进程退出——否则管理员
+> 连后台都进不去，就再也改不回来（见 `cmd/server` 的 `newUploaderWithFallback`）。
 
-接口：`GET/PUT /api/admin/settings`（平台超管）、`GET /api/public/settings`（公开，仅上表前 3 项）。
+接口：`GET/PUT /api/admin/settings`（平台超管；PUT 回包含 `data.restartKeys` 点名需重启的项）、
+`GET /api/public/settings`（公开，仅品牌名 / 小程序基址 / 锁定租户）。
 
 ## 测试与 CI
 

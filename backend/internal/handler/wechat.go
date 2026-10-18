@@ -33,11 +33,10 @@ type wxacodeEntry struct {
 // 海报合成放在小程序端 canvas；后端只负责产出小程序码图片，存到 local/minio/oss 后返回访问 URL。
 // 私有桶（STORAGE_PUBLIC=false）下，返回的是限时签名 GET URL，避免把对象设为公开读。
 func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
-	// AppID 每次请求都解析：可在后台「系统设置 → 微信 → wx_appid」配置，
-	// 未配置时回退环境变量 WX_APPID——换 AppID 不必改环境变量重启。
-	// AppSecret 属密钥，始终只从环境变量取（不进设置表）。
+	// AppID / AppSecret 都每次请求解析：可在后台「系统设置 → 微信」配置，
+	// 未配置时回退环境变量 WX_APPID / WX_APPSECRET——换凭据不必改环境变量重启。
 	wcOf := func() wechat.Config {
-		return wechat.Config{AppID: resolveWXAppID(cfg), AppSecret: cfg.WXAppSecret}
+		return wechat.Config{AppID: resolveWXAppID(cfg), AppSecret: resolveWXAppSecret(cfg)}
 	}
 
 	// 微信身份换取（公开）：小程序 wx.login 的 code → openid。
@@ -137,6 +136,15 @@ func resolveWXAppID(cfg config.Config) string {
 		return v
 	}
 	return cfg.WXAppID
+}
+
+// resolveWXAppSecret 与 resolveWXAppID 同构：优先取系统设置 wx_appsecret（界面里以掩码展示、
+// 提交后仅存库不回传），留空回退环境变量 WX_APPSECRET。
+func resolveWXAppSecret(cfg config.Config) string {
+	if v := strings.TrimSpace(setting.GetString("wx_appsecret", "")); v != "" {
+		return v
+	}
+	return cfg.WXAppSecret
 }
 
 // wxacodeTTL 小程序码缓存有效期：优先取系统设置 upload/wxacode_ttl_hours，

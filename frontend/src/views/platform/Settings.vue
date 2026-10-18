@@ -13,8 +13,8 @@
     <el-alert
       type="info"
       :closable="false"
-      title="在此维护产品运行参数，保存后即时生效、无需重启。"
-      description="密钥与基础设施类配置（数据库地址、JWT 密钥、云存储/CDN 凭据、微信 AppSecret）出于安全考虑始终走环境变量，不在此处编辑。"
+      title="在此维护产品运行参数。常规项保存后即时生效；标注「需重启」的项要重启服务后才生效；标注「只读」的项只能改环境变量后重启。"
+      description="敏感项（密钥 / 连接串）不会回传真实值，界面只显示「已配置」；输入框留空表示不修改，填新值即覆盖。"
       style="margin-bottom: 16px"
     />
 
@@ -34,31 +34,63 @@
             <div class="row-label">
               <span class="label-text">{{ item.key }}</span>
               <el-tag size="small" effect="plain">{{ typeLabel(item.type) }}</el-tag>
+              <el-tag v-if="item.restart" size="small" type="warning" effect="plain">需重启</el-tag>
+              <el-tag v-if="item.readOnly" size="small" type="info" effect="plain">只读</el-tag>
+              <el-tag v-if="item.secret" size="small" type="danger" effect="plain">敏感</el-tag>
             </div>
-            <div class="row-desc">{{ item.description }}</div>
+            <div class="row-desc">
+              {{ item.description }}
+              <span v-if="item.envVar" class="env-hint">环境变量：{{ item.envVar }}</span>
+            </div>
           </div>
 
           <div class="row-control">
-            <!-- 开关：后端按 true/false 字符串存储 -->
-            <el-switch
+            <!-- 开关用三态：未设置（跟随环境变量）/ 开 / 关。
+                 后端以「空串 = 未在界面设置」表达回退环境变量，两态开关表达不了。 -->
+            <el-select
               v-if="item.type === 'bool'"
-              :model-value="isTrue(item.key)"
-              active-text="开"
-              inactive-text="关"
-              @change="(v: any) => setVal(item.key, v ? 'true' : 'false')"
-            />
+              :model-value="draft[item.key]"
+              :disabled="item.readOnly"
+              @change="(v: any) => setVal(item.key, String(v ?? ''))"
+            >
+              <el-option label="未设置（跟随环境变量）" value="" />
+              <el-option label="开" value="true" />
+              <el-option label="关" value="false" />
+            </el-select>
             <!-- 整数：上传上限 / 缓存小时 / 锁定租户 -->
             <el-input-number
               v-else-if="item.type === 'int'"
               :model-value="numVal(item.key)"
-              :min="minOf(item.key)"
+              :min="0"
+              :disabled="item.readOnly"
               controls-position="right"
               @change="(v: any) => setVal(item.key, String(v ?? 0))"
             />
+            <!-- 敏感文本：只显示掩码，留空不提交；点「清除」可显式置空回退环境变量 -->
+            <div v-else-if="item.secret" class="secret-control">
+              <el-input
+                v-model="draft[item.key]"
+                type="password"
+                show-password
+                :disabled="item.readOnly"
+                :placeholder="secretPlaceholder(item)"
+                class="text-input"
+              />
+              <el-button
+                v-if="!item.readOnly && item.configured"
+                size="small"
+                text
+                type="danger"
+                @click="clearSecret(item.key)"
+              >
+                清除
+              </el-button>
+            </div>
             <!-- 其余（string / string_slice）按文本编辑 -->
             <el-input
               v-else
               v-model="draft[item.key]"
+              :disabled="item.readOnly"
               :placeholder="placeholderOf(item)"
               class="text-input"
             />
@@ -82,15 +114,20 @@ const GROUP_LABELS: Record<string, string> = {
   miniprogram: '小程序',
   upload: '上传',
   wechat: '微信',
+  storage: '文件存储与 CDN',
+  security: '安全与基础设施（只读）',
   feature: '功能开关',
 }
-const GROUP_ORDER = ['general', 'miniprogram', 'upload', 'wechat', 'feature']
+const GROUP_ORDER = ['general', 'miniprogram', 'upload', 'wechat', 'storage', 'security', 'feature']
 
 const settings = useSettingsStore()
 
 const items = ref<SettingItem[]>([])
 const original = reactive<Record<string, string>>({})
 const draft = reactive<Record<string, string>>({})
+// 敏感项点「清除」= 显式提交空串（回退环境变量）。它与「没动过」不是一回事，
+// 因为两者在输入框里都是空值，必须单独记一笔才能正确生成提交载荷。
+const cleared = reactive<Record<string, boolean>>({})
 const loading = ref(true)
 const saving = ref(false)
 
@@ -114,7 +151,10 @@ const groups = computed(() => {
 })
 
 const changedKeys = computed(() =>
-  Object.keys(draft).filter((k) => draft[k] !== original[k])
+  items.value
+    .filter((it) => !it.readOnly)
+    .filter((it) => cleared[it.key] || draft[it.key] !== original[it.key])
+    .map((it) => it.key),
 )
 const dirty = computed(() => changedKeys.value.length > 0)
 const changedCount = computed(() => changedKeys.value.length)
@@ -123,27 +163,31 @@ function typeLabel(t: string) {
   return { int: '整数', bool: '开关', string: '文本', string_slice: '列表' }[t] || t
 }
 function placeholderOf(item: SettingItem) {
+  if (item.readOnly) return '只读'
   return item.type === 'string_slice' ? '逗号分隔，如 png,jpg,webp' : '未设置'
 }
-function isTrue(k: string) {
-  const v = String(draft[k] ?? '').toLowerCase()
-  return v === 'true' || v === '1' || v === 'yes' || v === 'on'
+function secretPlaceholder(item: SettingItem) {
+  if (item.readOnly) return '已配置（只读）'
+  return item.configured ? '已配置，留空则不修改' : '未设置，留空则回退环境变量'
 }
 function numVal(k: string) {
   const n = Number(draft[k])
   return Number.isFinite(n) ? n : 0
 }
-// 租户 id 允许 0（平台模式）；其余数值项不允许负数
-function minOf(k: string) {
-  return k === 'pinned_company_id' ? 0 : 0
-}
 function setVal(k: string, v: string) {
   draft[k] = v
+  cleared[k] = false
+}
+// 清除敏感值：置空并标记，提交时会带上空串让后端回退环境变量
+function clearSecret(k: string) {
+  draft[k] = ''
+  cleared[k] = true
 }
 
 function reset() {
-  Object.keys(draft).forEach((k) => {
-    draft[k] = original[k]
+  items.value.forEach((it) => {
+    draft[it.key] = original[it.key]
+    cleared[it.key] = false
   })
 }
 
@@ -154,8 +198,11 @@ async function load() {
     if (r.code === 0 && r.data) {
       items.value = r.data
       r.data.forEach((it) => {
-        original[it.key] = it.value
-        draft[it.key] = it.value
+        // 敏感项后端只给掩码，界面输入框一律留空：留空 = 不修改，避免把掩码回写成真实值。
+        // 只读的敏感项例外：它本来就不能提交，直接把掩码显示出来，管理员才看得到「当前已配置」。
+        original[it.key] = it.secret && !it.readOnly ? '' : it.value
+        draft[it.key] = original[it.key]
+        cleared[it.key] = false
       })
     }
   } catch {
@@ -170,20 +217,28 @@ async function save() {
   saving.value = true
   const payload: Record<string, string> = {}
   changedKeys.value.forEach((k) => {
-    payload[k] = draft[k]
+    payload[k] = cleared[k] ? '' : draft[k]
   })
   try {
     // 后端逐条校验类型，任一非法即返回 code:1（拦截器已弹错误提示并 reject）
-    await updateSettings(payload)
+    const r = await updateSettings(payload)
     // 成功后把「原值」推进到新值，按钮回到禁用态
     Object.keys(payload).forEach((k) => {
-      original[k] = payload[k]
+      cleared[k] = false
+      // 敏感项保存后输入框回到空（下发的仍是掩码），原值也保持空，避免显示成「已修改」
+      original[k] = items.value.find((it) => it.key === k)?.secret ? '' : payload[k]
+      draft[k] = original[k]
     })
     // 品牌名变了要立刻同步侧边栏展示，避免用户以为没生效
     if (payload.brand_name !== undefined) {
       settings.setBrandName(payload.brand_name || '')
     }
-    ElMessage.success(`已保存 ${changedCount.value} 项设置`)
+    const restart = r?.data?.restartKeys || []
+    if (restart.length > 0) {
+      ElMessage.warning(`已保存 ${changedCount.value} 项；${restart.length} 项需重启服务后生效：${restart.join('、')}`)
+    } else {
+      ElMessage.success(`已保存 ${changedCount.value} 项设置`)
+    }
   } catch {
     // 失败保留草稿，方便用户修正后重试
   } finally {
@@ -250,6 +305,7 @@ onMounted(load)
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .label-text {
   font-weight: 600;
@@ -262,6 +318,10 @@ onMounted(load)
   font-size: 12px;
   line-height: 1.6;
 }
+.env-hint {
+  margin-left: 6px;
+  color: #c0c4cc;
+}
 .row-control {
   flex: none;
   width: 260px;
@@ -269,6 +329,12 @@ onMounted(load)
   justify-content: flex-end;
 }
 .text-input {
+  width: 100%;
+}
+.secret-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   width: 100%;
 }
 /* 手机端：控制区改为独占一行，避免标签被挤压 */

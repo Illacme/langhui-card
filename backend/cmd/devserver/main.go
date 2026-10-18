@@ -101,6 +101,9 @@ func main() {
 	// 避免把演示账号口令写死在代码里），仅本地联调相关字段（SQLite 上传目录 / 本地驱动 /
 	// dev JWT 密钥）在此显式覆盖。
 	cfg := config.Load()
+	// 与生产一致：系统设置覆盖环境变量（界面留空则保留环境变量）。
+	// 放在下面几个「开发态强制覆盖」之前，保证 devserver 仍然是本地磁盘 + 临时目录。
+	cfg.OverlayFromSettings()
 	cfg.UploadDir = mustDir(filepath.Join(os.TempDir(), "langhui-dev-uploads"))
 	cfg.UploadBaseURL = uploadBaseURL(port)
 	cfg.StorageDriver = "local"
@@ -140,7 +143,7 @@ func main() {
 	handler.RegisterStorage(r, db, up, refresher, cfg)
 	handler.RegisterAssets(r, db, up) // 常用素材库（内嵌图标/封面/LOGO）
 	handler.RegisterWechat(r, cfg, up)
-	handler.RegisterSettings(r, db) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	handler.RegisterSettings(r, db, cfg) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
 	log.Printf("演示账号：平台超管 %s/%s；员工手机 13832603521 / 密码 langhui123（高立新，业务经理）", cfg.AdminUser, cfg.AdminPass)

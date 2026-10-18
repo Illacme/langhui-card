@@ -2,19 +2,26 @@
 //
 // 设计目标（与产品诉求对齐）：
 //   - 把过去散落在 config.go / main.go / storage.go / auth.go 等处的「写死值」
-//     收敛为一张 sys_setting 表，平台超管可在 PC 后台「系统设置」界面统一维护，
-//     无需改代码、无需重启即可生效（运行时内存缓存 + 即时回写）。
-//   - 密钥类（DB DSN / JWT / 云存储与 CDN 凭据 / 微信 AppSecret / Cookie 安全）
-//     始终留环境变量（轨 B），不进本表，避免敏感信息落入可界面编辑的范围。
+//     收敛为一张 sys_setting 表，平台超管可在 PC 后台「系统设置」界面统一维护。
+//
+// 配置项分三档（按「改错能否自愈」与「泄漏爆炸半径」划分，不是按「是否敏感」一刀切）：
+//  1. 常规项：保存即时生效（运行时内存缓存 + 即时回写），如品牌名 / 上传上限 / 特性开关；
+//  2. 需重启项（Restart）：云存储与 CDN 凭据、上传基址等。它们要在启动时建客户端，
+//     保存后需重启进程才生效；凭据写错不会让系统不可达——改回来重启即可自愈；
+//  3. 只读项（ReadOnly）：DB_DSN / JWT_KEY / Cookie 安全。它们一旦改错就会把
+//     「改回来的入口」一起弄丢（连不上库 → 读不出配置；会话全失效 → 登不进后台），
+//     因此只能在界面**掩码展示当前值**并提示改法，实际修改走环境变量 + 重启。
 //
 // 约定：
 //   - 所有「可后台配置项」必须在 registry 登记（含类型与默认值），前端分组表单与之对应；
 //     新增可配置项 = 在 registry 追加一行 + 前端加一项，缺省值会在 Init 时自动 seed 进库。
 //   - 取值一律带默认值：库未初始化 / 该 key 缺失 时回落默认值，保证任意阶段调用都安全。
+//   - 空串 = 「未在界面设置」，读取时回退同名环境变量（见 config.OverlayFromSettings）。
 package setting
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,9 +42,38 @@ type Setting struct {
 // TableName 显式指定表名（避免 GORM 复数化）。
 func (Setting) TableName() string { return "sys_setting" }
 
-// def 单条可配置项的静态定义（类型契约 + 默认值 + 文案）。
+// def 单条可配置项的静态定义（类型契约 + 默认值 + 文案 + 生效方式元数据）。
 type def struct {
 	Key, Group, Type, Value, Desc string
+	// Secret：敏感项。接口只回传掩码（Mask），真实值永不出现在响应里；
+	// 界面提交掩码或缺省表示「不改动」，提交空串表示「清掉、回退环境变量」。
+	Secret bool
+	// Restart：保存后需重启进程才生效（需在启动时建客户端的项，如对象存储 / CDN）。
+	Restart bool
+	// ReadOnly：只读项。不落库、不可通过接口修改，只能改环境变量后重启
+	//（改错会把「改回来的入口」一起弄丢的项，见包注释第 3 档）。
+	ReadOnly bool
+	// EnvVar：对应环境变量名。界面据此提示改法；未设置时回退该环境变量。
+	EnvVar string
+}
+
+// Mask 敏感项在接口响应里的掩码（界面据此显示「已配置」，不回传真实值）。
+const Mask = "******"
+
+// Item 后台「系统设置」渲染用 DTO。
+// 与 DB 模型 Setting 分开，避免把 secret 的真实值随表结构一并序列化出去。
+type Item struct {
+	Key         string `json:"key"`
+	Group       string `json:"group"`
+	Type        string `json:"type"` // int | string | bool | string_slice
+	Description string `json:"description"`
+	// Value 当前值：敏感项恒为 Mask（已配置）或空串（未配置）。
+	Value      string `json:"value"`
+	Secret     bool   `json:"secret"`
+	Restart    bool   `json:"restart"`
+	ReadOnly   bool   `json:"readOnly"`
+	EnvVar     string `json:"envVar"`
+	Configured bool   `json:"configured"` // 是否有有效值（库值 / 环境变量 / 进程内缺省）
 }
 
 // registry 全量「可后台配置项」清单：新增可配置项只在此追加一行即可。
@@ -45,22 +81,77 @@ type def struct {
 //   general    通用（品牌名）
 //   miniprogram 小程序（默认基址 / 独立版锁定租户）
 //   upload     上传（单文件上限 / 允许扩展名）
-//   wechat     微信（小程序码 TTL / AppID）
+//   wechat     微信（小程序码 TTL / AppID / AppSecret）
+//   storage    文件存储与 CDN（驱动 / 端点 / 桶 / 凭据 / 上传基址 / CDN 刷新）
+//   security   安全与基础设施（只读：DB 连接串 / JWT 密钥 / Cookie）
 //   feature    特性开关（Prometheus 指标 / 独立版企业锁定）
 var registry = []def{
-	{"brand_name", "general", "string", "智能名片", "后台侧边栏 / 页标题品牌名（未设置回落此值）"},
-	{"miniprogram_base_url", "miniprogram", "string", "", "小程序端默认接口基址；空则小程序用自身内置 baseUrl"},
-	{"pinned_company_id", "miniprogram", "int", "0", "企业独立版锁定租户：>0 锁定该企业，0=平台模式"},
-	{"upload_max_mb", "upload", "int", "10", "单文件上传上限（MB）"},
-	{"upload_allow_ext", "upload", "string_slice", "png,jpg,jpeg,gif,webp,mp4", "允许上传的扩展名（小写，逗号分隔）"},
-	{"wxacode_ttl_hours", "wechat", "int", "720", "小程序码缓存有效期（小时）"},
-	{"wx_appid", "wechat", "string", "", "小程序 AppID（小程序码与微信登录用；留空回退环境变量 WX_APPID。AppSecret 仍留环境变量）"},
+	{Key: "brand_name", Group: "general", Type: "string", Value: "智能名片",
+		Desc: "后台侧边栏 / 页标题品牌名（未设置回落此值）"},
+	{Key: "miniprogram_base_url", Group: "miniprogram", Type: "string",
+		Desc: "小程序端默认接口基址；空则小程序用自身内置 baseUrl"},
+	{Key: "pinned_company_id", Group: "miniprogram", Type: "int", Value: "0",
+		Desc: "企业独立版锁定租户：>0 锁定该企业，0=平台模式"},
+	{Key: "upload_max_mb", Group: "upload", Type: "int", Value: "10",
+		Desc: "单文件上传上限（MB）"},
+	{Key: "upload_allow_ext", Group: "upload", Type: "string_slice", Value: "png,jpg,jpeg,gif,webp,mp4",
+		Desc: "允许上传的扩展名（小写，逗号分隔）"},
+	{Key: "wxacode_ttl_hours", Group: "wechat", Type: "int", Value: "720",
+		Desc: "小程序码缓存有效期（小时）"},
+	{Key: "wx_appid", Group: "wechat", Type: "string", EnvVar: "WX_APPID",
+		Desc: "小程序 AppID（小程序码与微信登录用）；留空回退环境变量 WX_APPID"},
+	{Key: "wx_appsecret", Group: "wechat", Type: "string", Secret: true, EnvVar: "WX_APPSECRET",
+		Desc: "小程序 AppSecret（小程序码用，敏感）；留空回退环境变量 WX_APPSECRET"},
+
+	// ---- 文件存储与 CDN（改后需重启：客户端在启动时构造）----
+	// 凭据写错最坏结果是「上传失败」，改回来重启即可自愈，不会把自己锁在系统外，
+	// 因此允许在界面维护；留空则回退同名环境变量。
+	{Key: "storage_driver", Group: "storage", Type: "string", Restart: true, EnvVar: "STORAGE_DRIVER",
+		Desc: "存储驱动：local(本地磁盘) | minio(MinIO/S3 兼容) | oss(阿里云 OSS)；留空回退环境变量"},
+	{Key: "storage_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ENDPOINT",
+		Desc: "对象存储端点（不含协议头）；MinIO 对应 MINIO_ENDPOINT，OSS 对应 OSS_ENDPOINT"},
+	{Key: "storage_bucket", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_BUCKET",
+		Desc: "对象存储桶名（MinIO 对应 MINIO_BUCKET，OSS 对应 OSS_BUCKET）"},
+	{Key: "storage_access_key", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ACCESS_KEY",
+		Desc: "对象存储 AccessKey（MinIO 的 access key / OSS 的 AccessKeyId）"},
+	{Key: "storage_secret_key", Group: "storage", Type: "string", Secret: true, Restart: true, EnvVar: "MINIO_SECRET_KEY",
+		Desc: "对象存储 SecretKey（敏感，界面只回传掩码）"},
+	{Key: "storage_use_ssl", Group: "storage", Type: "bool", Restart: true, EnvVar: "MINIO_USE_SSL",
+		Desc: "MinIO 是否走 HTTPS；留空回退环境变量 MINIO_USE_SSL"},
+	{Key: "storage_public", Group: "storage", Type: "bool", Restart: true, EnvVar: "STORAGE_PUBLIC",
+		Desc: "是否公开桶：false=私有桶，已存图片需限时签名才能访问"},
+	{Key: "upload_dir", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_DIR",
+		Desc: "本地存储目录（仅 local 驱动；小程序码缓存也落这里）"},
+	{Key: "upload_base_url", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_BASE_URL",
+		Desc: "上传文件公开访问基址（小程序 / 前端拼绝对 URL 用）"},
+	{Key: "cdn_enabled", Group: "storage", Type: "bool", Restart: true, EnvVar: "CDN_ENABLED",
+		Desc: "是否启用 CDN 缓存刷新（覆盖写后使边缘缓存失效）"},
+	{Key: "cdn_access_key_id", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ACCESS_KEY_ID",
+		Desc: "CDN 刷新 AccessKeyId（阿里云，可与 OSS 凭据相同）"},
+	{Key: "cdn_access_key_secret", Group: "storage", Type: "string", Secret: true, Restart: true, EnvVar: "CDN_ACCESS_KEY_SECRET",
+		Desc: "CDN 刷新 AccessKeySecret（敏感）"},
+	{Key: "cdn_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ENDPOINT",
+		Desc: "CDN 刷新端点，留空默认 cdn.aliyuncs.com"},
+
+	// ---- 安全与基础设施（只读：只能改环境变量后重启）----
+	// 这三项改错会把「改回来的入口」一起弄丢（连不上库 / 登不进后台），故界面只展示。
+	{Key: "db_dsn", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "DB_DSN",
+		Desc: "数据库连接串（敏感，只读）。配置本身存在库里，改错就连不上库、再也读不出配置，因此只能改环境变量 DB_DSN 后重启"},
+	{Key: "jwt_key", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "JWT_KEY",
+		Desc: "JWT 签名密钥（敏感，只读）。改错会让所有已登录会话立即失效且无法回退，只能改环境变量 JWT_KEY 后重启"},
+	{Key: "cookie_secure", Group: "security", Type: "bool", Restart: true, ReadOnly: true, EnvVar: "COOKIE_SECURE",
+		Desc: "鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true）。改错会导致 http 环境登录不上，只能改环境变量 COOKIE_SECURE 后重启"},
+	{Key: "cookie_domain", Group: "security", Type: "string", Restart: true, ReadOnly: true, EnvVar: "COOKIE_DOMAIN",
+		Desc: "鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）"},
+
 	// 缺省空串 = 「未设置」，读取时回退环境变量 METRICS_ENABLED；
 	// 一旦在界面显式设为 true/false 就以界面为准（避免升级后让既有部署的开关行为突变）。
-	{"metrics_enabled", "feature", "bool", "", "是否开放 /metrics（Prometheus 指标）；留空则跟随环境变量 METRICS_ENABLED"},
+	{Key: "metrics_enabled", Group: "feature", Type: "bool", EnvVar: "METRICS_ENABLED",
+		Desc: "是否开放 /metrics（Prometheus 指标）；留空则跟随环境变量 METRICS_ENABLED"},
 	// 开启后企业管理页整体只读：列表/管理员列表可查，但新建企业、编辑企业、
 	// 启停企业、新建企业管理员一律拒绝（见 handler/companies.go 的 writeLocked）。
-	{"independent_lock", "feature", "bool", "false", "独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员）"},
+	{Key: "independent_lock", Group: "feature", Type: "bool", Value: "false",
+		Desc: "独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员）"},
 }
 
 // registryByKey 供按 key 快速查类型。
@@ -111,8 +202,12 @@ func Init(db *gorm.DB) error {
 }
 
 // seedDefaults 把 registry 中尚未落库的 key 以默认值写入（幂等）。
+// 只读项（ReadOnly）不落库：它们只能由环境变量决定，写进库反而会造成「界面没改、库里有值」的误解。
 func (s *Store) seedDefaults() error {
 	for _, d := range registry {
+		if d.ReadOnly {
+			continue
+		}
 		var cnt int64
 		if err := s.db.Model(&Setting{}).Where("key = ?", d.Key).Count(&cnt).Error; err != nil {
 			return err
@@ -216,6 +311,12 @@ func (s *Store) Set(key, value string) error {
 	if !ok {
 		return fmt.Errorf("未知设置项: %s", key)
 	}
+	if d.ReadOnly {
+		return fmt.Errorf("%s 为只读项，只能通过环境变量 %s 修改后重启", key, d.EnvVar)
+	}
+	if d.Secret && value == Mask {
+		return fmt.Errorf("%s 不能提交掩码值；留空表示回退环境变量", key)
+	}
 	if err := validateType(d.Type, value); err != nil {
 		return fmt.Errorf("%s: %w", key, err)
 	}
@@ -296,18 +397,79 @@ func GetStringSlice(key string, def []string) []string {
 // Reload 重新从 DB 载入内存（Put 已即时刷新，此处供外部强制刷新）。
 func Reload() error { return getStore().reload() }
 
-// All 返回全部可配置项（含类型 / 描述 / 当前值），供后台「系统设置」渲染分组表单。
-// 以 registry 为序，保证界面稳定；值取内存当前值（缺失则缺省值）。
-func All() []Setting {
+// envSnapshot 进程启动时的「环境变量类配置」实际值快照（仅用于只读项展示，不落库）。
+// 由 handler.RegisterSettings 注入（见 SetEnvSnapshot）：DB_DSN 等项即使环境变量没设，
+// 进程内也有缺省值，只有注入快照才能如实告诉管理员「当前到底配了什么」。
+var (
+	envSnapshot   = map[string]string{}
+	envSnapshotMu sync.RWMutex
+)
+
+// SetEnvSnapshot 注入环境变量类配置项的当前实际值（键为 registry 的 key，如 db_dsn）。
+func SetEnvSnapshot(m map[string]string) {
+	envSnapshotMu.Lock()
+	envSnapshot = m
+	envSnapshotMu.Unlock()
+}
+
+func envValue(key, envVar string) string {
+	envSnapshotMu.RLock()
+	v, ok := envSnapshot[key]
+	envSnapshotMu.RUnlock()
+	if ok && v != "" {
+		return v
+	}
+	if envVar == "" {
+		return ""
+	}
+	return os.Getenv(envVar)
+}
+
+// All 返回全部可配置项（含类型 / 描述 / 当前值 / 生效方式），供后台「系统设置」渲染分组表单。
+// 以 registry 为序，保证界面稳定；敏感项只回传掩码，真实值不出接口。
+func All() []Item {
 	g := getStore()
-	out := make([]Setting, 0, len(registry))
+	out := make([]Item, 0, len(registry))
 	for _, d := range registry {
-		out = append(out, Setting{
+		stored := g.GetString(d.Key, d.Value)
+		// 只读项不落库，值一律取进程内的环境变量实际值（由 envSnapshot 注入）。
+		if d.ReadOnly {
+			stored = envValue(d.Key, d.EnvVar)
+		}
+		it := Item{
 			Key: d.Key, Group: d.Group, Type: d.Type,
-			Description: d.Desc, Value: g.GetString(d.Key, d.Value),
-		})
+			Description: d.Desc,
+			Secret:      d.Secret, Restart: d.Restart, ReadOnly: d.ReadOnly, EnvVar: d.EnvVar,
+		}
+		it.Configured = configured(d, stored)
+		if d.Secret {
+			// 敏感项：已配置回传掩码（界面显示「已配置」），未配置回传空串
+			if it.Configured {
+				it.Value = Mask
+			}
+		} else {
+			it.Value = stored
+		}
+		out = append(out, it)
 	}
 	return out
+}
+
+// IsRestart 该项保存后是否需重启进程才生效（云存储 / CDN 客户端在启动时构造）。
+// PUT 接口据此在返回 message 里点名提示，避免管理员误以为「改了没生效」。
+func IsRestart(key string) bool {
+	d, ok := registryByKey[key]
+	return ok && d.Restart
+}
+
+// configured 判断该项当前是否已有有效值：库值非空，或环境变量 / 进程快照非空。
+// 布尔项只看「有没有被显式设置」——缺省 false 不应当显示成已配置。
+func configured(d def, stored string) bool {
+	if strings.TrimSpace(stored) != "" {
+		return true
+	}
+	// 布尔项的「未设置」是空串而不是 "false"：缺省关的开关不应显示成已配置
+	return envValue(d.Key, d.EnvVar) != ""
 }
 
 // Upsert 包级写入（校验类型）。未初始化时返回错误。
