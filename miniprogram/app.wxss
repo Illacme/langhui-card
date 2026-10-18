@@ -36,12 +36,13 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
   padding: 8rpx 22rpx; border-radius: 26rpx;
 }
 .emp-card .addr { color: #5f6f80; font-size: 24rpx; margin-top: 6rpx; }
-/* 联系表：白底两列；上方为设计稿的装饰短线（约左列 1/3 宽，非通栏）；
-   第二行邮箱与「座机」列左对齐 */
+/* 联系表：白底两列；上方为通栏双色分隔线——左段约 1/3 与公司名同色的蓝色，
+   右段浅灰延续到右缘（设计稿细节）；第二行邮箱与「座机」列左对齐 */
 .emp-card .rows { margin-top: 22rpx; padding-top: 18rpx; position: relative; }
 .emp-card .rows::before {
-  content: ""; position: absolute; top: 0; left: 0;
-  width: 32%; height: 1px; background: #dfe6ee;
+  content: ""; position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, #1b66df 0, #1b66df 32%, #e5ebf2 32%, #e5ebf2 100%);
 }
 .emp-card .row { display: flex; }
 .emp-card .cell { display: flex; width: 50%; padding: 8rpx 0; min-width: 0; }
