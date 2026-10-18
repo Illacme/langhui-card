@@ -63,6 +63,7 @@
 
 /* 「经典业绩」标题行：左侧标题 + 右侧「案例进入」小字链接（同名片按钮行为） */
 .sec-head { display: flex; align-items: center; justify-content: space-between; }
+.sec-head .sec-title { margin-bottom: 0; }
 .sec-link { font-size: 24rpx; color: #8aa5c0; }
 
 /* 简介区：视频封面下的公司名大标题（设计稿黑色加粗） */

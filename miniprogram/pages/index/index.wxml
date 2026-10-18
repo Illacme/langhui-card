@@ -37,7 +37,7 @@
     <block wx:else>
       <employee-card employee="{{employee}}" company="{{company}}" bind:entercase="onEnterCase" />
       <view class="section">
-        <view class="sec-title">公司简介</view>
+        <!-- 「公司简介」标题按设计稿叠在封面图左上角（见 company-video 组件），此处不再单列 -->
         <company-video channelId="{{profile.videoChannelId}}" backupMp4Url="{{profile.backupMp4Url}}" cover="{{profile.cover}}" />
         <view class="company-name">{{company.fullName}}</view>
         <text class="intro">{{profile.introText}}</text>

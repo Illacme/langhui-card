@@ -1,6 +1,8 @@
 <view class="company-video">
-  <!-- 设计图首页「公司简介」为一张蓝色建筑剪影卡片，非视频播放器。
-       后台上传的 cover 即该卡片；无 cover 时显示同风格占位。 -->
-  <image wx:if="{{cover}}" src="{{cover}}" class="cv" mode="aspectFill" />
+  <!-- 设计稿：封面图左上角叠白色「公司简介」标题；无 cover 时显示同风格占位（自带标题） -->
+  <view class="cv-wrap" wx:if="{{cover}}">
+    <image src="{{cover}}" class="cv" mode="aspectFill" />
+    <view class="cv-title">公司简介</view>
+  </view>
   <view wx:else class="cv cv-ph">公司简介</view>
 </view>
