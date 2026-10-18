@@ -1,4 +1,4 @@
-import { request } from '../../../utils/request'
+import { request, assetUrl } from '../../../utils/request'
 import { parseRich } from '../../../utils/richtext'
 import { formatDateTime } from '../../../utils/datetime'
 import { getCompanyId } from '../../../utils/tenant'
@@ -29,6 +29,11 @@ Page({
         wx.showToast({ title: '案例不存在或已下架', icon: 'none' })
         this.setData({ loading: false })
         return
+      }
+      // 封面与相册均为后端相对路径，端上拼绝对（<image> 与 previewImage 都需绝对 URL）
+      r.data.cover = assetUrl(r.data.cover)
+      if (Array.isArray(r.data.album)) {
+        r.data.album = r.data.album.map((u: string) => assetUrl(u))
       }
       this.setData({
         project: r.data,

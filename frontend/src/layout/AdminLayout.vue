@@ -90,11 +90,13 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UserFilled, Key, SwitchButton, Document, Van, DataLine, OfficeBuilding, School, Menu } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/store/auth'
+import { useSettingsStore } from '@/store/settings'
 import { adminLogout, getMe } from '@/api/auth'
 import ChangePasswordDialog from '@/components/ChangePasswordDialog.vue'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const route = useRoute()
 const router = useRouter()
 const showPwd = ref(false)
@@ -107,6 +109,8 @@ const avatarText = computed(() => (auth.username || '管理员').charAt(0))
 // 页面刷新后恢复身份：令牌在 httpOnly Cookie 中，JS 读不到 claims，
 // 用 /api/admin/me 取回「平台超管 / 企业管理员」与当前企业（服务端为准，覆盖本地缓存）。
 onMounted(async () => {
+  // 品牌名等公开运行参数：先渲染本地缓存值，再静默刷新（失败回落内置默认）
+  settings.load()
   if (auth.loggedIn && !auth.profileLoaded) {
     try {
       const resp = await getMe()
@@ -153,6 +157,8 @@ const allMenuGroups = [
     items: [
       { path: '/companies', title: '企业管理' },
       { path: '/platform/cdn-refresh', title: 'CDN 刷新' },
+      // 系统设置：运行参数（品牌名 / 上传限制 / 小程序码 TTL / 特性开关）后台维护
+      { path: '/platform/settings', title: '系统设置' },
     ],
   },
 ]
@@ -179,17 +185,21 @@ watch(
   }
 )
 
-// 侧边栏品牌名：取「企业简称」（在「企业管理」里设置，未设置时默认「智能名片」）；
-// 平台超管无归属企业，同样显示「智能名片」。
+// 侧边栏品牌名：优先「企业简称」（在「企业管理」里设置）；
+// 平台超管无归属企业、或企业未设简称时，回落到后台「系统设置 → 通用 → brand_name」
+// （未配置再由 store 回落内置默认「智能名片」）——品牌名不再写死在前端代码里。
 // 注意：公司信息页里的简称只作为小程序展示值，与本标识没有关联。
-const brandName = computed(() =>
-  auth.isPlatform || !auth.companyName
-    ? '智能名片 · 管理后台'
-    : `${auth.companyShortName || '智能名片'} · 管理后台`
-)
+const brandName = computed(() => {
+  const fallback = settings.displayBrandName
+  return auth.isPlatform || !auth.companyName
+    ? `${fallback} · 管理后台`
+    : `${auth.companyShortName || fallback} · 管理后台`
+})
 
 const activeMenu = computed(() => route.path)
-const currentTitle = computed(() => (route.meta?.title as string) || '智能名片管理后台')
+const currentTitle = computed(
+  () => (route.meta?.title as string) || `${settings.displayBrandName}管理后台`
+)
 
 async function onLogout() {
   try {

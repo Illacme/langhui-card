@@ -37,6 +37,7 @@ import (
 
 	"langhui/internal/config"
 	"langhui/internal/model"
+	"langhui/internal/setting"
 	"langhui/internal/storage"
 
 	"github.com/gin-gonic/gin"
@@ -120,6 +121,9 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 
 	SeedAdmin(db, cfg) // 首启 seed 初始超管
 
+	// 系统设置：seed 缺省值 + 载入内存缓存（测试依赖公开/后台设置接口）
+	require.NoError(t, setting.Init(db))
+
 	r := New(db)
 	RegisterAuth(r, db, cfg)
 	RegisterApply(r, db)
@@ -133,6 +137,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	RegisterStorage(r, db, up, refresher, cfg)
 	RegisterAssets(r, db, up) // 常用素材库（内嵌 Lucide 图标 + 通用封面/LOGO）
 	RegisterWechat(r, cfg, up)
+	RegisterSettings(r, db) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	return r
 }
@@ -154,7 +159,7 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
-		&model.Company{},
+		&model.Company{}, &setting.Setting{},
 	))
 	// 1 号租户（朗汇）：公开接口缺省落点；存量行为不随多租户改造而变
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
@@ -985,7 +990,7 @@ func newSeedDB(t *testing.T) *gorm.DB {
 		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
 		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
-		&model.Company{},
+		&model.Company{}, &setting.Setting{},
 	))
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 	return db

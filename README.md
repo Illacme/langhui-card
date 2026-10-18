@@ -49,6 +49,28 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 # 小程序：微信开发者工具导入 miniprogram/ 目录
 ```
 
+## 系统设置（运行参数后台化）
+
+产品运行参数不再写死在代码里，平台超管可在 PC 后台「平台管理 → 系统设置」界面维护，
+**保存即时生效、无需重启**：
+
+| 分组 | 配置项 | 说明 |
+| --- | --- | --- |
+| 通用 | `brand_name` | 后台侧边栏 / 登录页 / 页标题品牌名 |
+| 小程序 | `miniprogram_base_url` | 小程序端接口基址（冷启动拉 `/api/public/settings` 覆盖） |
+| 小程序 | `pinned_company_id` | 企业独立版锁定租户（>0 锁定，0 = 平台模式） |
+| 上传 | `upload_max_mb` | 单文件上传上限（MB） |
+| 上传 | `upload_allow_ext` | 允许上传的扩展名（逗号分隔） |
+| 微信 | `wxacode_ttl_hours` | 小程序码缓存有效期（小时） |
+| 微信 | `wx_appid` | 小程序 AppID |
+| 功能开关 | `metrics_enabled` | 是否开放 `/metrics`（Prometheus 指标） |
+| 功能开关 | `independent_lock` | 独立版企业锁定 |
+
+> **密钥类不进界面**：数据库地址、JWT 密钥、云存储 / CDN 凭据、微信 AppSecret 等
+> 始终走环境变量（见 `.env.example`），不落库、不可在界面编辑，避免敏感信息泄漏。
+
+接口：`GET/PUT /api/admin/settings`（平台超管）、`GET /api/public/settings`（公开，仅上表前 3 项）。
+
 ## 测试与 CI
 
 CI 见 `.github/workflows/ci.yml`，四个 job：

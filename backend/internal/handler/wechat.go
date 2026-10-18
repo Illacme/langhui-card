@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"langhui/internal/config"
+	"langhui/internal/setting"
 	"langhui/internal/storage"
 	"langhui/internal/wechat"
 
@@ -97,7 +98,7 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 			return
 		}
-		e = wxacodeEntry{key: key, publicURL: publicURL, expAt: time.Now().Add(cfg.WxacodeTTL)}
+		e = wxacodeEntry{key: key, publicURL: publicURL, expAt: time.Now().Add(wxacodeTTL(cfg))}
 		wxacodeMu.Lock()
 		wxacodeCache[staffID] = e
 		wxacodeMu.Unlock()
@@ -121,4 +122,15 @@ func resolveWxacodeURL(e wxacodeEntry, cfg config.Config, up storage.Uploader) (
 		return s.SignGetURL(e.key, time.Hour)
 	}
 	return e.publicURL, nil
+}
+
+// wxacodeTTL 小程序码缓存有效期：优先取系统设置 upload/wxacode_ttl_hours，
+// 未配置 / 非法时回退 config.WxacodeTTL（环境变量或默认 720h）。
+// 让「小程序码缓存时长」从系统设置界面可改，而不再写死在环境变量。
+func wxacodeTTL(cfg config.Config) time.Duration {
+	h := setting.GetInt("wxacode_ttl_hours", int(cfg.WxacodeTTL.Hours()))
+	if h <= 0 {
+		h = int(cfg.WxacodeTTL.Hours())
+	}
+	return time.Duration(h) * time.Hour
 }

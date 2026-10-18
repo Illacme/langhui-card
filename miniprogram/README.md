@@ -61,7 +61,10 @@ miniprogram/
    整个小程序锁定为该企业的独立版本——内容 / 申请 / 分享恒带该 companyId，
    且**不读任何外部来源**（扫码 scene、分享参数、Storage 残留都不能改写），
    不存在切换多租户的行为，呈现为「该企业专属小程序」。
-2. **平台模式**（`pinnedCompanyId = 0`，默认）：
+   > 锁定值可由后台下发，无需改代码重新提审：在 PC 后台「系统设置 → 小程序 →
+   > `pinned_company_id`」填企业 id，小程序冷启动拉 `/api/public/settings` 覆盖
+   > （见 `utils/config.ts`）。缺省 0。
+2. **平台模式**（`pinned_company_id = 0`，默认）：
    访客扫企业专属小程序码（scene 携带 `companyId=N`，或分享链接带 `companyId`）
    首次进入时绑定该企业并写入 Storage 粘滞，之后本机所有入口（直接打开 / 分享）均落该企业；
    无任何来源时不传 companyId，由后端缺省落 1 号租户（朗汇）。
@@ -75,7 +78,10 @@ miniprogram/
 
 ## 运行
 1. 微信开发者工具 → 导入项目 → 选择 `miniprogram/` 目录（appid 可用测试号）。
-2. 修改 `app.ts` 的 `globalData.baseUrl` 指向后端地址；开发阶段 `project.config.json` 已设 `urlCheck:false` 允许 http。
+2. 把 `utils/config.ts` 的 `DEFAULT_BASE_URL` 改成后端地址（这是「还没拿到后台配置时」的引导
+   种子）；开发阶段 `project.config.json` 已设 `urlCheck:false` 允许 http。
+   联调起来后即可由 PC 后台「系统设置 → 小程序 → `miniprogram_base_url`」下发正式基址，
+   不必再改代码打包（目标域名仍需是已配置的 request 合法域名）。
 3. 生产需在小程序后台配置 request 合法域名（https）。
 
 ## 本地联调（推荐：免 MySQL 的 devserver）
@@ -87,7 +93,7 @@ go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖�
 内置演示数据：平台超管 `admin / admin123456`；演示员工 手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）；公司信息、7 个业绩分类、多个项目案例、4 个业务服务、首页布局。
 小程序侧联调步骤：
 1. 微信开发者工具导入 `miniprogram/`（测试号 appid，`urlCheck:false` 已开）。
-2. 把 `app.ts` 的 `globalData.baseUrl` 改成开发机地址：模拟器用 `http://127.0.0.1:8080`，真机用电脑局域网 IP（同网段、关防火墙）。
+2. 把 `utils/config.ts` 的 `DEFAULT_BASE_URL` 改成开发机地址：模拟器用 `http://127.0.0.1:8080`，真机用电脑局域网 IP（同网段、关防火墙）。
 3. 首页直接打开会弹「输入员工编号」，输入 `1` 进入演示员工名片；或经 PC 后台生成的分享链接 / 小程序码进入（scene=`staffId=1`）。
 4. 员工登录页用 `13832603521 / langhui123` 登录，可改头像（上传走 `/api/employee/upload`）、提交名片修改（待平台/企业管理员审核）。
 5. 多租户联调：平台超管在 PC 后台「企业管理」开通企业并建企业管理员 → 企业管理员登录管理自己企业的内容 → 小程序申请页填 `companyId` 或用 `?companyId=` 访问公开接口验证隔离（见「多租户与企业独立版」）。

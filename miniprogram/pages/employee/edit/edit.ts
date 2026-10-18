@@ -1,4 +1,4 @@
-import { request, apiBaseUrl } from '../../../utils/request'
+import { request, apiBaseUrl, assetUrl } from '../../../utils/request'
 
 Page({
   data: {
@@ -48,7 +48,7 @@ Page({
             const body = JSON.parse(r.data)
             if (body.code === 0 && body.data && body.data.urls && body.data.urls.length) {
               const form = that.data.form as any
-              form.avatar = body.data.urls[0]
+              form.avatar = assetUrl(body.data.urls[0])
               that.setData({ form })
               wx.showToast({ title: '上传成功' })
             } else {

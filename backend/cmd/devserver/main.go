@@ -10,8 +10,9 @@
 //	cd backend && go run ./cmd/devserver
 //
 // 然后小程序 app.ts 的 baseUrl 指向 http://<本机IP>:8080 （开发者工具需勾选"不校验合法域名"）。
-// 真机 / 局域网联调时设 DEV_UPLOAD_BASE_URL=http://<本机IP>:8080/uploads，
-// 否则返回给端的头像 URL 写死 127.0.0.1，手机取不到图。
+// 上传/采用接口返回的是相对路径 /uploads/<name>，各端自行拼绝对——
+// 浏览器/管理后台经 vite 代理或反向代理解析，小程序经 assetUrl 拼 baseUrl，
+// 因此不再需要为手机端单独配 DEV_UPLOAD_BASE_URL（旧方案会把 127.0.0.1 写死进库导致裂图）。
 package main
 
 import (
@@ -27,6 +28,7 @@ import (
 	"langhui/internal/handler"
 	"langhui/internal/middleware"
 	"langhui/internal/model"
+	"langhui/internal/setting"
 	"langhui/internal/storage"
 
 	"github.com/glebarez/sqlite"
@@ -49,6 +51,7 @@ var devModels = []interface{}{
 	&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
 	&model.OpenApply{}, &model.CardModifyApply{},
 	&model.RevokedSession{}, &model.Company{},
+	&setting.Setting{}, // 系统设置表（后台「系统设置」界面维护运行参数）
 }
 
 func main() {
@@ -74,16 +77,36 @@ func main() {
 		log.Fatalf("auto migrate: %v", err)
 	}
 
-	cfg := config.Config{
-		UploadDir:     mustDir(filepath.Join(os.TempDir(), "langhui-dev-uploads")),
-		UploadBaseURL: uploadBaseURL(port),
-		StorageDriver: "local",
-		StoragePublic: true,
-		JWTKey:        "dev-jwt-key",
-		AdminUser:     "admin",
-		AdminPass:     "admin123456",
+	// 系统设置：seed 缺省值 + 载入内存缓存（后台「系统设置」界面维护运行参数）
+	if err := setting.Init(db); err != nil {
+		log.Fatalf("init settings: %v", err)
 	}
-	log.Printf("upload base url: %s", cfg.UploadBaseURL)
+	// 上传限制从系统设置读取（后台改上限即时生效、无需重启）
+	storage.UploadLimitBytes = func() int64 {
+		return int64(setting.GetInt("upload_max_mb", 10)) * 1024 * 1024
+	}
+	storage.AllowExtProvider = func() map[string]bool {
+		sl := setting.GetStringSlice("upload_allow_ext", nil)
+		if len(sl) == 0 {
+			return storage.DefaultAllowExt
+		}
+		m := make(map[string]bool, len(sl))
+		for _, e := range sl {
+			m[e] = true
+		}
+		return m
+	}
+
+	// 复用与 cmd/server 一致的环境变量加载（ADMIN_USER / ADMIN_PASS 等可由 env 覆盖，
+	// 避免把演示账号口令写死在代码里），仅本地联调相关字段（SQLite 上传目录 / 本地驱动 /
+	// dev JWT 密钥）在此显式覆盖。
+	cfg := config.Load()
+	cfg.UploadDir = mustDir(filepath.Join(os.TempDir(), "langhui-dev-uploads"))
+	cfg.UploadBaseURL = uploadBaseURL(port)
+	cfg.StorageDriver = "local"
+	cfg.StoragePublic = true
+	cfg.JWTKey = "dev-jwt-key"
+	log.Printf("dev server listening on :%s (storage=local, 上传返回相对路径 /uploads/<name>，由各端按源拼绝对)", port)
 	handler.SeedAdmin(db, cfg)
 
 	seedDemoData(db, cfg)
@@ -108,6 +131,7 @@ func main() {
 	handler.RegisterStorage(r, db, up, refresher, cfg)
 	handler.RegisterAssets(r, db, up) // 常用素材库（内嵌图标/封面/LOGO）
 	handler.RegisterWechat(r, cfg, up)
+	handler.RegisterSettings(r, db) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
 	log.Printf("演示账号：平台超管 %s/%s；员工手机 13832603521 / 密码 langhui123（高立新，业务经理）", cfg.AdminUser, cfg.AdminPass)
@@ -124,9 +148,9 @@ func mustDir(name string) string {
 	return abs
 }
 
-// uploadBaseURL 上传基址：默认 http://127.0.0.1:<port>/uploads（同机测试可直接用）；
-// 真机 / 局域网联调时用 DEV_UPLOAD_BASE_URL 指向本机 IP 或域名——
-// 否则后端返回给端的头像 / 相册 URL 写死 127.0.0.1，手机取不到图。
+// uploadBaseURL 仅作为配置字段 UploadBaseURL 的填充值（本地驱动已不依赖它生成 URL）。
+// 保留以兼容生产云存储（MinIO/OSS 用 BaseURL 拼绝对 CDN）与反向代理场景；
+// 本地联调因上传返回相对路径 /uploads/<name>，DEV_UPLOAD_BASE_URL 已不再影响手机端取图。
 func uploadBaseURL(port string) string {
 	if v := strings.TrimSpace(os.Getenv("DEV_UPLOAD_BASE_URL")); v != "" {
 		return strings.TrimRight(v, "/")
@@ -139,7 +163,7 @@ func uploadBaseURL(port string) string {
 // 图片素材（LOGO/头像/分类图标/项目封面/服务图标等）由 writeSeedAssets 写入上传目录，
 // 并以 cfg.UploadBaseURL 为基址回写，保证本机与真机（配 DEV_UPLOAD_BASE_URL）都能取到图。
 func seedDemoData(db *gorm.DB, cfg config.Config) {
-	assets := writeSeedAssets(cfg.UploadDir, cfg.UploadBaseURL)
+	assets := writeSeedAssets(cfg.UploadDir)
 
 	// 1 号租户：朗汇机电（存量演示数据全部归属；多租户第一期的小程序缺省也落这里）
 	db.Where("id = ?", 1).FirstOrCreate(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"})
@@ -243,9 +267,10 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	}
 }
 
-// writeSeedAssets 把内嵌的 PNG 占位素材写入上传目录，并返回「文件名→可访问 URL」映射。
+// writeSeedAssets 把内嵌的 PNG 占位素材写入上传目录，并返回「文件名→相对 URL」映射。
 // 每次启动都重写（上传目录为临时目录，重启即清空），保证素材始终可用。
-func writeSeedAssets(uploadDir, baseURL string) map[string]string {
+// 返回相对 /uploads/<name>（与各端按源拼绝对的统一约定一致）。
+func writeSeedAssets(uploadDir string) map[string]string {
 	urls := map[string]string{}
 	entries, err := seedAssetFS.ReadDir("seedassets")
 	if err != nil {
@@ -264,7 +289,7 @@ func writeSeedAssets(uploadDir, baseURL string) map[string]string {
 			log.Printf("写入素材 %s 失败: %v", e.Name(), err)
 			continue
 		}
-		urls[e.Name()] = strings.TrimRight(baseURL, "/") + "/" + e.Name()
+		urls[e.Name()] = "/uploads/" + e.Name()
 	}
 	return urls
 }

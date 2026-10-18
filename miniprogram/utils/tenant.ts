@@ -4,7 +4,9 @@
 //  1. 企业独立小程序版本（tenantConfig.pinnedCompanyId > 0）：
 //     整个小程序锁定为该企业的独立版本——一切内容 / 申请 / 分享都不带、也不读
 //     任何 companyId 来源（包括扫码 scene），不存在切换多租户的行为。
-//     部署时把下面的 pinnedCompanyId 改成企业 id 即可（在 PC 后台「企业管理」可查看）。
+//     锁定值由后台「系统设置 → 小程序 → pinned_company_id」下发，
+//     冷启动时写入下面的 tenantConfig（见 utils/config.ts）；如需强制内置，
+//     也可直接把这里改成企业 id（在 PC 后台「企业管理」可查看）。
 //  2. 平台模式（pinnedCompanyId = 0，默认）：
 //     保留分发能力：访客扫企业专属小程序码（scene 携带 companyId=N）首次进入时
 //     绑定该企业并写入 Storage 粘滞，后续打开 / 分享均落该企业；
@@ -13,7 +15,9 @@
 // 注意：员工登录态与名片内容始终按员工归属企业走（token / staffId 维度），
 // 本模块只决定「企业内容（业绩/服务/布局）与自助申请」落在哪个租户。
 
-// 企业独立版配置（部署改这里）：0=平台模式；非 0=锁定该企业（无任何切换行为）
+// 企业独立版配置：0=平台模式；非 0=锁定该企业（无任何切换行为）。
+// 运行期由后台「系统设置 → 小程序 → pinned_company_id」下发覆盖（见 app.ts / utils/config.ts）；
+// 缺省 0，后端未下发配置时保持平台模式。
 export const tenantConfig = {
   pinnedCompanyId: 0,
 }

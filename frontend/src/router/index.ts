@@ -88,6 +88,15 @@ const routes = [
         component: () => import('@/views/platform/CdnRefresh.vue'),
         meta: { title: 'CDN 刷新', group: '平台管理', platformOnly: true },
       },
+      {
+        // 系统设置：把产品运行参数（品牌名 / 上传限制 / 小程序码 TTL / 特性开关等）
+        // 从「代码写死」收敛为后台可维护项，保存即时生效、无需重启。
+        // 密钥类仍留环境变量，仅平台超级管理员可见可访问
+        path: 'platform/settings',
+        name: 'settings',
+        component: () => import('@/views/platform/Settings.vue'),
+        meta: { title: '系统设置', group: '平台管理', platformOnly: true },
+      },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/apply/open' },

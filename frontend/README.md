@@ -61,8 +61,9 @@ npm install
 npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 ```
 
-- 开发期 `vite.config.ts` 已将 `/api` 代理到 `http://127.0.0.1:8080`；
-  如需指向其他后端地址，用 `VITE_BACKEND_URL=http://x.x.x.x:8080 npm run dev`。
+- 开发期 `vite.config.ts` 已将 `/api` 与 `/uploads` 代理到 `http://127.0.0.1:8080`；
+  如需指向其他后端地址，用 `VITE_API_BASE=http://x.x.x.x:8080/api npm run dev`
+  （代理目标自动由 `VITE_API_BASE` 去掉末尾 `/api` 推导，无需再设 `VITE_BACKEND_URL`）。
 - 生产构建：`npm run build`（产物在 `dist/`，交由 Nginx 托管，API 走反向代理或同源）。
 
 ## 登录与鉴权

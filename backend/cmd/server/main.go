@@ -7,6 +7,7 @@ import (
 	"langhui/internal/handler"
 	"langhui/internal/middleware"
 	"langhui/internal/repository"
+	"langhui/internal/setting"
 	"langhui/internal/storage"
 
 	"gorm.io/driver/mysql"
@@ -27,6 +28,26 @@ func main() {
 	}
 
 	handler.SeedAdmin(db, cfg) // 首启动若 admin 表为空则创建初始超管
+
+	// 系统设置：建表 + seed 缺省值 + 载入内存缓存（后台「系统设置」界面维护运行参数）
+	if err := setting.Init(db); err != nil {
+		log.Fatalf("init settings: %v", err)
+	}
+	// 上传限制从系统设置读取（后台改上限即时生效、无需重启）；未配置则回落 10MB / 默认白名单
+	storage.UploadLimitBytes = func() int64 {
+		return int64(setting.GetInt("upload_max_mb", 10)) * 1024 * 1024
+	}
+	storage.AllowExtProvider = func() map[string]bool {
+		sl := setting.GetStringSlice("upload_allow_ext", nil)
+		if len(sl) == 0 {
+			return storage.DefaultAllowExt
+		}
+		m := make(map[string]bool, len(sl))
+		for _, e := range sl {
+			m[e] = true
+		}
+		return m
+	}
 
 	// 机会性清理过期的会话黑名单行（expires_at 已过的吊销记录，令牌自身也已过期）。
 	// 生产可按需另配定时任务：DELETE FROM revoked_sessions WHERE expires_at < NOW();
@@ -70,6 +91,7 @@ func main() {
 	handler.RegisterStorage(r, db, up, refresher, cfg) // 直传预签名 / 私有桶签名 / CDN 刷新 / 本地私有文件流
 	handler.RegisterAssets(r, db, up)                  // 常用素材库（内嵌图标/封面/LOGO）：清单 / 采用 / 预览图
 	handler.RegisterWechat(r, cfg, up)                 // GET /api/wechat/wxacode（小程序码，按 staffId）
+	handler.RegisterSettings(r, db)                    // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	log.Printf("listen :%s (storage driver=%s)", cfg.Port, cfg.StorageDriver)
 	if err := r.Run(":" + cfg.Port); err != nil {

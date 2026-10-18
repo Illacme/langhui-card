@@ -7,16 +7,30 @@
 // 都没有则不传（后端缺省落 1 号租户朗汇）。/api/card 按员工归属企业取，
 // /api/employee/*、/api/wechat/*、登录刷新等与租户无关，一律不注入。
 import { getCompanyId } from './tenant'
+import { DEFAULT_BASE_URL } from './config'
 
 const app = getApp() as any
 
+// 基址优先取 globalData（冷启动已由后台下发的 miniprogram_base_url 覆盖，见 utils/config.ts）；
+// 拿不到（如单测环境 / 未初始化）时回落到内置引导种子，不再在请求层散落写死地址。
 function baseUrl(): string {
-  return (app && app.globalData && app.globalData.baseUrl) || 'http://127.0.0.1:8080'
+  return (app && app.globalData && app.globalData.baseUrl) || DEFAULT_BASE_URL
 }
 
 // apiBaseUrl 暴露给文件上传等需要直接拼 URL 的场景（如 wx.uploadFile）
 export function apiBaseUrl(): string {
   return baseUrl()
+}
+
+// assetUrl 把后端返回的资源路径统一修正为「当前端可访问的绝对 URL」。
+// 后端本地存储返回相对路径（/uploads/...）或库内相对（/api/assets/file/...）：
+// 浏览器能按页面源解析，但小程序 <image src> / canvas img.src 不认相对路径，
+// 必须拼上 baseUrl 才能加载——否则手机端图片裂图。
+// 云存储（MinIO/OSS）返回的是绝对 CDN URL，原样返回即可（already absolute）。
+export function assetUrl(p?: string | null): string {
+  if (!p) return ''
+  if (/^https?:\/\//i.test(p)) return p
+  return baseUrl() + (p.charAt(0) === '/' ? '' : '/') + p
 }
 
 export interface ApiResult<T> {

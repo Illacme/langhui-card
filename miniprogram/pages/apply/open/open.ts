@@ -1,4 +1,4 @@
-import { request, apiBaseUrl } from '../../../utils/request'
+import { request, apiBaseUrl, assetUrl } from '../../../utils/request'
 import { getOpenid, getWechatNickname } from '../../../utils/wechat'
 
 // 访客自助提交开通申请（POST /api/apply/open）。
@@ -66,7 +66,7 @@ Page({
         } catch {}
         if (body.code === 0 && body.data && body.data.urls && body.data.urls.length) {
           const form = this.data.form as any
-          form.avatar = body.data.urls[0]
+          form.avatar = assetUrl(body.data.urls[0])
           this.setData({ form })
           wx.showToast({ title: '头像已设置' })
         } else {

@@ -69,7 +69,12 @@ func signHandler(up storage.Uploader, cfg config.Config) gin.HandlerFunc {
 		base := strings.TrimRight(cfg.UploadBaseURL, "/") + "/"
 		out := make(map[string]string, len(req.Urls))
 		for _, u := range req.Urls {
+			// 优先按绝对基址反推 key（云存储绝对 CDN URL）；
+			// 兼容本地存储返回的相对路径 /uploads/<name>：key 退化成去掉 /uploads/ 前缀。
 			key := strings.TrimPrefix(u, base)
+			if key == u {
+				key = strings.TrimPrefix(u, "/uploads/")
+			}
 			if key == "" || key == u {
 				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "无法解析对象 key: " + u})
 				return

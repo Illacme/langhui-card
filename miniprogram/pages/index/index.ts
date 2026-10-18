@@ -1,4 +1,4 @@
-import { request } from '../../utils/request'
+import { request, assetUrl } from '../../utils/request'
 import { bindCompanyFromScene, getCompanyId } from '../../utils/tenant'
 
 Page({
@@ -85,7 +85,7 @@ Page({
     request('GET', '/api/employee/me')
       .then((r: any) => {
         if (r && r.code === 0 && r.data) {
-          this.setData({ meAvatar: r.data.avatar || '', meName: r.data.name || '我的' })
+          this.setData({ meAvatar: assetUrl(r.data.avatar) || '', meName: r.data.name || '我的' })
         } else {
           this.setData({ meAvatar: '', meName: '' })
         }
@@ -145,16 +145,26 @@ Page({
         wx.showToast({ title: '员工不存在', icon: 'none' })
         return
       }
+      // 后端资源返回相对路径（/uploads/... 等），小程序 <image src> 不认相对，
+      // 必须在端上拼绝对——统一经 assetUrl 修正后再下发（employee-card /
+      // featured-projects / achievement-grid / service-grid / company-video 组件直接消费）。
+      const cardData = card as any
+      if (cardData.employee) cardData.employee.avatar = assetUrl(cardData.employee.avatar)
+      if (cardData.company) cardData.company.logo = assetUrl(cardData.company.logo)
+      if (cardData.profile) cardData.profile.cover = assetUrl(cardData.profile.cover)
+      const categories = (ach.categories || []).map((c: any) => ({ ...c, icon: assetUrl(c.icon) }))
+      const featured = (ach.featured || []).map((p: any) => ({ ...p, cover: assetUrl(p.cover) }))
+      const services = (svc.data || []).map((s: any) => ({ ...s, icon: assetUrl(s.icon) }))
       this.setData({
-        employee: card.employee,
-        company: card.company,
-        profile: card.profile,
-        categories: ach.categories || [],
-        featured: ach.featured || [],
-        services: svc.data || [],
+        employee: cardData.employee,
+        company: cardData.company,
+        profile: cardData.profile,
+        categories,
+        featured,
+        services,
         homeOrder: layout.order && layout.order.length ? layout.order : ['achievement', 'service'],
         // 首页背景：后端在响应根级下发（与 order 同级），缺省即不设背景
-        bgImage: layout.bgImage || '',
+        bgImage: assetUrl(layout.bgImage || ''),
         bgMask: layout.bgMask || 0,
         bgMaskAlpha: (layout.bgMask || 0) / 100,
         disabled: false,

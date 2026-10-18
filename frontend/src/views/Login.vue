@@ -3,7 +3,7 @@
     <el-card class="login-card">
       <div class="login-head">
         <div class="login-logo">智</div>
-        <h2>智能名片 · 管理后台</h2>
+        <h2>{{ settings.displayBrandName }} · 管理后台</h2>
         <p class="login-sub">管理员登录（平台 / 企业）</p>
       </div>
       <el-form ref="formRef" :model="form" :rules="rules" @submit.prevent="onSubmit">
@@ -35,15 +35,17 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { adminLogin } from '@/api/auth'
 import { useAuthStore } from '@/store/auth'
+import { useSettingsStore } from '@/store/settings'
 
 const auth = useAuthStore()
+const settings = useSettingsStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -55,6 +57,12 @@ const rules: FormRules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 }
+
+// 登录页标题品牌名取自后台「系统设置 → brand_name」（公开接口，无需登录）；
+// 未配置 / 接口不可用时由 store 回落内置默认「智能名片」。
+onMounted(() => {
+  settings.load()
+})
 
 async function onSubmit() {
   if (!formRef.value) return

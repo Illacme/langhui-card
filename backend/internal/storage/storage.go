@@ -20,10 +20,11 @@ type Uploader interface {
 	SaveBytes(relPath string, data []byte, contentType string) (string, error)
 }
 
-// LocalUploader 本地磁盘实现（骨架默认），生产可换 MinIOUploader / OssUploader 不改业务代码
+// LocalUploader 本地磁盘实现（骨架默认），生产可换 MinIOUploader / OssUploader 不改业务代码。
+// 本地驱动 URL 一律返回相对 /uploads/<name>，由各端按自身源拼绝对（见 Save/SaveBytes 注释）。
 type LocalUploader struct {
 	Dir      string          // 本地目录，如 ./uploads
-	BaseURL  string          // 公开访问基址，如 https://cdn.xxx/uploads
+	BaseURL  string          // 仅作兼容保留（云存储用）；本地驱动已不再参与 URL 生成
 	MaxBytes int64           // 单文件上限（字节）
 	AllowExt map[string]bool // 允许扩展名白名单（小写，不含点）
 }
@@ -33,7 +34,19 @@ var DefaultAllowExt = map[string]bool{
 	"png": true, "jpg": true, "jpeg": true, "gif": true, "webp": true, "mp4": true,
 }
 
-// Save 落盘并返回 URL（对象名形如 uploads/<name>，URL 为 BaseURL/<name>）
+// 运行时上限覆盖（优先取系统设置；未注入或返回 <=0 时用 LocalUploader.MaxBytes 兜底）。
+// 由 cmd/server 与 devserver 在 setting.Init 后注入，实现「后台改上限即时生效、无需重启」。
+// 这样上传限制不再写死在 main 的 10MB 常量里——它由 sys_setting.upload_max_mb 驱动。
+var UploadLimitBytes func() int64
+
+// AllowExtProvider 运行时扩展名白名单覆盖（优先取系统设置 upload_allow_ext）。
+// 返回 nil 时 checkFile 退用传入的 LocalUploader.AllowExt（默认白名单）。
+var AllowExtProvider func() map[string]bool
+
+// Save 落盘并返回相对 URL（/uploads/<name>）。
+// 故意返回相对路径而非绝对 localhost URL：各端按自身源拼绝对地址，
+// 浏览器/管理后台经反向代理或 vite 代理解析，小程序经 assetUrl 拼 baseUrl，
+// 实现「零配置多端可达」——避免把 127.0.0.1 写死进库导致手机端裂图。
 func (l *LocalUploader) Save(fh *multipart.FileHeader) (string, error) {
 	if err := checkFile(fh, l.MaxBytes, l.AllowExt); err != nil {
 		return "", err
@@ -58,10 +71,11 @@ func (l *LocalUploader) Save(fh *multipart.FileHeader) (string, error) {
 	if _, err := io.Copy(out, src); err != nil {
 		return "", err
 	}
-	return strings.TrimRight(l.BaseURL, "/") + "/" + name, nil
+	return "/uploads/" + name, nil
 }
 
-// SaveBytes 写入本地并返回 URL（relPath 直接作为子路径，如 "wxacode/12.jpg"）
+// SaveBytes 写入本地并返回相对 URL（relPath 直接作为子路径，如 "wxacode/12.jpg"）。
+// clean 已由下方 TrimPrefix 去首斜杠，拼 /uploads/ 前缀即与 r.Static("/uploads", Dir) 路由匹配。
 func (l *LocalUploader) SaveBytes(relPath string, data []byte, _ string) (string, error) {
 	clean := strings.TrimPrefix(relPath, "/")
 	dst := filepath.Join(l.Dir, clean)
@@ -71,13 +85,24 @@ func (l *LocalUploader) SaveBytes(relPath string, data []byte, _ string) (string
 	if err := os.WriteFile(dst, data, 0644); err != nil {
 		return "", err
 	}
-	return strings.TrimRight(l.BaseURL, "/") + "/" + clean, nil
+	return "/uploads/" + clean, nil
 }
 
 // checkFile 统一的大小 / 类型 / 内容嗅探校验（所有驱动共用）。
 // 先校验扩展名白名单，再对常见图片/视频做文件头（魔法字节）嗅探，防止把
 // 可执行文件重命名为图片扩展名后上传，规避存储/展示被滥用的风险。
 func checkFile(fh *multipart.FileHeader, max int64, allow map[string]bool) error {
+	// 运行时覆盖：优先取系统设置里的上传上限 / 扩展名白名单（后台改即生效）
+	if UploadLimitBytes != nil {
+		if m := UploadLimitBytes(); m > 0 {
+			max = m
+		}
+	}
+	if AllowExtProvider != nil {
+		if a := AllowExtProvider(); a != nil {
+			allow = a
+		}
+	}
 	if max > 0 && fh.Size > max {
 		return fmt.Errorf("文件过大，上限 %d MB", max/1024/1024)
 	}

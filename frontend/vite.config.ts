@@ -6,6 +6,14 @@ import { fileURLToPath, URL } from 'node:url'
 
 // PC 管理后台 Vite 配置
 // 开发期通过 /api 代理把请求转发到本地 Go 后端（默认 8080），避免跨域。
+//
+// 代理目标统一由 VITE_API_BASE 推导：VITE_API_BASE 是「含 /api 前缀的完整基址」
+// （运行时 axios / 素材预览图都以此为 base），取其去掉末尾 /api 后的源站作为代理目标，
+// 这样仅维护一个环境变量即可，避免再保留一个 VITE_BACKEND_URL 造成双命名混淆。
+// VITE_API_BASE 缺省 /api（相对当前源）时回落本机 8080。
+const apiBase = process.env.VITE_API_BASE || 'http://127.0.0.1:8080/api'
+const proxyTarget = apiBase.replace(/\/api\/?$/, '') || 'http://127.0.0.1:8080'
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -29,7 +37,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8080',
+        target: proxyTarget,
+        changeOrigin: true,
+      },
+      // 上传/采用接口返回相对路径 /uploads/<name>，开发态由本代理转发到后端静态目录，
+      // 保证管理后台 <img src="/uploads/..."> 在 vite 源下也能取到图（生产态由同源/反代保证）。
+      '/uploads': {
+        target: proxyTarget,
         changeOrigin: true,
       },
     },

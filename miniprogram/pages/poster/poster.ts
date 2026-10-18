@@ -1,4 +1,4 @@
-import { request } from '../../utils/request'
+import { request, assetUrl } from '../../utils/request'
 
 Page({
   data: {
@@ -25,7 +25,10 @@ Page({
     ])
     // /api/wechat/wxacode 成功返回 {code:0,data:{url}}（data.url 正确）；
     // /api/card 的 employee/company/profile 在响应根级（非 data 包裹），故此处直接存整个响应。
-    const qrUrl = code.data ? code.data.url : ''
+    const qrUrl = assetUrl(code.data ? code.data.url : '')
+    // 头像为后端相对路径，canvas 的 img.src 需绝对 URL 才能加载
+    const cardAny = card as any
+    if (cardAny.employee) cardAny.employee.avatar = assetUrl(cardAny.employee.avatar)
     this.setData({ card, qrUrl })
     this.draw()
   },

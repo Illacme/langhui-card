@@ -1,4 +1,4 @@
-import { request } from '../../../utils/request'
+import { request, assetUrl } from '../../../utils/request'
 
 // 员工「我的」页（tabBar）：未登录给登录 / 申请开通入口，已登录给名片与账号操作。
 // 数据在 onShow 拉取而非 onLoad——从登录页 / 编辑页返回时需要刷新登录态与资料。
@@ -25,6 +25,8 @@ Page({
       // 记到 globalData：「我的名片」switchTab 回名片页时按这个编号取数
       const app = getApp() as any
       app.globalData.myStaffId = r.data.staffId
+      // 头像为后端相对路径，端上拼绝对（小程序 <image src> 不认相对）
+      r.data.avatar = assetUrl(r.data.avatar)
       this.setData({ me: r.data, pendingModify: !!r.pendingModify })
     } else {
       // token 失效（拦截器已清 storage）：回到未登录态

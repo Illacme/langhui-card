@@ -1,4 +1,4 @@
-import { request } from '../../../utils/request'
+import { request, assetUrl } from '../../../utils/request'
 
 Page({
   data: {
@@ -20,7 +20,7 @@ Page({
     this.setData({ loading: true, error: false })
     try {
       const r = await request('GET', '/api/projects', { categoryId: this.data.categoryId })
-      const list = r.data || []
+      const list = (r.data || []).map((p: any) => ({ ...p, cover: assetUrl(p.cover) }))
       this.setData({ list, loading: false })
       // 标题栏回显分类名（跳转页文档 §1.2）：列表接口已回填 categoryName，无需二次查询；
       // 分类被删导致空名时退化为固定标题
