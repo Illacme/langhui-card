@@ -5,7 +5,10 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .section { background: #fff; margin: 16rpx 0; padding: 24rpx; }
 .sec-title { font-size: 32rpx; font-weight: 600; margin-bottom: 16rpx; }
 
-/* 员工名片区（严格按设计稿：圆角白卡片，头像+信息块紧凑排布，白底两列联系表） */
+/* 员工名片区（严格按设计稿：圆角白卡片，头像+信息块紧凑排布，白底两列联系表）
+   子元素类名一律 ec- 前缀：组件 addGlobalClass 会吃到全局样式，
+   通用名（cell/row/label…）会与「我的」页等全局类冲突泄漏样式
+   （历史 bug：全局 .cell 的 border-bottom 曾在联系表左列渲染出「半截灰线」） */
 .emp-card {
   background: #fff;
   margin: 16rpx 24rpx 0;
@@ -14,19 +17,19 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
   padding: 28rpx 28rpx 24rpx;
   box-sizing: border-box;
 }
-.emp-card .head { display: flex; }
+.emp-card .ec-head { display: flex; }
 .emp-card .avatar {
   width: 112rpx; height: 112rpx; border-radius: 50%;
   background: #e8f1fb; flex-shrink: 0;
   border: 4rpx solid #fff; box-shadow: 0 4rpx 10rpx rgba(0, 0, 0, 0.10);
 }
-.emp-card .info { flex: 1; min-width: 0; margin-left: 22rpx; }
-.emp-card .line1 { display: flex; align-items: center; justify-content: space-between; }
-.emp-card .name { font-size: 34rpx; font-weight: 700; color: #222; }
+.emp-card .ec-info { flex: 1; min-width: 0; margin-left: 22rpx; }
+.emp-card .ec-line1 { display: flex; align-items: center; justify-content: space-between; }
+.emp-card .ec-name { font-size: 34rpx; font-weight: 700; color: #222; }
 .emp-card .logo { width: 150rpx; height: 44rpx; flex-shrink: 0; margin-left: 16rpx; }
-.emp-card .title { color: #6b7a89; font-size: 24rpx; margin-top: 2rpx; }
-.emp-card .line3 { display: flex; align-items: center; margin-top: 10rpx; }
-.emp-card .cname {
+.emp-card .ec-title { color: #6b7a89; font-size: 24rpx; margin-top: 2rpx; }
+.emp-card .ec-line3 { display: flex; align-items: center; margin-top: 10rpx; }
+.emp-card .ec-cname {
   flex: 1; min-width: 0; color: #1b66df; font-size: 26rpx; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -35,23 +38,20 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
   background: #fff; border: 1rpx solid #d7e3ef;
   padding: 8rpx 22rpx; border-radius: 26rpx;
 }
-.emp-card .addr { color: #5f6f80; font-size: 24rpx; margin-top: 6rpx; }
-/* 联系表：白底两列。分隔线按设计稿用真实元素绘制：
-   rows-line = 上方通栏双色线（左段约 1/3 与公司名同色蓝色 + 右段浅灰到右缘）；
-   row-hline = 两行之间只覆盖左列的灰色半截线（右列「座机→邮箱」同属一组不隔断）；
-   第二行邮箱与「座机」列左对齐 */
-.emp-card .rows { margin-top: 22rpx; }
-.emp-card .rows-line {
+.emp-card .ec-addr { color: #5f6f80; font-size: 24rpx; margin-top: 6rpx; }
+/* 联系表：白底两列，仅上方一条通栏双色分隔线（左段约 1/3 与公司名同色蓝色 +
+   右段浅灰到右缘）；手机行下方设计稿没有任何线；邮箱行与「座机」列左对齐 */
+.emp-card .ec-rows { margin-top: 22rpx; }
+.emp-card .ec-rows-line {
   height: 1px; width: 100%; margin-bottom: 16rpx;
   background: linear-gradient(90deg, #1b66df 0, #1b66df 34%, #e5ebf2 34%, #e5ebf2 100%);
 }
-.emp-card .row-hline { height: 1px; width: 47%; background: #e5ebf2; margin: 4rpx 0; }
-.emp-card .row { display: flex; }
-.emp-card .cell { display: flex; width: 50%; padding: 8rpx 0; min-width: 0; }
-.emp-card .cell.email { margin-left: 50%; }
-.emp-card .cell.email .val { font-size: 22rpx; }
-.emp-card .label { width: 76rpx; color: #98a6b5; font-size: 24rpx; flex-shrink: 0; }
-.emp-card .val { color: #333; font-size: 26rpx; word-break: break-all; }
+.emp-card .ec-row { display: flex; }
+.emp-card .ec-cell { display: flex; width: 50%; padding: 8rpx 0; min-width: 0; }
+.emp-card .ec-cell.email { margin-left: 50%; }
+.emp-card .ec-cell.email .ec-val { font-size: 22rpx; }
+.emp-card .ec-label { width: 76rpx; color: #98a6b5; font-size: 24rpx; flex-shrink: 0; }
+.emp-card .ec-val { color: #333; font-size: 26rpx; word-break: break-all; }
 
 /* 公司简介卡片（设计稿：封面大图左上角叠白色标题，图片更高挺拔） */
 .company-video .cv-wrap { position: relative; }
