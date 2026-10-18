@@ -282,23 +282,37 @@ _STYLE_GROUPS = {
         "bg-linen", "bg-weave",
         "cover-veins", "cover-skyline-warm", "cover-minimal-sand",
         "cover-stars-dawn", "cover-orbs-amber", "cover-chevrons-emerald",
+        # LOGO / 头像：暖色大地系（橙、叶绿、青柠、琥珀、橄榄、咖啡）
+        "logo-bolt", "logo-leaf", "logo-hex-lime", "logo-wave-amber",
+        "avatar-5", "avatar-6", "avatar-19", "avatar-23",
     ),
     "luxury": (
         "bg-gold", "bg-marble", "bg-marble-white", "bg-silk", "bg-silk-rose",
         "bg-hexcell-copper",
         "cover-goldline", "cover-goldline-emerald",
+        # LOGO / 头像：金、古铜、深酒红、绛红（尊贵感配色）
+        "logo-ringstar", "logo-crown", "logo-gear-gold", "logo-compass",
+        "logo-peak-bronze",
+        "avatar-9", "avatar-12", "avatar-14", "avatar-20",
     ),
     "soft": (
         "bg-ink", "bg-pearl", "bg-mint", "bg-bloom", "bg-bloom-lavender",
         "bg-skyline-day", "bg-ripple",
         "cover-arcs-rose", "cover-ripple-violet", "cover-arclines-rose",
         "cover-confetti-mint", "cover-blocks-mint",
+        # LOGO / 头像：高明度淡色（淡紫、浅灰、浅玫红、薄荷、珊瑚、靛紫）
+        "logo-orbit-violet", "logo-tower-slate", "logo-diamond-rose",
+        "avatar-16", "avatar-17", "avatar-18", "avatar-21",
     ),
     "vivid": (
         "bg-bokeh", "bg-glow", "bg-mesh", "bg-aurora", "bg-waves", "bg-nebula",
         "bg-coral", "bg-sunburst",
         "cover-beams", "cover-arcs", "cover-waves", "cover-waves-deep",
         "cover-bokeh", "cover-bubbles", "cover-ripple", "cover-orbs",
+        # LOGO / 头像：高饱和撞色（紫、玫红、正红）
+        "logo-hex", "logo-orbit", "logo-cube", "logo-flame", "logo-spiral",
+        "logo-crown-violet",
+        "avatar-4", "avatar-7",
     ),
 }
 STYLE_MAP = {i: s for s, ids in _STYLE_GROUPS.items() for i in ids}
@@ -603,6 +617,10 @@ def make_icon(item_id, name, lucide, group, tags):
     tile.alpha_composite(glyph, ((S - glyph.width) // 2, (S - glyph.height) // 2))
     path = os.path.join(OUT, "icons", item_id + ".png")
     tile.save(path, "PNG")
+    # 图标当前只有 cat/svc/misc 三组冷色配色（见 GROUP_COLORS），客观上不存在
+    # 调性差异，故全部落 clean——选择器的风格行在图标分类下会自动隐藏。
+    # 若要让暖色/金色调性的企业也能配上同调图标，需给图标加配色变体
+    # （数量 ×N、体积线性增长），属于另一项产品决策。
     return {"id": item_id, "name": name, "category": "icon", "style": "clean",
             "file": "icons/%s.png" % item_id, "thumb": "icons/%s.png" % item_id,
             "width": S, "height": S, "tags": tags + ["简约清晰"]}
@@ -1522,9 +1540,11 @@ def make_avatar(item_id, name, colors):
     tile = rounded_tile(S, *colors, radius_ratio=0.22)
     tile.alpha_composite(mark_person(S), (0, 0))
     tile.save(os.path.join(OUT, "avatars", item_id + ".png"), "PNG")
-    return {"id": item_id, "name": name, "category": "avatar", "style": "clean",
+    return {"id": item_id, "name": name, "category": "avatar",
+            "style": style_of(item_id),
             "file": "avatars/%s.png" % item_id, "thumb": "avatars/%s.png" % item_id,
-            "width": S, "height": S, "tags": [name, "头像", "默认", "简约清晰"]}
+            "width": S, "height": S,
+            "tags": [name, "头像", "默认", STYLE_NAMES[style_of(item_id)]]}
 
 
 LOGO_MARKS = {
@@ -1545,9 +1565,11 @@ def make_logo(item_id, name, colors, mark):
     tile.alpha_composite(LOGO_MARKS[mark](S), (0, 0))
     path = os.path.join(OUT, "logos", item_id + ".png")
     tile.save(path, "PNG")
-    return {"id": item_id, "name": name, "category": "logo", "style": "clean",
+    return {"id": item_id, "name": name, "category": "logo",
+            "style": style_of(item_id),
             "file": "logos/%s.png" % item_id, "thumb": "logos/%s.png" % item_id,
-            "width": S, "height": S, "tags": [name, "LOGO", "标识", mark, "简约清晰"]}
+            "width": S, "height": S,
+            "tags": [name, "LOGO", "标识", mark, STYLE_NAMES[style_of(item_id)]]}
 
 
 # ── 小程序首页背景图（750×1334 竖幅，深色高端商务风） ───────────────────

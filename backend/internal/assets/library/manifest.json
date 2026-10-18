@@ -3874,7 +3874,7 @@
    "id": "logo-bolt",
    "name": "闪电",
    "category": "logo",
-   "style": "clean",
+   "style": "nature",
    "file": "logos/logo-bolt.png",
    "thumb": "logos/logo-bolt.png",
    "width": 512,
@@ -3884,7 +3884,7 @@
     "LOGO",
     "标识",
     "bolt",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
@@ -3925,7 +3925,7 @@
    "id": "logo-hex",
    "name": "六边",
    "category": "logo",
-   "style": "clean",
+   "style": "vivid",
    "file": "logos/logo-hex.png",
    "thumb": "logos/logo-hex.png",
    "width": 512,
@@ -3935,7 +3935,7 @@
     "LOGO",
     "标识",
     "hex",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
@@ -3976,7 +3976,7 @@
    "id": "logo-orbit",
    "name": "环轨",
    "category": "logo",
-   "style": "clean",
+   "style": "vivid",
    "file": "logos/logo-orbit.png",
    "thumb": "logos/logo-orbit.png",
    "width": 512,
@@ -3986,7 +3986,7 @@
     "LOGO",
     "标识",
     "orbit",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
@@ -4010,7 +4010,7 @@
    "id": "logo-ringstar",
    "name": "星环",
    "category": "logo",
-   "style": "clean",
+   "style": "luxury",
    "file": "logos/logo-ringstar.png",
    "thumb": "logos/logo-ringstar.png",
    "width": 512,
@@ -4020,7 +4020,7 @@
     "LOGO",
     "标识",
     "ringstar",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4078,7 +4078,7 @@
    "id": "logo-cube",
    "name": "立方",
    "category": "logo",
-   "style": "clean",
+   "style": "vivid",
    "file": "logos/logo-cube.png",
    "thumb": "logos/logo-cube.png",
    "width": 512,
@@ -4088,7 +4088,7 @@
     "LOGO",
     "标识",
     "cube",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
@@ -4112,7 +4112,7 @@
    "id": "logo-flame",
    "name": "火焰",
    "category": "logo",
-   "style": "clean",
+   "style": "vivid",
    "file": "logos/logo-flame.png",
    "thumb": "logos/logo-flame.png",
    "width": 512,
@@ -4122,14 +4122,14 @@
     "LOGO",
     "标识",
     "flame",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
    "id": "logo-leaf",
    "name": "叶片",
    "category": "logo",
-   "style": "clean",
+   "style": "nature",
    "file": "logos/logo-leaf.png",
    "thumb": "logos/logo-leaf.png",
    "width": 512,
@@ -4139,7 +4139,7 @@
     "LOGO",
     "标识",
     "leaf",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
@@ -4163,7 +4163,7 @@
    "id": "logo-crown",
    "name": "冠冕",
    "category": "logo",
-   "style": "clean",
+   "style": "luxury",
    "file": "logos/logo-crown.png",
    "thumb": "logos/logo-crown.png",
    "width": 512,
@@ -4173,14 +4173,14 @@
     "LOGO",
     "标识",
     "crown",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
    "id": "logo-spiral",
    "name": "螺旋",
    "category": "logo",
-   "style": "clean",
+   "style": "vivid",
    "file": "logos/logo-spiral.png",
    "thumb": "logos/logo-spiral.png",
    "width": 512,
@@ -4190,7 +4190,7 @@
     "LOGO",
     "标识",
     "spiral",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
@@ -4214,7 +4214,7 @@
    "id": "logo-gear-gold",
    "name": "齿轮 · 金",
    "category": "logo",
-   "style": "clean",
+   "style": "luxury",
    "file": "logos/logo-gear-gold.png",
    "thumb": "logos/logo-gear-gold.png",
    "width": 512,
@@ -4224,7 +4224,7 @@
     "LOGO",
     "标识",
     "gear",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4248,7 +4248,7 @@
    "id": "logo-hex-lime",
    "name": "六边 · 青柠",
    "category": "logo",
-   "style": "clean",
+   "style": "nature",
    "file": "logos/logo-hex-lime.png",
    "thumb": "logos/logo-hex-lime.png",
    "width": 512,
@@ -4258,14 +4258,14 @@
     "LOGO",
     "标识",
     "hex",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
    "id": "logo-orbit-violet",
    "name": "环轨 · 紫",
    "category": "logo",
-   "style": "clean",
+   "style": "soft",
    "file": "logos/logo-orbit-violet.png",
    "thumb": "logos/logo-orbit-violet.png",
    "width": 512,
@@ -4275,14 +4275,14 @@
     "LOGO",
     "标识",
     "orbit",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
    "id": "logo-tower-slate",
    "name": "塔楼 · 石板",
    "category": "logo",
-   "style": "clean",
+   "style": "soft",
    "file": "logos/logo-tower-slate.png",
    "thumb": "logos/logo-tower-slate.png",
    "width": 512,
@@ -4292,7 +4292,7 @@
     "LOGO",
     "标识",
     "tower",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
@@ -4333,7 +4333,7 @@
    "id": "logo-compass",
    "name": "罗盘",
    "category": "logo",
-   "style": "clean",
+   "style": "luxury",
    "file": "logos/logo-compass.png",
    "thumb": "logos/logo-compass.png",
    "width": 512,
@@ -4343,7 +4343,7 @@
     "LOGO",
     "标识",
     "compass",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4401,7 +4401,7 @@
    "id": "logo-wave-amber",
    "name": "波浪 · 琥珀",
    "category": "logo",
-   "style": "clean",
+   "style": "nature",
    "file": "logos/logo-wave-amber.png",
    "thumb": "logos/logo-wave-amber.png",
    "width": 512,
@@ -4411,7 +4411,7 @@
     "LOGO",
     "标识",
     "wave",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
@@ -4452,7 +4452,7 @@
    "id": "logo-crown-violet",
    "name": "冠冕 · 紫",
    "category": "logo",
-   "style": "clean",
+   "style": "vivid",
    "file": "logos/logo-crown-violet.png",
    "thumb": "logos/logo-crown-violet.png",
    "width": 512,
@@ -4462,7 +4462,7 @@
     "LOGO",
     "标识",
     "crown",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
@@ -4486,7 +4486,7 @@
    "id": "logo-diamond-rose",
    "name": "菱钻 · 玫红",
    "category": "logo",
-   "style": "clean",
+   "style": "soft",
    "file": "logos/logo-diamond-rose.png",
    "thumb": "logos/logo-diamond-rose.png",
    "width": 512,
@@ -4496,7 +4496,7 @@
     "LOGO",
     "标识",
     "diamond",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
@@ -4520,7 +4520,7 @@
    "id": "logo-peak-bronze",
    "name": "山峰 · 古铜",
    "category": "logo",
-   "style": "clean",
+   "style": "luxury",
    "file": "logos/logo-peak-bronze.png",
    "thumb": "logos/logo-peak-bronze.png",
    "width": 512,
@@ -4530,7 +4530,7 @@
     "LOGO",
     "标识",
     "peak",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4585,7 +4585,7 @@
    "id": "avatar-4",
    "name": "默认头像 · 紫",
    "category": "avatar",
-   "style": "clean",
+   "style": "vivid",
    "file": "avatars/avatar-4.png",
    "thumb": "avatars/avatar-4.png",
    "width": 256,
@@ -4594,14 +4594,14 @@
     "默认头像 · 紫",
     "头像",
     "默认",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
    "id": "avatar-5",
    "name": "默认头像 · 绿",
    "category": "avatar",
-   "style": "clean",
+   "style": "nature",
    "file": "avatars/avatar-5.png",
    "thumb": "avatars/avatar-5.png",
    "width": 256,
@@ -4610,14 +4610,14 @@
     "默认头像 · 绿",
     "头像",
     "默认",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
    "id": "avatar-6",
    "name": "默认头像 · 橙",
    "category": "avatar",
-   "style": "clean",
+   "style": "nature",
    "file": "avatars/avatar-6.png",
    "thumb": "avatars/avatar-6.png",
    "width": 256,
@@ -4626,14 +4626,14 @@
     "默认头像 · 橙",
     "头像",
     "默认",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
    "id": "avatar-7",
    "name": "默认头像 · 玫",
    "category": "avatar",
-   "style": "clean",
+   "style": "vivid",
    "file": "avatars/avatar-7.png",
    "thumb": "avatars/avatar-7.png",
    "width": 256,
@@ -4642,7 +4642,7 @@
     "默认头像 · 玫",
     "头像",
     "默认",
-    "简约清晰"
+    "光影流动"
    ]
   },
   {
@@ -4665,7 +4665,7 @@
    "id": "avatar-9",
    "name": "默认头像 · 金",
    "category": "avatar",
-   "style": "clean",
+   "style": "luxury",
    "file": "avatars/avatar-9.png",
    "thumb": "avatars/avatar-9.png",
    "width": 256,
@@ -4674,7 +4674,7 @@
     "默认头像 · 金",
     "头像",
     "默认",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4713,7 +4713,7 @@
    "id": "avatar-12",
    "name": "默认头像 · 绛红",
    "category": "avatar",
-   "style": "clean",
+   "style": "luxury",
    "file": "avatars/avatar-12.png",
    "thumb": "avatars/avatar-12.png",
    "width": 256,
@@ -4722,7 +4722,7 @@
     "默认头像 · 绛红",
     "头像",
     "默认",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4745,7 +4745,7 @@
    "id": "avatar-14",
    "name": "默认头像 · 琥珀",
    "category": "avatar",
-   "style": "clean",
+   "style": "luxury",
    "file": "avatars/avatar-14.png",
    "thumb": "avatars/avatar-14.png",
    "width": 256,
@@ -4754,7 +4754,7 @@
     "默认头像 · 琥珀",
     "头像",
     "默认",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
@@ -4777,7 +4777,7 @@
    "id": "avatar-16",
    "name": "默认头像 · 薄荷",
    "category": "avatar",
-   "style": "clean",
+   "style": "soft",
    "file": "avatars/avatar-16.png",
    "thumb": "avatars/avatar-16.png",
    "width": 256,
@@ -4786,14 +4786,14 @@
     "默认头像 · 薄荷",
     "头像",
     "默认",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
    "id": "avatar-17",
    "name": "默认头像 · 珊瑚",
    "category": "avatar",
-   "style": "clean",
+   "style": "soft",
    "file": "avatars/avatar-17.png",
    "thumb": "avatars/avatar-17.png",
    "width": 256,
@@ -4802,14 +4802,14 @@
     "默认头像 · 珊瑚",
     "头像",
     "默认",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
    "id": "avatar-18",
    "name": "默认头像 · 靛紫",
    "category": "avatar",
-   "style": "clean",
+   "style": "soft",
    "file": "avatars/avatar-18.png",
    "thumb": "avatars/avatar-18.png",
    "width": 256,
@@ -4818,14 +4818,14 @@
     "默认头像 · 靛紫",
     "头像",
     "默认",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
    "id": "avatar-19",
    "name": "默认头像 · 橄榄",
    "category": "avatar",
-   "style": "clean",
+   "style": "nature",
    "file": "avatars/avatar-19.png",
    "thumb": "avatars/avatar-19.png",
    "width": 256,
@@ -4834,14 +4834,14 @@
     "默认头像 · 橄榄",
     "头像",
     "默认",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
    "id": "avatar-20",
    "name": "默认头像 · 酒红",
    "category": "avatar",
-   "style": "clean",
+   "style": "luxury",
    "file": "avatars/avatar-20.png",
    "thumb": "avatars/avatar-20.png",
    "width": 256,
@@ -4850,14 +4850,14 @@
     "默认头像 · 酒红",
     "头像",
     "默认",
-    "简约清晰"
+    "轻奢尊贵"
    ]
   },
   {
    "id": "avatar-21",
    "name": "默认头像 · 玫瑰",
    "category": "avatar",
-   "style": "clean",
+   "style": "soft",
    "file": "avatars/avatar-21.png",
    "thumb": "avatars/avatar-21.png",
    "width": 256,
@@ -4866,7 +4866,7 @@
     "默认头像 · 玫瑰",
     "头像",
     "默认",
-    "简约清晰"
+    "柔美清新"
    ]
   },
   {
@@ -4889,7 +4889,7 @@
    "id": "avatar-23",
    "name": "默认头像 · 咖啡",
    "category": "avatar",
-   "style": "clean",
+   "style": "nature",
    "file": "avatars/avatar-23.png",
    "thumb": "avatars/avatar-23.png",
    "width": 256,
@@ -4898,7 +4898,7 @@
     "默认头像 · 咖啡",
     "头像",
     "默认",
-    "简约清晰"
+    "温暖自然"
    ]
   },
   {
