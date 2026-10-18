@@ -1,5 +1,5 @@
 {
- "version": 3,
+ "version": 4,
  "categories": [
   {
    "key": "icon",
@@ -584,6 +584,552 @@
    ]
   },
   {
+   "id": "icon-wheat",
+   "name": "粮油农产",
+   "category": "icon",
+   "file": "icons/icon-wheat.png",
+   "thumb": "icons/icon-wheat.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "粮油",
+    "农产",
+    "种植"
+   ]
+  },
+  {
+   "id": "icon-tractor",
+   "name": "农机农业",
+   "category": "icon",
+   "file": "icons/icon-tractor.png",
+   "thumb": "icons/icon-tractor.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "农机",
+    "农业",
+    "耕作"
+   ]
+  },
+  {
+   "id": "icon-apple",
+   "name": "生鲜果品",
+   "category": "icon",
+   "file": "icons/icon-apple.png",
+   "thumb": "icons/icon-apple.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生鲜",
+    "果品",
+    "果蔬"
+   ]
+  },
+  {
+   "id": "icon-fish-symbol",
+   "name": "水产海鲜",
+   "category": "icon",
+   "file": "icons/icon-fish-symbol.png",
+   "thumb": "icons/icon-fish-symbol.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "水产",
+    "海鲜",
+    "渔业"
+   ]
+  },
+  {
+   "id": "icon-milk",
+   "name": "乳品饮料",
+   "category": "icon",
+   "file": "icons/icon-milk.png",
+   "thumb": "icons/icon-milk.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "乳品",
+    "饮料",
+    "奶制品"
+   ]
+  },
+  {
+   "id": "icon-croissant",
+   "name": "烘焙面点",
+   "category": "icon",
+   "file": "icons/icon-croissant.png",
+   "thumb": "icons/icon-croissant.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "烘焙",
+    "面点",
+    "食品"
+   ]
+  },
+  {
+   "id": "icon-utensils-crossed",
+   "name": "团餐宴席",
+   "category": "icon",
+   "file": "icons/icon-utensils-crossed.png",
+   "thumb": "icons/icon-utensils-crossed.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "团餐",
+    "宴席",
+    "食堂"
+   ]
+  },
+  {
+   "id": "icon-dog",
+   "name": "宠物服务",
+   "category": "icon",
+   "file": "icons/icon-dog.png",
+   "thumb": "icons/icon-dog.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "宠物",
+    "兽医",
+    "萌宠"
+   ]
+  },
+  {
+   "id": "icon-baby",
+   "name": "母婴护理",
+   "category": "icon",
+   "file": "icons/icon-baby.png",
+   "thumb": "icons/icon-baby.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "母婴",
+    "育儿",
+    "护理"
+   ]
+  },
+  {
+   "id": "icon-dna",
+   "name": "生物医药",
+   "category": "icon",
+   "file": "icons/icon-dna.png",
+   "thumb": "icons/icon-dna.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "生物",
+    "医药",
+    "基因"
+   ]
+  },
+  {
+   "id": "icon-brain",
+   "name": "智库咨询",
+   "category": "icon",
+   "file": "icons/icon-brain.png",
+   "thumb": "icons/icon-brain.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "智库",
+    "咨询",
+    "策略"
+   ]
+  },
+  {
+   "id": "icon-sofa",
+   "name": "家居软装",
+   "category": "icon",
+   "file": "icons/icon-sofa.png",
+   "thumb": "icons/icon-sofa.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "家居",
+    "软装",
+    "家具"
+   ]
+  },
+  {
+   "id": "icon-bed-double",
+   "name": "酒店客房",
+   "category": "icon",
+   "file": "icons/icon-bed-double.png",
+   "thumb": "icons/icon-bed-double.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客房",
+    "住宿",
+    "民宿"
+   ]
+  },
+  {
+   "id": "icon-tent",
+   "name": "户外露营",
+   "category": "icon",
+   "file": "icons/icon-tent.png",
+   "thumb": "icons/icon-tent.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "户外",
+    "露营",
+    "拓展"
+   ]
+  },
+  {
+   "id": "icon-luggage",
+   "name": "旅游出行",
+   "category": "icon",
+   "file": "icons/icon-luggage.png",
+   "thumb": "icons/icon-luggage.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "旅游",
+    "出行",
+    "度假"
+   ]
+  },
+  {
+   "id": "icon-sailboat",
+   "name": "游艇帆船",
+   "category": "icon",
+   "file": "icons/icon-sailboat.png",
+   "thumb": "icons/icon-sailboat.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游艇",
+    "帆船",
+    "水上"
+   ]
+  },
+  {
+   "id": "icon-fuel",
+   "name": "油品石化",
+   "category": "icon",
+   "file": "icons/icon-fuel.png",
+   "thumb": "icons/icon-fuel.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "油品",
+    "石化",
+    "加油站"
+   ]
+  },
+  {
+   "id": "icon-radiation",
+   "name": "核电放射",
+   "category": "icon",
+   "file": "icons/icon-radiation.png",
+   "thumb": "icons/icon-radiation.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "核电",
+    "放射",
+    "特检"
+   ]
+  },
+  {
+   "id": "icon-brick-wall",
+   "name": "建材砌筑",
+   "category": "icon",
+   "file": "icons/icon-brick-wall.png",
+   "thumb": "icons/icon-brick-wall.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "建材",
+    "砌筑",
+    "墙体"
+   ]
+  },
+  {
+   "id": "icon-traffic-cone",
+   "name": "市政工程",
+   "category": "icon",
+   "file": "icons/icon-traffic-cone.png",
+   "thumb": "icons/icon-traffic-cone.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "市政",
+    "道路",
+    "养护"
+   ]
+  },
+  {
+   "id": "icon-drill",
+   "name": "钻井机加",
+   "category": "icon",
+   "file": "icons/icon-drill.png",
+   "thumb": "icons/icon-drill.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钻井",
+    "机加",
+    "钻孔"
+   ]
+  },
+  {
+   "id": "icon-pickaxe",
+   "name": "矿山采掘",
+   "category": "icon",
+   "file": "icons/icon-pickaxe.png",
+   "thumb": "icons/icon-pickaxe.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "矿山",
+    "采掘",
+    "矿业"
+   ]
+  },
+  {
+   "id": "icon-anvil",
+   "name": "冶金锻造",
+   "category": "icon",
+   "file": "icons/icon-anvil.png",
+   "thumb": "icons/icon-anvil.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冶金",
+    "锻造",
+    "铸造"
+   ]
+  },
+  {
+   "id": "icon-radar",
+   "name": "探测雷达",
+   "category": "icon",
+   "file": "icons/icon-radar.png",
+   "thumb": "icons/icon-radar.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "雷达",
+    "探测",
+    "传感"
+   ]
+  },
+  {
+   "id": "icon-satellite-dish",
+   "name": "卫星通信",
+   "category": "icon",
+   "file": "icons/icon-satellite-dish.png",
+   "thumb": "icons/icon-satellite-dish.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "卫星",
+    "通信",
+    "天线"
+   ]
+  },
+  {
+   "id": "icon-radio-tower",
+   "name": "通信铁塔",
+   "category": "icon",
+   "file": "icons/icon-radio-tower.png",
+   "thumb": "icons/icon-radio-tower.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "铁塔",
+    "基站",
+    "信号"
+   ]
+  },
+  {
+   "id": "icon-cpu",
+   "name": "芯片半导体",
+   "category": "icon",
+   "file": "icons/icon-cpu.png",
+   "thumb": "icons/icon-cpu.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "芯片",
+    "半导体",
+    "电子"
+   ]
+  },
+  {
+   "id": "icon-bot",
+   "name": "机器人智能",
+   "category": "icon",
+   "file": "icons/icon-bot.png",
+   "thumb": "icons/icon-bot.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "机器人",
+    "智能",
+    "AI"
+   ]
+  },
+  {
+   "id": "icon-gavel",
+   "name": "法律律所",
+   "category": "icon",
+   "file": "icons/icon-gavel.png",
+   "thumb": "icons/icon-gavel.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "法律",
+    "律所",
+    "法务"
+   ]
+  },
+  {
+   "id": "icon-newspaper",
+   "name": "新闻出版",
+   "category": "icon",
+   "file": "icons/icon-newspaper.png",
+   "thumb": "icons/icon-newspaper.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "新闻",
+    "出版",
+    "报刊"
+   ]
+  },
+  {
+   "id": "icon-mic",
+   "name": "会议主持",
+   "category": "icon",
+   "file": "icons/icon-mic.png",
+   "thumb": "icons/icon-mic.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "会议",
+    "主持",
+    "会务"
+   ]
+  },
+  {
+   "id": "icon-radio",
+   "name": "广播电台",
+   "category": "icon",
+   "file": "icons/icon-radio.png",
+   "thumb": "icons/icon-radio.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "广播",
+    "电台",
+    "音频"
+   ]
+  },
+  {
+   "id": "icon-tv",
+   "name": "电视媒体",
+   "category": "icon",
+   "file": "icons/icon-tv.png",
+   "thumb": "icons/icon-tv.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电视",
+    "媒体",
+    "栏目"
+   ]
+  },
+  {
+   "id": "icon-gamepad-2",
+   "name": "游戏电竞",
+   "category": "icon",
+   "file": "icons/icon-gamepad-2.png",
+   "thumb": "icons/icon-gamepad-2.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "游戏",
+    "电竞",
+    "娱乐"
+   ]
+  },
+  {
+   "id": "icon-watch",
+   "name": "钟表珠宝",
+   "category": "icon",
+   "file": "icons/icon-watch.png",
+   "thumb": "icons/icon-watch.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "钟表",
+    "珠宝",
+    "腕表"
+   ]
+  },
+  {
+   "id": "icon-fence",
+   "name": "围栏护栏",
+   "category": "icon",
+   "file": "icons/icon-fence.png",
+   "thumb": "icons/icon-fence.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "围栏",
+    "护栏",
+    "隔离"
+   ]
+  },
+  {
+   "id": "icon-fire-extinguisher",
+   "name": "消防设备",
+   "category": "icon",
+   "file": "icons/icon-fire-extinguisher.png",
+   "thumb": "icons/icon-fire-extinguisher.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "消防",
+    "设备",
+    "灭火"
+   ]
+  },
+  {
+   "id": "icon-heart-handshake",
+   "name": "公益养老",
+   "category": "icon",
+   "file": "icons/icon-heart-handshake.png",
+   "thumb": "icons/icon-heart-handshake.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "公益",
+    "养老",
+    "助残"
+   ]
+  },
+  {
+   "id": "icon-trash-2",
+   "name": "环卫清运",
+   "category": "icon",
+   "file": "icons/icon-trash-2.png",
+   "thumb": "icons/icon-trash-2.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "环卫",
+    "清运",
+    "保洁"
+   ]
+  },
+  {
    "id": "icon-arrow-up-down",
    "name": "电梯",
    "category": "icon",
@@ -1116,6 +1662,370 @@
    ]
   },
   {
+   "id": "icon-package-plus",
+   "name": "送货上门",
+   "category": "icon",
+   "file": "icons/icon-package-plus.png",
+   "thumb": "icons/icon-package-plus.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "送货",
+    "上门",
+    "配送安装"
+   ]
+  },
+  {
+   "id": "icon-container",
+   "name": "集装箱运输",
+   "category": "icon",
+   "file": "icons/icon-container.png",
+   "thumb": "icons/icon-container.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "集装箱",
+    "海运",
+    "货运"
+   ]
+  },
+  {
+   "id": "icon-forklift",
+   "name": "装卸搬运",
+   "category": "icon",
+   "file": "icons/icon-forklift.png",
+   "thumb": "icons/icon-forklift.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "装卸",
+    "搬运",
+    "叉车"
+   ]
+  },
+  {
+   "id": "icon-boxes",
+   "name": "仓储托管",
+   "category": "icon",
+   "file": "icons/icon-boxes.png",
+   "thumb": "icons/icon-boxes.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仓储",
+    "托管",
+    "库存"
+   ]
+  },
+  {
+   "id": "icon-refrigerator",
+   "name": "冷链配送",
+   "category": "icon",
+   "file": "icons/icon-refrigerator.png",
+   "thumb": "icons/icon-refrigerator.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "冷链",
+    "冷藏",
+    "保鲜"
+   ]
+  },
+  {
+   "id": "icon-spray-can",
+   "name": "喷涂工艺",
+   "category": "icon",
+   "file": "icons/icon-spray-can.png",
+   "thumb": "icons/icon-spray-can.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "喷涂",
+    "工艺",
+    "表面处理"
+   ]
+  },
+  {
+   "id": "icon-plug-zap",
+   "name": "电气安装",
+   "category": "icon",
+   "file": "icons/icon-plug-zap.png",
+   "thumb": "icons/icon-plug-zap.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "电气",
+    "安装",
+    "布线"
+   ]
+  },
+  {
+   "id": "icon-battery-charging",
+   "name": "充电服务",
+   "category": "icon",
+   "file": "icons/icon-battery-charging.png",
+   "thumb": "icons/icon-battery-charging.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "充电",
+    "补能",
+    "充电桩"
+   ]
+  },
+  {
+   "id": "icon-battery-full",
+   "name": "储能备电",
+   "category": "icon",
+   "file": "icons/icon-battery-full.png",
+   "thumb": "icons/icon-battery-full.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "储能",
+    "备电",
+    "电源"
+   ]
+  },
+  {
+   "id": "icon-cable",
+   "name": "线缆敷设",
+   "category": "icon",
+   "file": "icons/icon-cable.png",
+   "thumb": "icons/icon-cable.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "线缆",
+    "敷设",
+    "桥架"
+   ]
+  },
+  {
+   "id": "icon-power",
+   "name": "配电工程",
+   "category": "icon",
+   "file": "icons/icon-power.png",
+   "thumb": "icons/icon-power.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "配电",
+    "供电",
+    "电力"
+   ]
+  },
+  {
+   "id": "icon-gauge",
+   "name": "仪表校准",
+   "category": "icon",
+   "file": "icons/icon-gauge.png",
+   "thumb": "icons/icon-gauge.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "仪表",
+    "校准",
+    "计量"
+   ]
+  },
+  {
+   "id": "icon-scan-line",
+   "name": "扫码溯源",
+   "category": "icon",
+   "file": "icons/icon-scan-line.png",
+   "thumb": "icons/icon-scan-line.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫码",
+    "溯源",
+    "防伪"
+   ]
+  },
+  {
+   "id": "icon-barcode",
+   "name": "条码标识",
+   "category": "icon",
+   "file": "icons/icon-barcode.png",
+   "thumb": "icons/icon-barcode.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "条码",
+    "标识",
+    "编码"
+   ]
+  },
+  {
+   "id": "icon-scan",
+   "name": "扫描查验",
+   "category": "icon",
+   "file": "icons/icon-scan.png",
+   "thumb": "icons/icon-scan.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "扫描",
+    "查验",
+    "识别"
+   ]
+  },
+  {
+   "id": "icon-cctv",
+   "name": "视频监控",
+   "category": "icon",
+   "file": "icons/icon-cctv.png",
+   "thumb": "icons/icon-cctv.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "视频",
+    "监控",
+    "摄像头"
+   ]
+  },
+  {
+   "id": "icon-shield-alert",
+   "name": "风险预警",
+   "category": "icon",
+   "file": "icons/icon-shield-alert.png",
+   "thumb": "icons/icon-shield-alert.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "风险",
+    "预警",
+    "防控"
+   ]
+  },
+  {
+   "id": "icon-file-search",
+   "name": "尽职调查",
+   "category": "icon",
+   "file": "icons/icon-file-search.png",
+   "thumb": "icons/icon-file-search.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "尽调",
+    "调查",
+    "核查"
+   ]
+  },
+  {
+   "id": "icon-file-check",
+   "name": "合规报批",
+   "category": "icon",
+   "file": "icons/icon-file-check.png",
+   "thumb": "icons/icon-file-check.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合规",
+    "报批",
+    "审批"
+   ]
+  },
+  {
+   "id": "icon-scroll-text",
+   "name": "合同文书",
+   "category": "icon",
+   "file": "icons/icon-scroll-text.png",
+   "thumb": "icons/icon-scroll-text.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "合同",
+    "文书",
+    "签约"
+   ]
+  },
+  {
+   "id": "icon-party-popper",
+   "name": "活动策划",
+   "category": "icon",
+   "file": "icons/icon-party-popper.png",
+   "thumb": "icons/icon-party-popper.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "活动",
+    "策划",
+    "庆典"
+   ]
+  },
+  {
+   "id": "icon-mail-check",
+   "name": "邮件确认",
+   "category": "icon",
+   "file": "icons/icon-mail-check.png",
+   "thumb": "icons/icon-mail-check.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "邮件",
+    "确认",
+    "通知"
+   ]
+  },
+  {
+   "id": "icon-list-checks",
+   "name": "清单核对",
+   "category": "icon",
+   "file": "icons/icon-list-checks.png",
+   "thumb": "icons/icon-list-checks.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "清单",
+    "核对",
+    "逐项"
+   ]
+  },
+  {
+   "id": "icon-square-check-big",
+   "name": "验收通过",
+   "category": "icon",
+   "file": "icons/icon-square-check-big.png",
+   "thumb": "icons/icon-square-check-big.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "验收",
+    "通过",
+    "确认"
+   ]
+  },
+  {
+   "id": "icon-cloud-upload",
+   "name": "云端备份",
+   "category": "icon",
+   "file": "icons/icon-cloud-upload.png",
+   "thumb": "icons/icon-cloud-upload.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云端",
+    "备份",
+    "同步"
+   ]
+  },
+  {
+   "id": "icon-languages",
+   "name": "多语翻译",
+   "category": "icon",
+   "file": "icons/icon-languages.png",
+   "thumb": "icons/icon-languages.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "翻译",
+    "多语",
+    "本地化"
+   ]
+  },
+  {
    "id": "icon-image",
    "name": "图片",
    "category": "icon",
@@ -1477,6 +2387,258 @@
     "标签",
     "分类",
     "标记"
+   ]
+  },
+  {
+   "id": "icon-history",
+   "name": "发展历程",
+   "category": "icon",
+   "file": "icons/icon-history.png",
+   "thumb": "icons/icon-history.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "历程",
+    "发展",
+    "沿革"
+   ]
+  },
+  {
+   "id": "icon-infinity",
+   "name": "永续合作",
+   "category": "icon",
+   "file": "icons/icon-infinity.png",
+   "thumb": "icons/icon-infinity.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "永续",
+    "长期",
+    "合作"
+   ]
+  },
+  {
+   "id": "icon-layers",
+   "name": "体系架构",
+   "category": "icon",
+   "file": "icons/icon-layers.png",
+   "thumb": "icons/icon-layers.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "体系",
+    "架构",
+    "层级"
+   ]
+  },
+  {
+   "id": "icon-component",
+   "name": "模块单元",
+   "category": "icon",
+   "file": "icons/icon-component.png",
+   "thumb": "icons/icon-component.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "模块",
+    "单元",
+    "组件"
+   ]
+  },
+  {
+   "id": "icon-terminal",
+   "name": "技术研发",
+   "category": "icon",
+   "file": "icons/icon-terminal.png",
+   "thumb": "icons/icon-terminal.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "研发",
+    "技术",
+    "工程"
+   ]
+  },
+  {
+   "id": "icon-binary",
+   "name": "数据算法",
+   "category": "icon",
+   "file": "icons/icon-binary.png",
+   "thumb": "icons/icon-binary.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "数据",
+    "算法",
+    "算力"
+   ]
+  },
+  {
+   "id": "icon-hard-drive",
+   "name": "数据存储",
+   "category": "icon",
+   "file": "icons/icon-hard-drive.png",
+   "thumb": "icons/icon-hard-drive.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "存储",
+    "数据",
+    "备份"
+   ]
+  },
+  {
+   "id": "icon-milestone",
+   "name": "里程碑",
+   "category": "icon",
+   "file": "icons/icon-milestone.png",
+   "thumb": "icons/icon-milestone.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "里程碑",
+    "节点",
+    "进展"
+   ]
+  },
+  {
+   "id": "icon-book-marked",
+   "name": "知识文档",
+   "category": "icon",
+   "file": "icons/icon-book-marked.png",
+   "thumb": "icons/icon-book-marked.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "知识",
+    "文档",
+    "资料"
+   ]
+  },
+  {
+   "id": "icon-contact",
+   "name": "客户名录",
+   "category": "icon",
+   "file": "icons/icon-contact.png",
+   "thumb": "icons/icon-contact.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "客户",
+    "名录",
+    "通讯录"
+   ]
+  },
+  {
+   "id": "icon-id-card",
+   "name": "证件资质",
+   "category": "icon",
+   "file": "icons/icon-id-card.png",
+   "thumb": "icons/icon-id-card.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "证件",
+    "资质",
+    "证照"
+   ]
+  },
+  {
+   "id": "icon-book-user",
+   "name": "讲师培训",
+   "category": "icon",
+   "file": "icons/icon-book-user.png",
+   "thumb": "icons/icon-book-user.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "讲师",
+    "培训",
+    "授课"
+   ]
+  },
+  {
+   "id": "icon-sparkles",
+   "name": "精工品质",
+   "category": "icon",
+   "file": "icons/icon-sparkles.png",
+   "thumb": "icons/icon-sparkles.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "精工",
+    "品质",
+    "匠心"
+   ]
+  },
+  {
+   "id": "icon-rocket",
+   "name": "快速上线",
+   "category": "icon",
+   "file": "icons/icon-rocket.png",
+   "thumb": "icons/icon-rocket.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "上线",
+    "提速",
+    "交付"
+   ]
+  },
+  {
+   "id": "icon-blend",
+   "name": "融合集成",
+   "category": "icon",
+   "file": "icons/icon-blend.png",
+   "thumb": "icons/icon-blend.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "融合",
+    "集成",
+    "整合"
+   ]
+  },
+  {
+   "id": "icon-search",
+   "name": "搜索查询",
+   "category": "icon",
+   "file": "icons/icon-search.png",
+   "thumb": "icons/icon-search.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "搜索",
+    "查询",
+    "检索"
+   ]
+  },
+  {
+   "id": "icon-cloud",
+   "name": "云托管",
+   "category": "icon",
+   "file": "icons/icon-cloud.png",
+   "thumb": "icons/icon-cloud.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "云",
+    "托管",
+    "SaaS"
+   ]
+  },
+  {
+   "id": "icon-link",
+   "name": "资源对接",
+   "category": "icon",
+   "file": "icons/icon-link.png",
+   "thumb": "icons/icon-link.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "对接",
+    "资源",
+    "链接"
    ]
   },
   {
@@ -1960,6 +3122,246 @@
    ]
   },
   {
+   "id": "cover-meshnodes",
+   "name": "网阵",
+   "category": "cover",
+   "file": "covers/cover-meshnodes.jpg",
+   "thumb": "thumbs/covers/cover-meshnodes.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "网阵",
+    "封面",
+    "背景",
+    "meshnodes"
+   ]
+  },
+  {
+   "id": "cover-radar",
+   "name": "雷达",
+   "category": "cover",
+   "file": "covers/cover-radar.jpg",
+   "thumb": "thumbs/covers/cover-radar.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "雷达",
+    "封面",
+    "背景",
+    "radar"
+   ]
+  },
+  {
+   "id": "cover-ripple",
+   "name": "波纹环",
+   "category": "cover",
+   "file": "covers/cover-ripple.jpg",
+   "thumb": "thumbs/covers/cover-ripple.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "波纹环",
+    "封面",
+    "背景",
+    "ripple"
+   ]
+  },
+  {
+   "id": "cover-chevrons",
+   "name": "山形",
+   "category": "cover",
+   "file": "covers/cover-chevrons.jpg",
+   "thumb": "thumbs/covers/cover-chevrons.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "山形",
+    "封面",
+    "背景",
+    "chevrons"
+   ]
+  },
+  {
+   "id": "cover-orbs",
+   "name": "光球",
+   "category": "cover",
+   "file": "covers/cover-orbs.jpg",
+   "thumb": "thumbs/covers/cover-orbs.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "光球",
+    "封面",
+    "背景",
+    "orbs"
+   ]
+  },
+  {
+   "id": "cover-stairs",
+   "name": "阶梯",
+   "category": "cover",
+   "file": "covers/cover-stairs.jpg",
+   "thumb": "thumbs/covers/cover-stairs.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "阶梯",
+    "封面",
+    "背景",
+    "stairs"
+   ]
+  },
+  {
+   "id": "cover-arclines",
+   "name": "弧线束",
+   "category": "cover",
+   "file": "covers/cover-arclines.jpg",
+   "thumb": "thumbs/covers/cover-arclines.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "弧线束",
+    "封面",
+    "背景",
+    "arclines"
+   ]
+  },
+  {
+   "id": "cover-confetti",
+   "name": "碎点",
+   "category": "cover",
+   "file": "covers/cover-confetti.jpg",
+   "thumb": "thumbs/covers/cover-confetti.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "碎点",
+    "封面",
+    "背景",
+    "confetti"
+   ]
+  },
+  {
+   "id": "cover-meshnodes-teal",
+   "name": "青网阵",
+   "category": "cover",
+   "file": "covers/cover-meshnodes-teal.jpg",
+   "thumb": "thumbs/covers/cover-meshnodes-teal.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "青网阵",
+    "封面",
+    "背景",
+    "meshnodes"
+   ]
+  },
+  {
+   "id": "cover-radar-slate",
+   "name": "石墨雷达",
+   "category": "cover",
+   "file": "covers/cover-radar-slate.jpg",
+   "thumb": "thumbs/covers/cover-radar-slate.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "石墨雷达",
+    "封面",
+    "背景",
+    "radar"
+   ]
+  },
+  {
+   "id": "cover-ripple-violet",
+   "name": "紫波纹",
+   "category": "cover",
+   "file": "covers/cover-ripple-violet.jpg",
+   "thumb": "thumbs/covers/cover-ripple-violet.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "紫波纹",
+    "封面",
+    "背景",
+    "ripple"
+   ]
+  },
+  {
+   "id": "cover-chevrons-emerald",
+   "name": "翡翠山形",
+   "category": "cover",
+   "file": "covers/cover-chevrons-emerald.jpg",
+   "thumb": "thumbs/covers/cover-chevrons-emerald.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "翡翠山形",
+    "封面",
+    "背景",
+    "chevrons"
+   ]
+  },
+  {
+   "id": "cover-orbs-amber",
+   "name": "琥珀光球",
+   "category": "cover",
+   "file": "covers/cover-orbs-amber.jpg",
+   "thumb": "thumbs/covers/cover-orbs-amber.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "琥珀光球",
+    "封面",
+    "背景",
+    "orbs"
+   ]
+  },
+  {
+   "id": "cover-stairs-indigo",
+   "name": "靛蓝阶梯",
+   "category": "cover",
+   "file": "covers/cover-stairs-indigo.jpg",
+   "thumb": "thumbs/covers/cover-stairs-indigo.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "靛蓝阶梯",
+    "封面",
+    "背景",
+    "stairs"
+   ]
+  },
+  {
+   "id": "cover-arclines-rose",
+   "name": "玫红弧线",
+   "category": "cover",
+   "file": "covers/cover-arclines-rose.jpg",
+   "thumb": "thumbs/covers/cover-arclines-rose.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "玫红弧线",
+    "封面",
+    "背景",
+    "arclines"
+   ]
+  },
+  {
+   "id": "cover-confetti-mint",
+   "name": "薄荷碎点",
+   "category": "cover",
+   "file": "covers/cover-confetti-mint.jpg",
+   "thumb": "thumbs/covers/cover-confetti-mint.jpg",
+   "width": 960,
+   "height": 504,
+   "tags": [
+    "薄荷碎点",
+    "封面",
+    "背景",
+    "confetti"
+   ]
+  },
+  {
    "id": "logo-building",
    "name": "建筑",
    "category": "logo",
@@ -2350,6 +3752,216 @@
    ]
   },
   {
+   "id": "logo-anchor",
+   "name": "船锚",
+   "category": "logo",
+   "file": "logos/logo-anchor.png",
+   "thumb": "logos/logo-anchor.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "船锚",
+    "LOGO",
+    "标识",
+    "anchor"
+   ]
+  },
+  {
+   "id": "logo-bridge",
+   "name": "拱桥",
+   "category": "logo",
+   "file": "logos/logo-bridge.png",
+   "thumb": "logos/logo-bridge.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "拱桥",
+    "LOGO",
+    "标识",
+    "bridge"
+   ]
+  },
+  {
+   "id": "logo-compass",
+   "name": "罗盘",
+   "category": "logo",
+   "file": "logos/logo-compass.png",
+   "thumb": "logos/logo-compass.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "罗盘",
+    "LOGO",
+    "标识",
+    "compass"
+   ]
+  },
+  {
+   "id": "logo-brackets",
+   "name": "尖括号",
+   "category": "logo",
+   "file": "logos/logo-brackets.png",
+   "thumb": "logos/logo-brackets.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "尖括号",
+    "LOGO",
+    "标识",
+    "brackets"
+   ]
+  },
+  {
+   "id": "logo-circles",
+   "name": "三环",
+   "category": "logo",
+   "file": "logos/logo-circles.png",
+   "thumb": "logos/logo-circles.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "三环",
+    "LOGO",
+    "标识",
+    "circles"
+   ]
+  },
+  {
+   "id": "logo-grid",
+   "name": "九宫格",
+   "category": "logo",
+   "file": "logos/logo-grid.png",
+   "thumb": "logos/logo-grid.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "九宫格",
+    "LOGO",
+    "标识",
+    "grid"
+   ]
+  },
+  {
+   "id": "logo-wave-amber",
+   "name": "波浪 · 琥珀",
+   "category": "logo",
+   "file": "logos/logo-wave-amber.png",
+   "thumb": "logos/logo-wave-amber.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "波浪 · 琥珀",
+    "LOGO",
+    "标识",
+    "wave"
+   ]
+  },
+  {
+   "id": "logo-flame-royal",
+   "name": "火焰 · 宝蓝",
+   "category": "logo",
+   "file": "logos/logo-flame-royal.png",
+   "thumb": "logos/logo-flame-royal.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "火焰 · 宝蓝",
+    "LOGO",
+    "标识",
+    "flame"
+   ]
+  },
+  {
+   "id": "logo-leaf-teal",
+   "name": "叶片 · 青碧",
+   "category": "logo",
+   "file": "logos/logo-leaf-teal.png",
+   "thumb": "logos/logo-leaf-teal.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "叶片 · 青碧",
+    "LOGO",
+    "标识",
+    "leaf"
+   ]
+  },
+  {
+   "id": "logo-crown-violet",
+   "name": "冠冕 · 紫",
+   "category": "logo",
+   "file": "logos/logo-crown-violet.png",
+   "thumb": "logos/logo-crown-violet.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "冠冕 · 紫",
+    "LOGO",
+    "标识",
+    "crown"
+   ]
+  },
+  {
+   "id": "logo-spiral-ocean",
+   "name": "螺旋 · 海蓝",
+   "category": "logo",
+   "file": "logos/logo-spiral-ocean.png",
+   "thumb": "logos/logo-spiral-ocean.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "螺旋 · 海蓝",
+    "LOGO",
+    "标识",
+    "spiral"
+   ]
+  },
+  {
+   "id": "logo-diamond-rose",
+   "name": "菱钻 · 玫红",
+   "category": "logo",
+   "file": "logos/logo-diamond-rose.png",
+   "thumb": "logos/logo-diamond-rose.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "菱钻 · 玫红",
+    "LOGO",
+    "标识",
+    "diamond"
+   ]
+  },
+  {
+   "id": "logo-cube-graphite",
+   "name": "立方 · 石墨",
+   "category": "logo",
+   "file": "logos/logo-cube-graphite.png",
+   "thumb": "logos/logo-cube-graphite.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "立方 · 石墨",
+    "LOGO",
+    "标识",
+    "cube"
+   ]
+  },
+  {
+   "id": "logo-peak-bronze",
+   "name": "山峰 · 古铜",
+   "category": "logo",
+   "file": "logos/logo-peak-bronze.png",
+   "thumb": "logos/logo-peak-bronze.png",
+   "width": 512,
+   "height": 512,
+   "tags": [
+    "山峰 · 古铜",
+    "LOGO",
+    "标识",
+    "peak"
+   ]
+  },
+  {
    "id": "avatar-1",
    "name": "默认头像 · 蓝",
    "category": "avatar",
@@ -2625,6 +4237,62 @@
    "height": 256,
    "tags": [
     "默认头像 · 酒红",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-21",
+   "name": "默认头像 · 玫瑰",
+   "category": "avatar",
+   "file": "avatars/avatar-21.png",
+   "thumb": "avatars/avatar-21.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 玫瑰",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-22",
+   "name": "默认头像 · 天青",
+   "category": "avatar",
+   "file": "avatars/avatar-22.png",
+   "thumb": "avatars/avatar-22.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 天青",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-23",
+   "name": "默认头像 · 咖啡",
+   "category": "avatar",
+   "file": "avatars/avatar-23.png",
+   "thumb": "avatars/avatar-23.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 咖啡",
+    "头像",
+    "默认"
+   ]
+  },
+  {
+   "id": "avatar-24",
+   "name": "默认头像 · 墨绿",
+   "category": "avatar",
+   "file": "avatars/avatar-24.png",
+   "thumb": "avatars/avatar-24.png",
+   "width": 256,
+   "height": 256,
+   "tags": [
+    "默认头像 · 墨绿",
     "头像",
     "默认"
    ]
@@ -3137,6 +4805,312 @@
     "背景",
     "全屏",
     "diagonal"
+   ]
+  },
+  {
+   "id": "bg-marble",
+   "name": "大理石",
+   "category": "background",
+   "file": "backgrounds/bg-marble.jpg",
+   "thumb": "thumbs/backgrounds/bg-marble.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "大理石",
+    "石材",
+    "建材",
+    "背景",
+    "全屏",
+    "marble"
+   ]
+  },
+  {
+   "id": "bg-silk",
+   "name": "丝绸",
+   "category": "background",
+   "file": "backgrounds/bg-silk.jpg",
+   "thumb": "thumbs/backgrounds/bg-silk.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "丝绸",
+    "柔顺",
+    "服装",
+    "背景",
+    "全屏",
+    "silk"
+   ]
+  },
+  {
+   "id": "bg-hexcell",
+   "name": "蜂巢",
+   "category": "background",
+   "file": "backgrounds/bg-hexcell.jpg",
+   "thumb": "thumbs/backgrounds/bg-hexcell.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "蜂巢",
+    "工业",
+    "材料",
+    "背景",
+    "全屏",
+    "hexcell"
+   ]
+  },
+  {
+   "id": "bg-dotmatrix",
+   "name": "点阵",
+   "category": "background",
+   "file": "backgrounds/bg-dotmatrix.jpg",
+   "thumb": "thumbs/backgrounds/bg-dotmatrix.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "点阵",
+    "数据",
+    "科技",
+    "背景",
+    "全屏",
+    "dotmatrix"
+   ]
+  },
+  {
+   "id": "bg-sunburst",
+   "name": "光芒",
+   "category": "background",
+   "file": "backgrounds/bg-sunburst.jpg",
+   "thumb": "thumbs/backgrounds/bg-sunburst.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "光芒",
+    "能源",
+    "光伏",
+    "背景",
+    "全屏",
+    "sunburst"
+   ]
+  },
+  {
+   "id": "bg-topo",
+   "name": "等高线",
+   "category": "background",
+   "file": "backgrounds/bg-topo.jpg",
+   "thumb": "thumbs/backgrounds/bg-topo.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "等高线",
+    "测绘",
+    "工程",
+    "背景",
+    "全屏",
+    "topo"
+   ]
+  },
+  {
+   "id": "bg-bloom",
+   "name": "柔光",
+   "category": "background",
+   "file": "backgrounds/bg-bloom.jpg",
+   "thumb": "thumbs/backgrounds/bg-bloom.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "柔光",
+    "美业",
+    "婚庆",
+    "背景",
+    "全屏",
+    "bloom"
+   ]
+  },
+  {
+   "id": "bg-skyline-day",
+   "name": "晨曦",
+   "category": "background",
+   "file": "backgrounds/bg-skyline-day.jpg",
+   "thumb": "thumbs/backgrounds/bg-skyline-day.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "晨曦",
+    "地产",
+    "浅色",
+    "背景",
+    "全屏",
+    "skyline-day"
+   ]
+  },
+  {
+   "id": "bg-ripple",
+   "name": "水波环",
+   "category": "background",
+   "file": "backgrounds/bg-ripple.jpg",
+   "thumb": "thumbs/backgrounds/bg-ripple.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "水波",
+    "水务",
+    "环保",
+    "背景",
+    "全屏",
+    "ripple"
+   ]
+  },
+  {
+   "id": "bg-arcstripe",
+   "name": "弧纹",
+   "category": "background",
+   "file": "backgrounds/bg-arcstripe.jpg",
+   "thumb": "thumbs/backgrounds/bg-arcstripe.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "弧纹",
+    "金融",
+    "稳重",
+    "背景",
+    "全屏",
+    "arcstripe"
+   ]
+  },
+  {
+   "id": "bg-sparkdust",
+   "name": "星尘",
+   "category": "background",
+   "file": "backgrounds/bg-sparkdust.jpg",
+   "thumb": "thumbs/backgrounds/bg-sparkdust.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "星尘",
+    "互联网",
+    "科技",
+    "背景",
+    "全屏",
+    "sparkdust"
+   ]
+  },
+  {
+   "id": "bg-weave",
+   "name": "织纹",
+   "category": "background",
+   "file": "backgrounds/bg-weave.jpg",
+   "thumb": "thumbs/backgrounds/bg-weave.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "织纹",
+    "纺织",
+    "浅色",
+    "背景",
+    "全屏",
+    "weave"
+   ]
+  },
+  {
+   "id": "bg-marble-white",
+   "name": "白云石",
+   "category": "background",
+   "file": "backgrounds/bg-marble-white.jpg",
+   "thumb": "thumbs/backgrounds/bg-marble-white.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "白云石",
+    "浅色",
+    "素雅",
+    "背景",
+    "全屏",
+    "marble"
+   ]
+  },
+  {
+   "id": "bg-hexcell-copper",
+   "name": "铜蜂巢",
+   "category": "background",
+   "file": "backgrounds/bg-hexcell-copper.jpg",
+   "thumb": "thumbs/backgrounds/bg-hexcell-copper.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "铜",
+    "金属",
+    "暖调",
+    "背景",
+    "全屏",
+    "hexcell"
+   ]
+  },
+  {
+   "id": "bg-silk-rose",
+   "name": "玫瑰丝绸",
+   "category": "background",
+   "file": "backgrounds/bg-silk-rose.jpg",
+   "thumb": "thumbs/backgrounds/bg-silk-rose.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "玫瑰",
+    "美业",
+    "浪漫",
+    "背景",
+    "全屏",
+    "silk"
+   ]
+  },
+  {
+   "id": "bg-dotmatrix-royal",
+   "name": "宝蓝点阵",
+   "category": "background",
+   "file": "backgrounds/bg-dotmatrix-royal.jpg",
+   "thumb": "thumbs/backgrounds/bg-dotmatrix-royal.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "宝蓝",
+    "深邃",
+    "大气",
+    "背景",
+    "全屏",
+    "dotmatrix"
+   ]
+  },
+  {
+   "id": "bg-bloom-lavender",
+   "name": "薰衣草",
+   "category": "background",
+   "file": "backgrounds/bg-bloom-lavender.jpg",
+   "thumb": "thumbs/backgrounds/bg-bloom-lavender.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "薰衣草",
+    "浅色",
+    "柔和",
+    "背景",
+    "全屏",
+    "bloom"
+   ]
+  },
+  {
+   "id": "bg-sunrise",
+   "name": "日出",
+   "category": "background",
+   "file": "backgrounds/bg-sunrise.jpg",
+   "thumb": "thumbs/backgrounds/bg-sunrise.jpg",
+   "width": 750,
+   "height": 1334,
+   "tags": [
+    "日出",
+    "暖调",
+    "希望",
+    "背景",
+    "全屏",
+    "sunburst"
    ]
   }
  ]
