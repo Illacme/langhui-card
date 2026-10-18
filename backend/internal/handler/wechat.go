@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,7 +33,12 @@ type wxacodeEntry struct {
 // 海报合成放在小程序端 canvas；后端只负责产出小程序码图片，存到 local/minio/oss 后返回访问 URL。
 // 私有桶（STORAGE_PUBLIC=false）下，返回的是限时签名 GET URL，避免把对象设为公开读。
 func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
-	wc := wechat.Config{AppID: cfg.WXAppID, AppSecret: cfg.WXAppSecret}
+	// AppID 每次请求都解析：可在后台「系统设置 → 微信 → wx_appid」配置，
+	// 未配置时回退环境变量 WX_APPID——换 AppID 不必改环境变量重启。
+	// AppSecret 属密钥，始终只从环境变量取（不进设置表）。
+	wcOf := func() wechat.Config {
+		return wechat.Config{AppID: resolveWXAppID(cfg), AppSecret: cfg.WXAppSecret}
+	}
 
 	// 微信身份换取（公开）：小程序 wx.login 的 code → openid。
 	// 无论是否配置小程序码凭据都注册；未配置时返回明确错误，前端据此降级（不影响账号密码登录/申请）。
@@ -44,7 +50,7 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "缺少 code"})
 			return
 		}
-		openid, _, err := wechat.Code2Session(wc, req.Code)
+		openid, _, err := wechat.Code2Session(wcOf(), req.Code)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 			return
@@ -52,15 +58,14 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "openid": openid})
 	})
 
-	// 小程序码接口需要 access_token，未配置凭据时降级为明确错误（分享海报二维码位已兼容）
-	if cfg.WXAppID == "" || cfg.WXAppSecret == "" {
-		r.GET("/api/wechat/wxacode", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未配置 WX_APPID / WX_APPSECRET"})
-		})
-		return
-	}
-
 	r.GET("/api/wechat/wxacode", func(c *gin.Context) {
+		// 未配置凭据时降级为明确错误：放在请求期判定（而非注册期一次性判定），
+		// 这样后台补上 AppID 后立刻可用，无需重启进程。
+		wc := wcOf()
+		if wc.AppID == "" || wc.AppSecret == "" {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未配置小程序 AppID / WX_APPSECRET"})
+			return
+		}
 		staffID, _ := strconv.ParseInt(c.Query("staffId"), 10, 64)
 		if staffID <= 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "缺少 staffId"})
@@ -122,6 +127,16 @@ func resolveWxacodeURL(e wxacodeEntry, cfg config.Config, up storage.Uploader) (
 		return s.SignGetURL(e.key, time.Hour)
 	}
 	return e.publicURL, nil
+}
+
+// resolveWXAppID 小程序 AppID：优先取系统设置 wx_appid，留空时回退环境变量 WX_APPID。
+// 留空回退而非「设置项存在就覆盖」，是因为 seed 会把 wx_appid 写成空串——
+// 若直接以设置为准，会让既有只配了环境变量的部署凭空失效。
+func resolveWXAppID(cfg config.Config) string {
+	if v := strings.TrimSpace(setting.GetString("wx_appid", "")); v != "" {
+		return v
+	}
+	return cfg.WXAppID
 }
 
 // wxacodeTTL 小程序码缓存有效期：优先取系统设置 upload/wxacode_ttl_hours，

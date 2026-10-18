@@ -25,6 +25,44 @@ func testEngine() (*gin.Engine, *Metrics) {
 	return r, m
 }
 
+// TestMetricsEnabledGate 指标开关接线验证：系统设置 metrics_enabled 通过 Metrics.Enabled
+// 接入运行期开关——关闭时 /metrics 必须视为不存在（404），否则等于把流量规模暴露到公网。
+func TestMetricsEnabledGate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// 1) 未接入开关（Enabled=nil）→ 保持原有「始终启用」行为
+	m := NewMetrics()
+	r := gin.New()
+	r.GET("/metrics", m.Handler())
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("GET", "/metrics", nil))
+	require.Equal(t, http.StatusOK, w.Code, "未接入开关时应照常输出指标")
+
+	// 2) 开关关闭 → 404
+	off := NewMetrics()
+	off.Enabled = func() bool { return false }
+	rOff := gin.New()
+	rOff.GET("/metrics", off.Handler())
+	wOff := httptest.NewRecorder()
+	rOff.ServeHTTP(wOff, httptest.NewRequest("GET", "/metrics", nil))
+	require.Equal(t, http.StatusNotFound, wOff.Code, "开关关闭时 /metrics 应视为不存在")
+
+	// 3) 开关打开 → 200，且计数中间件开始累计
+	on := NewMetrics()
+	on.Enabled = func() bool { return true }
+	rOn := gin.New()
+	rOn.Use(on.Middleware())
+	rOn.GET("/ok", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"ok": true}) })
+	rOn.GET("/metrics", on.Handler())
+	rOn.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/ok", nil))
+	wOn := httptest.NewRecorder()
+	rOn.ServeHTTP(wOn, httptest.NewRequest("GET", "/metrics", nil))
+	require.Equal(t, http.StatusOK, wOn.Code)
+	// 注意断言的是**渲染后的 Prometheus 文本**（method="GET",status="2xx"），
+	// 不是内部计数键（"GET|2xx"）——两者格式不同，别按内部键断言。
+	require.Contains(t, wOn.Body.String(), `status="2xx"`, "开关打开后应能统计到刚发生的请求")
+}
+
 func TestRequestIDGeneratedAndEchoed(t *testing.T) {
 	r, _ := testEngine()
 

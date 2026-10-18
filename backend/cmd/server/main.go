@@ -60,12 +60,15 @@ func main() {
 	r := handler.New(db)
 	// 可观测性：请求 ID + 访问日志（方法/路径/状态/耗时/IP，5xx 单独前缀便于告警匹配）
 	r.Use(middleware.RequestID(), middleware.AccessLog())
-	// 指标端点默认关闭（METRICS_ENABLED=1 开启）：避免公网暴露流量规模，
-	// 生产建议仅内网 / 反代白名单可达，配 Prometheus 抓取 /metrics。
-	if cfg.MetricsEnabled {
-		metrics := middleware.NewMetrics()
-		r.Use(metrics.Middleware())
-		r.GET("/metrics", metrics.Handler())
+	// 指标端点：采集器始终注册，开关交给系统设置 metrics_enabled（留空回退 METRICS_ENABLED）——
+	// 后台改完即时生效、无需重启；关闭时 /metrics 返回 404，避免公网暴露流量规模。
+	metrics := middleware.NewMetrics()
+	metrics.Enabled = func() bool {
+		return setting.GetBool("metrics_enabled", cfg.MetricsEnabled)
+	}
+	r.Use(metrics.Middleware())
+	r.GET("/metrics", metrics.Handler())
+	if metrics.Enabled() {
 		log.Printf("[INFO] metrics enabled: GET /metrics")
 	}
 	handler.RegisterAuth(r, db, cfg) // 员工/超管登录（JWT 签发）+ 刷新 + 登出

@@ -4,6 +4,9 @@ import (
 	"net/http"
 	"testing"
 
+	"langhui/internal/config"
+	"langhui/internal/setting"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,6 +92,52 @@ func TestSettingsAPI(t *testing.T) {
 	require.Equal(t, "朗汇名片", pub["brand_name"])
 	_, hasAppID := pub["wx_appid"]
 	require.False(t, hasAppID, "wx_appid 为敏感项，不应出现在公开接口")
+}
+
+// TestWXAppIDSettingOverridesEnv wx_appid 接线验证。
+// 历史缺陷：该项曾在「系统设置」界面可见可存，但代码里**从不读取**（死配置，改了没用）。
+// 本测试把语义钉死：设置非空 → 以设置为准；设置为空 → 回退环境变量 WX_APPID。
+// （不能写成「设置项存在就覆盖」：seed 会把它写成空串，那样会让只配环境变量的部署凭空失效。）
+func TestWXAppIDSettingOverridesEnv(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	cfg := config.Config{WXAppID: "env-appid"}
+	// 1) seed 缺省为空串 → 回退环境变量
+	require.Equal(t, "env-appid", resolveWXAppID(cfg))
+
+	// 2) 后台设置 AppID → 覆盖环境变量，且无需重启
+	_, body := c.do("PUT", "/api/admin/settings", map[string]string{"wx_appid": "ui-appid"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "ui-appid", resolveWXAppID(cfg))
+
+	// 3) 清空设置 → 重新回退环境变量
+	_, body = c.do("PUT", "/api/admin/settings", map[string]string{"wx_appid": ""}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, "env-appid", resolveWXAppID(cfg))
+}
+
+// TestMetricsEnabledSettingFallsBackToEnv metrics_enabled 接线验证（同为曾经的死配置项）。
+// 缺省空串 =「未设置」→ 回退环境变量 METRICS_ENABLED；界面显式设置后以界面为准。
+func TestMetricsEnabledSettingFallsBackToEnv(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	// 1) 未设置：空串视同缺失，回退传入的（环境变量）默认值
+	require.False(t, setting.GetBool("metrics_enabled", false))
+	require.True(t, setting.GetBool("metrics_enabled", true))
+
+	// 2) 界面显式开启 → 环境变量为 false 也应以界面为准
+	_, body := c.do("PUT", "/api/admin/settings", map[string]string{"metrics_enabled": "true"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	require.True(t, setting.GetBool("metrics_enabled", false))
+
+	// 3) 界面显式关闭 → 环境变量为 true 也应以界面为准
+	_, body = c.do("PUT", "/api/admin/settings", map[string]string{"metrics_enabled": "false"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	require.False(t, setting.GetBool("metrics_enabled", true))
 }
 
 // loginEmployee 建一个员工并登录，返回其 Bearer 令牌（用于越权断言）。

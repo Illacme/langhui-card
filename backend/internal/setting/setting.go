@@ -54,9 +54,14 @@ var registry = []def{
 	{"upload_max_mb", "upload", "int", "10", "单文件上传上限（MB）"},
 	{"upload_allow_ext", "upload", "string_slice", "png,jpg,jpeg,gif,webp,mp4", "允许上传的扩展名（小写，逗号分隔）"},
 	{"wxacode_ttl_hours", "wechat", "int", "720", "小程序码缓存有效期（小时）"},
-	{"wx_appid", "wechat", "string", "", "小程序 AppID（小程序码与微信登录用；AppSecret 仍留环境变量）"},
-	{"metrics_enabled", "feature", "bool", "false", "是否开放 /metrics（Prometheus 指标）"},
-	{"independent_lock", "feature", "bool", "false", "独立版企业锁定：开启后后台不可改企业状态 / 企业管理"},
+	{"wx_appid", "wechat", "string", "", "小程序 AppID（小程序码与微信登录用；留空回退环境变量 WX_APPID。AppSecret 仍留环境变量）"},
+	// 缺省空串 = 「未设置」，读取时回退环境变量 METRICS_ENABLED；
+	// 一旦在界面显式设为 true/false 就以界面为准（避免升级后让既有部署的开关行为突变）。
+	{"metrics_enabled", "feature", "bool", "", "是否开放 /metrics（Prometheus 指标）；留空则跟随环境变量 METRICS_ENABLED"},
+	// TODO(未接线)：仅登记到界面，尚无任何代码读取——界面可存但当前不影响行为。
+	// 待产品定义「锁定后具体禁掉哪些操作」（企业启停？企业管理页只读？）后再实现；
+	// 在此之前保留可见，是为了让管理员看到规划中的开关，而不是假装已生效。
+	{"independent_lock", "feature", "bool", "false", "独立版企业锁定（暂未生效：锁定范围待定义，当前开启不影响任何行为）"},
 }
 
 // registryByKey 供按 key 快速查类型。
@@ -248,6 +253,10 @@ func validateType(typ, value string) error {
 			return fmt.Errorf("必须为整数，收到 %q", value)
 		}
 	case "bool":
+		if strings.TrimSpace(value) == "" {
+			// 空串 = 「未在界面设置」，由调用方回退环境变量（见 metrics_enabled）
+			return nil
+		}
 		switch strings.ToLower(strings.TrimSpace(value)) {
 		case "true", "false", "1", "0", "yes", "no", "on", "off":
 		default:

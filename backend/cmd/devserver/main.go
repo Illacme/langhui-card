@@ -114,6 +114,14 @@ func main() {
 	r := handler.New(db)
 	// 与生产一致的可观测性中间件（请求 ID + 访问日志）
 	r.Use(middleware.RequestID(), middleware.AccessLog())
+	// 指标端点（与 cmd/server 一致）：开关由系统设置 metrics_enabled 控制，
+	// 开发态默认留空 → 回退 METRICS_ENABLED 环境变量。
+	metrics := middleware.NewMetrics()
+	metrics.Enabled = func() bool {
+		return setting.GetBool("metrics_enabled", cfg.MetricsEnabled)
+	}
+	r.Use(metrics.Middleware())
+	r.GET("/metrics", metrics.Handler())
 	handler.RegisterAuth(r, db, cfg)
 	handler.RegisterApply(r, db)
 	handler.RegisterContent(r, db)

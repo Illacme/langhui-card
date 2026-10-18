@@ -92,6 +92,15 @@ type Metrics struct {
 	counters map[string]int64 // key: "METHOD|statusClass"（如 "GET|2xx"）
 	total    atomic.Int64
 	started  time.Time
+	// Enabled 运行时开关（由系统设置 metrics_enabled 驱动，见 cmd/server）。
+	// 关闭时不计数、GET /metrics 返回 404——避免在公网暴露流量规模。
+	// nil 表示不接入系统设置（始终启用）。
+	Enabled func() bool
+}
+
+// enabled 当前是否采集指标；未接入开关时恒为 true。
+func (m *Metrics) enabled() bool {
+	return m.Enabled == nil || m.Enabled()
 }
 
 // NewMetrics 创建指标收集器。
@@ -103,6 +112,9 @@ func NewMetrics() *Metrics {
 func (m *Metrics) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
+		if !m.enabled() {
+			return
+		}
 		class := fmt.Sprintf("%dxx", c.Writer.Status()/100)
 		key := c.Request.Method + "|" + class
 		m.mu.Lock()
@@ -115,6 +127,11 @@ func (m *Metrics) Middleware() gin.HandlerFunc {
 // Handler 输出 Prometheus 文本格式（text/plain; version=0.0.4）指标。
 func (m *Metrics) Handler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 指标默认关闭：开关未开时 /metrics 视为不存在，避免公网探测到流量规模
+		if !m.enabled() {
+			c.Status(http.StatusNotFound)
+			return
+		}
 		m.mu.Lock()
 		keys := make([]string, 0, len(m.counters))
 		for k := range m.counters {
