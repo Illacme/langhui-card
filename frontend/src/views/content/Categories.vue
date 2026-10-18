@@ -18,7 +18,7 @@
 
       <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="名称" min-width="140" />
-        <el-table-column label="图标" width="90" align="center">
+        <el-table-column label="图标" width="90" align="center" v-if="!isPhone">
           <template #default="{ row }">
             <el-image
               v-if="row.icon"
@@ -44,7 +44,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="锁定" width="90" align="center">
+        <el-table-column label="锁定" width="90" align="center" v-if="!isPhone">
           <template #default="{ row }">
             <el-tag :type="row.isLocked ? 'warning' : 'info'" effect="light">
               {{ row.isLocked ? '已锁定' : '未锁' }}
@@ -101,6 +101,7 @@
 </template>
 
 <script setup lang="ts">
+const { isPhone } = useBreakpoint()
 import { ref, reactive, onMounted } from 'vue'
 import { Refresh, Plus, Search, Rank, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -115,6 +116,7 @@ import {
 import UploadField from '@/components/UploadField.vue'
 import { useTable } from '@/composables/useTable'
 import { useSortableRows } from '@/composables/useSortableRows'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const rows = ref<any[]>([])
 const { keyword, currentPage, size, total, paged } = useTable(

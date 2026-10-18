@@ -123,7 +123,8 @@ func resolveWxacodeURL(e wxacodeEntry, cfg config.Config, up storage.Uploader) (
 		return e.publicURL, nil
 	}
 	if s, ok := up.(storage.Signer); ok {
-		return s.SignGetURL(e.key, time.Hour)
+		// 签名时长取系统设置（默认 1 小时），下限 1 分钟
+		return s.SignGetURL(e.key, signTTL("wxacode_sign_ttl_minutes", 60))
 	}
 	return e.publicURL, nil
 }

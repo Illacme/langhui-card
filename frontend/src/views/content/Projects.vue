@@ -21,16 +21,16 @@
 
       <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="name" label="名称" min-width="180" />
-        <el-table-column label="分类" width="130">
+        <el-table-column label="分类" width="130" v-if="!isPhone">
           <template #default="{ row }">{{ categoryName(row.categoryId) }}</template>
         </el-table-column>
-        <el-table-column label="封面" width="80" align="center">
+        <el-table-column label="封面" width="80" align="center" v-if="!isPhone">
           <template #default="{ row }">
             <el-image v-if="row.cover" :src="row.cover" style="width: 40px; height: 40px" fit="cover" />
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="精选" width="80" align="center">
+        <el-table-column label="精选" width="80" align="center" v-if="!isPhone">
           <template #default="{ row }">
             <el-tag :type="row.isHomeFeatured ? 'danger' : 'info'" effect="plain">
               {{ row.isHomeFeatured ? '精选' : '普通' }}
@@ -136,6 +136,7 @@
 </template>
 
 <script setup lang="ts">
+const { isPhone } = useBreakpoint()
 import { ref, reactive, computed, watch, onMounted, defineAsyncComponent } from 'vue'
 import { Refresh, Plus, Search, Rank, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -153,6 +154,7 @@ import UploadField from '@/components/UploadField.vue'
 const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 import { useTable } from '@/composables/useTable'
 import { useSortableRows } from '@/composables/useSortableRows'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const rows = ref<any[]>([])
 const categories = ref<any[]>([])

@@ -24,7 +24,7 @@
       />
 
       <el-table :data="rows" v-loading="loading" border stripe>
-        <el-table-column prop="id" label="编号" width="70" align="center" />
+        <el-table-column prop="id" label="编号" width="70" align="center" v-if="!isPhone" />
         <el-table-column prop="name" label="企业名称" min-width="220" show-overflow-tooltip />
         <el-table-column label="简称" min-width="130" show-overflow-tooltip>
           <template #default="{ row }">{{ row.shortName || '智能名片' }}</template>
@@ -36,9 +36,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="employeeCount" label="员工数" width="90" align="center" />
-        <el-table-column prop="adminCount" label="管理员数" width="100" align="center" />
-        <el-table-column label="创建时间" width="180" show-overflow-tooltip>
+        <el-table-column prop="employeeCount" label="员工数" width="90" align="center" v-if="!isPhone" />
+        <el-table-column prop="adminCount" label="管理员数" width="100" align="center" v-if="!isPhone" />
+        <el-table-column label="创建时间" width="180" show-overflow-tooltip v-if="!isPhone">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="260" fixed="right" align="center">
@@ -146,6 +146,7 @@
 </template>
 
 <script setup lang="ts">
+const { isPhone } = useBreakpoint()
 import { computed, onMounted, reactive, ref } from 'vue'
 import { Plus, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
@@ -161,6 +162,7 @@ import {
 } from '@/api/tenants'
 import { formatDateTime } from '@/utils/datetime'
 import { useAuthStore } from '@/store/auth'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const auth = useAuthStore()
 // 独立版企业锁定（后台「系统设置 → independent_lock」）：企业管理页整体只读。

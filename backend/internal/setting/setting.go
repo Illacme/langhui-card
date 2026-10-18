@@ -80,8 +80,9 @@ type Item struct {
 // 分组（group）直接对应前端「系统设置」的分组表单：
 //   general    通用（品牌名）
 //   miniprogram 小程序（默认基址 / 独立版锁定租户）
-//   upload     上传（单文件上限 / 允许扩展名）
+//   upload     上传（单文件上限 / 允许扩展名 / 各类签名有效期）
 //   wechat     微信（小程序码 TTL / AppID / AppSecret）
+//   auth       登录与令牌（令牌有效期 / 登录与刷新限流）
 //   storage    文件存储与 CDN（驱动 / 端点 / 桶 / 凭据 / 上传基址 / CDN 刷新）
 //   security   安全与基础设施（只读：DB 连接串 / JWT 密钥 / Cookie）
 //   feature    特性开关（Prometheus 指标 / 独立版企业锁定）
@@ -96,12 +97,32 @@ var registry = []def{
 		Desc: "单文件上传上限（MB）"},
 	{Key: "upload_allow_ext", Group: "upload", Type: "string_slice", Value: "png,jpg,jpeg,gif,webp,mp4",
 		Desc: "允许上传的扩展名（小写，逗号分隔）"},
+	// 签名有效期：直传 PUT 与私有桶 GET 的限时链接时长。太短前端还没传完就过期，
+	// 太长等于把对象存储写成公开读，故留界面可调，但代码内有下限兜底。
+	{Key: "presign_put_ttl_minutes", Group: "upload", Type: "int", Value: "15",
+		Desc: "直传预签名 PUT 链接有效期（分钟），最短 1 分钟"},
+	{Key: "sign_get_ttl_minutes", Group: "upload", Type: "int", Value: "30",
+		Desc: "私有桶限时签名 GET 链接有效期（分钟），最短 1 分钟"},
 	{Key: "wxacode_ttl_hours", Group: "wechat", Type: "int", Value: "720",
 		Desc: "小程序码缓存有效期（小时）"},
+	{Key: "wxacode_sign_ttl_minutes", Group: "wechat", Type: "int", Value: "60",
+		Desc: "私有桶下小程序码签名链接有效期（分钟），最短 1 分钟"},
 	{Key: "wx_appid", Group: "wechat", Type: "string", EnvVar: "WX_APPID",
 		Desc: "小程序 AppID（小程序码与微信登录用）；留空回退环境变量 WX_APPID"},
 	{Key: "wx_appsecret", Group: "wechat", Type: "string", Secret: true, EnvVar: "WX_APPSECRET",
 		Desc: "小程序 AppSecret（小程序码用，敏感）；留空回退环境变量 WX_APPSECRET"},
+
+	// ---- 登录与令牌（即时生效）----
+	// 令牌有效期设太短会把人一直踢下线；代码内保留**安全下限**，
+	// 界面填 0 / 负数时回落缺省，避免管理员把自己锁在系统外（改错可自愈）。
+	{Key: "access_token_ttl_minutes", Group: "auth", Type: "int", Value: "15",
+		Desc: "access 令牌有效期（分钟），最短 1 分钟；改后新签发的令牌立即按新值，已签发的不追溯"},
+	{Key: "refresh_token_ttl_days", Group: "auth", Type: "int", Value: "30",
+		Desc: "refresh 令牌有效期（天），最短 1 天；决定多久要重新登录一次"},
+	{Key: "login_rate_limit_per_min", Group: "auth", Type: "int", Value: "10",
+		Desc: "每 IP 每分钟允许的登录尝试次数（防爆破），最小 1"},
+	{Key: "refresh_rate_limit_per_min", Group: "auth", Type: "int", Value: "60",
+		Desc: "每 IP 每分钟允许的令牌刷新次数（刷新比登录频繁，配额更宽松），最小 1"},
 
 	// ---- 文件存储与 CDN（改后需重启：客户端在启动时构造）----
 	// 凭据写错最坏结果是「上传失败」，改回来重启即可自愈，不会把自己锁在系统外，

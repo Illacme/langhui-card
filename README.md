@@ -71,9 +71,13 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 小程序 | `pinned_company_id` | 企业独立版锁定租户（>0 锁定，0 = 平台模式） |
 | 上传 | `upload_max_mb` | 单文件上传上限（MB） |
 | 上传 | `upload_allow_ext` | 允许上传的扩展名（逗号分隔） |
+| 上传 | `presign_put_ttl_minutes` / `sign_get_ttl_minutes` | 直传 PUT / 私有桶 GET 签名链接有效期（分钟，最短 1） |
 | 微信 | `wxacode_ttl_hours` | 小程序码缓存有效期（小时） |
+| 微信 | `wxacode_sign_ttl_minutes` | 私有桶下小程序码签名链接有效期（分钟，最短 1） |
 | 微信 | `wx_appid` | 小程序 AppID（留空回退 `WX_APPID`，改完即时生效） |
 | 微信 | `wx_appsecret` | 小程序 AppSecret（敏感；留空回退 `WX_APPSECRET`，改完即时生效） |
+| 登录与令牌 | `access_token_ttl_minutes` / `refresh_token_ttl_days` | 令牌有效期（最短 1 分钟 / 1 天，非法值回落缺省） |
+| 登录与令牌 | `login_rate_limit_per_min` / `refresh_rate_limit_per_min` | 每 IP 每分钟登录 / 刷新次数（防爆破，最小 1） |
 | 文件存储与 CDN | `storage_driver` | `local` / `minio` / `oss`（留空回退 `STORAGE_DRIVER`，**需重启**） |
 | 文件存储与 CDN | `storage_endpoint` / `storage_bucket` | 对象存储端点与桶名（MinIO 与 OSS 共用这两个字段） |
 | 文件存储与 CDN | `storage_access_key` / `storage_secret_key` | 对象存储凭据（后者敏感，界面只回传掩码） |
@@ -89,6 +93,8 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 > - `DB_DSN` / `JWT_KEY` 改错会把「改回来的入口」一起弄丢（连不上库 → 读不出配置；
 >   会话全失效 → 登不进后台），所以只展示不编辑；
 > - 敏感项（密钥 / 连接串）接口**只回传掩码**，真实值永不出现在响应里；界面输入框留空 = 不修改。
+> - 令牌有效期与签名时长这类「设成 0 就等于把功能关死、甚至把自己锁在外面」的项，
+>   代码内保留**安全下限**：界面填 0 / 负数一律回落缺省值。
 >
 > 另：云存储驱动初始化失败时会**降级为本地磁盘**而不是让进程退出——否则管理员
 > 连后台都进不去，就再也改不回来（见 `cmd/server` 的 `newUploaderWithFallback`）。

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"langhui/internal/config"
+	"langhui/internal/setting"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -14,20 +15,43 @@ import (
 // 吊销分两层，互补使用：
 //   - 账号级（token_version）：改密 / 禁用使用户所有设备的所有令牌立即失效（见 middleware/auth.go）；
 //   - 会话级（sid 黑名单）：登出只失效当前设备的会话，不影响同一账号的其他登录（见 repository/session.go）。
+
+// 令牌有效期的**编译期缺省值兼安全下限**（分钟 / 天）。
+// 有效期由系统设置 `access_token_ttl_minutes` / `refresh_token_ttl_days` 驱动（后台可改、即时生效），
+// 但界面填 0 或负数时一律回落到这里——否则 access 有效期 0 会让所有人一登录就掉线，
+// 连后台都进不去改回来（「改错可自愈」的底线，见 setting 包注释）。
 const (
-	AccessTokenTTL  = 15 * time.Minute
-	RefreshTokenTTL = 30 * 24 * time.Hour
+	defaultAccessTokenMinutes = 15
+	defaultRefreshTokenDays   = 30
 )
+
+// AccessTokenTTL access 令牌有效期：取系统设置，非法回落缺省值。
+func AccessTokenTTL() time.Duration {
+	m := setting.GetInt("access_token_ttl_minutes", defaultAccessTokenMinutes)
+	if m < 1 {
+		m = defaultAccessTokenMinutes
+	}
+	return time.Duration(m) * time.Minute
+}
+
+// RefreshTokenTTL refresh 令牌有效期：取系统设置，非法回落缺省值。
+func RefreshTokenTTL() time.Duration {
+	d := setting.GetInt("refresh_token_ttl_days", defaultRefreshTokenDays)
+	if d < 1 {
+		d = defaultRefreshTokenDays
+	}
+	return time.Duration(d) * 24 * time.Hour
+}
 
 // Claims 自定义 JWT 载荷
 type Claims struct {
-	StaffID   int64  `json:"staffId"` // 员工 staff_id 或管理员 admin.id
-	Role      string `json:"role"`    // employee / admin
+	StaffID   int64  `json:"staffId"`   // 员工 staff_id 或管理员 admin.id
+	Role      string `json:"role"`      // employee / admin
 	CompanyID int64  `json:"companyId"` // 租户：员工/企业管理员归属企业；平台超管为 0
-	JTI       string `json:"jti"`     // 单令牌唯一标识，便于审计
-	SID       string `json:"sid"`     // 会话 ID：一次登录生成一个，access/refresh 共享；登出写入黑名单实现单设备精确吊销
-	Typ       string `json:"typ"`     // "access" | "refresh"
-	VID       int    `json:"vid"`     // 签发时的 token_version（安全戳）；改密/禁用时自增即令旧令牌失效
+	JTI       string `json:"jti"`       // 单令牌唯一标识，便于审计
+	SID       string `json:"sid"`       // 会话 ID：一次登录生成一个，access/refresh 共享；登出写入黑名单实现单设备精确吊销
+	Typ       string `json:"typ"`       // "access" | "refresh"
+	VID       int    `json:"vid"`       // 签发时的 token_version（安全戳）；改密/禁用时自增即令旧令牌失效
 	jwt.RegisteredClaims
 }
 
@@ -57,7 +81,7 @@ func issueTokens(staffID int64, role string, version int, companyID int64, sid s
 		Typ:       "access",
 		VID:       version,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(AccessTokenTTL)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(AccessTokenTTL())),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
@@ -70,7 +94,7 @@ func issueTokens(staffID int64, role string, version int, companyID int64, sid s
 		Typ:       "refresh",
 		VID:       version,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(RefreshTokenTTL)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(RefreshTokenTTL())),
 			IssuedAt:  jwt.NewNumericDate(now),
 		},
 	}
@@ -82,7 +106,7 @@ func issueTokens(staffID int64, role string, version int, companyID int64, sid s
 	if err != nil {
 		return "", "", 0, err
 	}
-	return access, refresh, int(AccessTokenTTL.Seconds()), nil
+	return access, refresh, int(AccessTokenTTL().Seconds()), nil
 }
 
 // ParseToken 校验签名与过期，返回载荷（不校验令牌类型 / 版本，后者由调用方按需判断）。

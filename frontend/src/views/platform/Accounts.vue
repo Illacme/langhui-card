@@ -19,14 +19,14 @@
     />
 
     <el-table :data="rows" v-loading="loading" border stripe>
-      <el-table-column prop="id" label="编号" width="80" align="center" />
+      <el-table-column prop="id" label="编号" width="80" align="center" v-if="!isPhone" />
       <el-table-column prop="username" label="用户名" min-width="200" show-overflow-tooltip>
         <template #default="{ row }">
           {{ row.username }}
           <el-tag v-if="row.id === myId" size="small" effect="plain" type="success">当前登录</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" min-width="180" show-overflow-tooltip>
+      <el-table-column label="创建时间" min-width="180" show-overflow-tooltip v-if="!isPhone">
         <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
       </el-table-column>
       <el-table-column label="操作" width="260" fixed="right" align="center">
@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+const { isPhone } = useBreakpoint()
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Refresh } from '@element-plus/icons-vue'
@@ -79,6 +80,7 @@ import {
 import { adminLogout, getMe } from '@/api/auth'
 import { useAuthStore } from '@/store/auth'
 import { formatDateTime } from '@/utils/datetime'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const router = useRouter()
 const auth = useAuthStore()

@@ -9,6 +9,7 @@ import (
 	"langhui/internal/middleware"
 	"langhui/internal/model"
 	"langhui/internal/repository"
+	"langhui/internal/setting"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -22,8 +23,14 @@ import (
 //
 // 两个登录接口均叠加登录限流中间件（按客户端 IP 固定窗口计数，防爆破）。
 func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
-	loginLimiter := middleware.NewLoginRateLimiter(10, time.Minute)   // 每 IP 每分钟最多 10 次登录尝试
-	refreshLimiter := middleware.NewLoginRateLimiter(60, time.Minute) // 刷新相对频繁，配额更宽松
+	// 限流阈值取自系统设置（后台「系统设置 → 登录与令牌」可改，即时生效）；
+	// 缺省值同时是兜底：界面填 0 / 负数时仍按 10 / 60 次每分钟限流，不会把防爆破关掉。
+	loginLimiter := middleware.NewLoginRateLimiter(func() int {
+		return setting.GetInt("login_rate_limit_per_min", 10)
+	}, 10, time.Minute)
+	refreshLimiter := middleware.NewLoginRateLimiter(func() int {
+		return setting.GetInt("refresh_rate_limit_per_min", 60)
+	}, 60, time.Minute)
 
 	// 员工登录（按手机号）——小程序端，Bearer 头鉴权
 	r.POST("/api/employee/login", loginLimiter.Handler(), func(c *gin.Context) {
@@ -104,7 +111,7 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "登录失败"})
 			return
 		}
-		setAuthCookies(c, access, refresh, auth.AccessTokenTTL, auth.RefreshTokenTTL, cfg)
+		setAuthCookies(c, access, refresh, auth.AccessTokenTTL(), auth.RefreshTokenTTL(), cfg)
 		// 回显身份（非敏感）：PC 后台据此区分平台超管 / 企业管理员并展示当前企业
 		companyName := ""
 		companyShortName := ""
@@ -169,7 +176,7 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 		}
 		if fromCookie {
 			// Cookie 流：轮换下发新的 access / refresh Cookie
-			setAuthCookies(c, access, refresh, auth.AccessTokenTTL, auth.RefreshTokenTTL, cfg)
+			setAuthCookies(c, access, refresh, auth.AccessTokenTTL(), auth.RefreshTokenTTL(), cfg)
 			c.JSON(http.StatusOK, gin.H{"code": 0, "expiresIn": expiresIn})
 			return
 		}
@@ -224,5 +231,5 @@ func sessionExpiry(c *gin.Context, claims *auth.Claims) time.Time {
 			return rc.ExpiresAt.Time
 		}
 	}
-	return time.Now().Add(auth.RefreshTokenTTL)
+	return time.Now().Add(auth.RefreshTokenTTL())
 }

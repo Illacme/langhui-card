@@ -8,6 +8,7 @@ import (
 
 	"langhui/internal/config"
 	"langhui/internal/middleware"
+	"langhui/internal/setting"
 	"langhui/internal/storage"
 
 	"github.com/gin-gonic/gin"
@@ -42,7 +43,10 @@ func presignHandler(up storage.Uploader) gin.HandlerFunc {
 		ext := strings.TrimPrefix(c.Query("ext"), ".")
 		contentType := c.Query("contentType")
 		key := storage.RandName(ext)
-		putURL, finalURL, err := p.PresignPut(key, contentType, 15*time.Minute)
+		// 签名时长取系统设置（后台「系统设置 → 上传」可改，即时生效）；
+		// 下限 1 分钟——设成 0 会让前端一拿链接就过期，等于直传功能整体失效。
+		ttl := signTTL("presign_put_ttl_minutes", 15)
+		putURL, finalURL, err := p.PresignPut(key, contentType, ttl)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 			return
@@ -79,7 +83,7 @@ func signHandler(up storage.Uploader, cfg config.Config) gin.HandlerFunc {
 				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "无法解析对象 key: " + u})
 				return
 			}
-			signed, err := s.SignGetURL(key, 30*time.Minute)
+			signed, err := s.SignGetURL(key, signTTL("sign_get_ttl_minutes", 30))
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 				return
@@ -88,6 +92,16 @@ func signHandler(up storage.Uploader, cfg config.Config) gin.HandlerFunc {
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"signed": out}})
 	}
+}
+
+// signTTL 取限时签名时长（分钟）：优先系统设置，未配置 / 非法时回落 def，
+// 并保底 1 分钟——0 或负数会让链接一生成即失效，前端表现为「签名了还是打不开」。
+func signTTL(key string, def int) time.Duration {
+	m := setting.GetInt(key, def)
+	if m < 1 {
+		m = def
+	}
+	return time.Duration(m) * time.Minute
 }
 
 // cdnRefreshHandler 触发 CDN 缓存刷新（覆盖写后使旧缓存失效）

@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
+	"langhui/internal/auth"
 	"langhui/internal/config"
 	"langhui/internal/setting"
 
@@ -343,6 +345,57 @@ func TestRestartKeysReportedOnSave(t *testing.T) {
 	require.EqualValues(t, 0, body["code"])
 	keys := body["data"].(map[string]interface{})["restartKeys"].([]interface{})
 	require.Contains(t, keys, "storage_driver")
+}
+
+// TestTokenAndSignTTLHaveSafetyFloor 第二批写死常量接入设置后的语义：
+// 界面可改、即时生效，但 **0 / 负数一律回落缺省**——
+// access 有效期设 0 会让所有人一登录就掉线、签名时长设 0 会让链接一生成即失效，
+// 都属于「改错之后连改回来的入口都没了」，必须有下限兜底。
+func TestTokenAndSignTTLHaveSafetyFloor(t *testing.T) {
+	setupSQLiteEngine(t)
+
+	// 1) 未配置 → 编译期缺省（15 分钟 / 30 天）
+	require.Equal(t, 15*time.Minute, auth.AccessTokenTTL())
+	require.Equal(t, 30*24*time.Hour, auth.RefreshTokenTTL())
+	require.Equal(t, 15*time.Minute, signTTL("presign_put_ttl_minutes", 15))
+	require.Equal(t, 30*time.Minute, signTTL("sign_get_ttl_minutes", 30))
+	require.Equal(t, time.Hour, signTTL("wxacode_sign_ttl_minutes", 60))
+
+	// 2) 界面设置 → 立即生效
+	require.NoError(t, setting.Upsert("access_token_ttl_minutes", "45"))
+	require.NoError(t, setting.Upsert("refresh_token_ttl_days", "7"))
+	require.NoError(t, setting.Upsert("presign_put_ttl_minutes", "5"))
+	require.Equal(t, 45*time.Minute, auth.AccessTokenTTL())
+	require.Equal(t, 7*24*time.Hour, auth.RefreshTokenTTL())
+	require.Equal(t, 5*time.Minute, signTTL("presign_put_ttl_minutes", 15))
+
+	// 3) 非法值（0 / 负数）→ 回落缺省，不把自己锁在外面
+	require.NoError(t, setting.Upsert("access_token_ttl_minutes", "0"))
+	require.NoError(t, setting.Upsert("refresh_token_ttl_days", "-1"))
+	require.NoError(t, setting.Upsert("presign_put_ttl_minutes", "0"))
+	require.Equal(t, 15*time.Minute, auth.AccessTokenTTL())
+	require.Equal(t, 30*24*time.Hour, auth.RefreshTokenTTL())
+	require.Equal(t, 15*time.Minute, signTTL("presign_put_ttl_minutes", 15))
+}
+
+// TestLoginRateLimitSettingTakesEffect 登录限流阈值取自系统设置且**无需重启**：
+// 过去 NewLoginRateLimiter(10, time.Minute) 在注册期定死，后台改了也没用。
+func TestLoginRateLimitSettingTakesEffect(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	// 直接写设置（不走接口，避免登录请求本身消耗限流配额干扰断言）。
+	// 阈值 1 = 窗口内允许 1 次：第 1 次放行，第 2 次起拒绝。
+	require.NoError(t, setting.Upsert("login_rate_limit_per_min", "1"))
+
+	c := newTestClient(r, t)
+	bad := map[string]interface{}{"phone": "13900000001", "password": "wrong-pwd"}
+
+	// 第 1 次：放行（密码错误是业务失败 code=1，不是限流）
+	_, b1 := c.do("POST", "/api/employee/login", bad, "")
+	require.EqualValues(t, 1, b1["code"])
+	// 第 2 次：达到阈值 → 429
+	_, b2 := c.do("POST", "/api/employee/login", bad, "")
+	require.EqualValues(t, 429, b2["code"])
+	require.Contains(t, b2["msg"], "频繁")
 }
 
 // loginEmployee 建一个员工并登录，返回其 Bearer 令牌（用于越权断言）。

@@ -16,7 +16,7 @@
       </div>
 
       <el-table :data="paged" v-loading="loading" border stripe>
-        <el-table-column prop="staffId" label="员工ID" width="90" align="center" />
+        <el-table-column prop="staffId" label="员工ID" width="90" align="center" v-if="!isPhone" />
         <el-table-column label="变更摘要" min-width="240">
           <template #default="{ row }">
             <el-tag v-for="f in summary(row.snapshot)" :key="f.key" class="sum-tag" size="small" type="info">
@@ -31,7 +31,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="rejectReason" label="驳回原因" min-width="160" show-overflow-tooltip />
-        <el-table-column label="提交时间" width="180">
+        <el-table-column label="提交时间" width="180" v-if="!isPhone">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
         <el-table-column label="操作" width="190" fixed="right" align="center">
@@ -84,6 +84,7 @@
 </template>
 
 <script setup lang="ts">
+const { isPhone } = useBreakpoint()
 import { ElMessage } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { Refresh, Right, Search } from '@element-plus/icons-vue'
@@ -91,6 +92,7 @@ import { listModifyApply, approveModify, rejectModify } from '@/api/apply'
 import { listEmployees } from '@/api/employees'
 import { useTable } from '@/composables/useTable'
 import { formatDateTime } from '@/utils/datetime'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 
 const FIELD_LABELS: Record<string, string> = {
   avatar: '头像',

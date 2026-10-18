@@ -114,11 +114,12 @@ const GROUP_LABELS: Record<string, string> = {
   miniprogram: '小程序',
   upload: '上传',
   wechat: '微信',
+  auth: '登录与令牌',
   storage: '文件存储与 CDN',
   security: '安全与基础设施（只读）',
   feature: '功能开关',
 }
-const GROUP_ORDER = ['general', 'miniprogram', 'upload', 'wechat', 'storage', 'security', 'feature']
+const GROUP_ORDER = ['general', 'miniprogram', 'upload', 'wechat', 'auth', 'storage', 'security', 'feature']
 
 const settings = useSettingsStore()
 

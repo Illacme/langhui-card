@@ -28,6 +28,8 @@ const items: SettingItem[] = [
   { key: 'wx_appid', group: 'wechat', type: 'string', value: '', description: 'AppID', secret: false, restart: false, readOnly: false, envVar: 'WX_APPID', configured: false },
   { key: 'wx_appsecret', group: 'wechat', type: 'string', value: '******', description: 'AppSecret（敏感）', secret: true, restart: false, readOnly: false, envVar: 'WX_APPSECRET', configured: true },
   { key: 'wxacode_ttl_hours', group: 'wechat', type: 'int', value: '720', description: '小程序码 TTL', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'access_token_ttl_minutes', group: 'auth', type: 'int', value: '15', description: 'access 有效期', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'login_rate_limit_per_min', group: 'auth', type: 'int', value: '10', description: '登录限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'cdn_enabled', group: 'storage', type: 'bool', value: '', description: 'CDN 刷新', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENABLED', configured: false },
   { key: 'storage_driver', group: 'storage', type: 'string', value: 'local', description: '存储驱动', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_DRIVER', configured: true },
   { key: 'storage_secret_key', group: 'storage', type: 'string', value: '', description: '存储 SecretKey', secret: true, restart: true, readOnly: false, envVar: 'MINIO_SECRET_KEY', configured: false },
@@ -137,8 +139,8 @@ describe('Settings 系统设置', () => {
   it('按分组渲染全部配置项与说明（含存储与只读分组）', async () => {
     const { w } = await setup()
     const text = w.text()
-    ;['通用', '小程序', '上传', '微信', '文件存储与 CDN', '安全与基础设施', '功能开关'].forEach((g) =>
-      expect(text).toContain(g),
+    ;['通用', '小程序', '上传', '微信', '登录与令牌', '文件存储与 CDN', '安全与基础设施', '功能开关'].forEach(
+      (g) => expect(text).toContain(g),
     )
     expect(text).toContain('brand_name')
     expect(text).toContain('品牌名')

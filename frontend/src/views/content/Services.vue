@@ -18,7 +18,7 @@
 
       <el-table ref="tableRef" :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="title" label="标题" min-width="200" />
-        <el-table-column label="图标" width="90" align="center">
+        <el-table-column label="图标" width="90" align="center" v-if="!isPhone">
           <template #default="{ row }">
             <el-image
               v-if="row.icon"
@@ -29,12 +29,12 @@
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
-        <el-table-column label="内容(摘要)" min-width="280" show-overflow-tooltip>
+        <el-table-column label="内容(摘要)" min-width="280" show-overflow-tooltip v-if="!isPhone">
           <template #default="{ row }">
             <span class="muted">{{ stripHtml(row.content) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="创建时间" width="180" align="center">
+        <el-table-column label="创建时间" width="180" align="center" v-if="!isPhone">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
         </el-table-column>
         <el-table-column label="排序" width="120" align="center">
@@ -101,6 +101,7 @@
 </template>
 
 <script setup lang="ts">
+const { isPhone } = useBreakpoint()
 import { ref, reactive, onMounted, defineAsyncComponent } from 'vue'
 import { Refresh, Plus, Search, Rank, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
@@ -116,6 +117,7 @@ import { useTable } from '@/composables/useTable'
 import { useSortableRows } from '@/composables/useSortableRows'
 import { formatDateTime } from '@/utils/datetime'
 import UploadField from '@/components/UploadField.vue'
+import { useBreakpoint } from '@/composables/useBreakpoint'
 // 富文本编辑器体积较大（~800KB），按页面懒加载，避免拖累首屏
 const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 
