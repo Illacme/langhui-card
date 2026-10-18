@@ -177,7 +177,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | 方法 | 路径 | 鉴权 | 说明 |
 |---|---|---|---|
 | GET  | /api/assets/file/*path | 否 | 素材预览图（PNG/JPEG），immutable 长缓存 |
-| GET  | /api/admin/assets/library | admin | 素材清单（**分页**）：`page`（缺省 1）/ `size`（缺省 24，上限 60）/ `type`（分类，空=全部）/ `style`（视觉调性，空=全部）/ `keyword`（名称或标签匹配）→ `{items,total,page,size,pages,categories,styles,styleCounts}`。`styleCounts` 是**当前 分类+关键字 下各调性的素材数**（刻意排除 `style` 自身影响，否则选中一档后其余全变 0），前端据此隐藏 0 结果的档位 |
+| GET  | /api/admin/assets/library | admin | 素材清单（**分页**）：`page`（缺省 1）/ `size`（缺省 15 = 选择器网格 5 列 × 3 排，一屏看全、无需滚动；上限 60）/ `type`（分类，空=全部）/ `style`（视觉调性，空=全部）/ `keyword`（名称或标签匹配）→ `{items,total,page,size,pages,categories,styles,styleCounts}`。`styleCounts` 是**当前 分类+关键字 下各调性的素材数**（刻意排除 `style` 自身影响，否则选中一档后其余全变 0），前端据此隐藏 0 结果的档位 |
 | POST | /api/admin/assets/adopt | admin | 采用素材：body `{"id":"bg-deepspace"}` → 复制进上传存储，返回 `{url, item}` |
 
 > 分页与筛选都在服务端：素材已达百级且会继续扩充，一次返回全量不合适；

@@ -69,8 +69,9 @@ type Result struct {
 }
 
 const (
-	// DefaultPageSize 选择器默认每页条数（6 列 × 4 行网格）
-	DefaultPageSize = 24
+	// DefaultPageSize 选择器默认每页条数：15 = 5 列 × 3 排，弹窗内一次看全、
+	// 无需滚动。选择器网格宽度约 830px、卡片最小 150px，正好排满 5 列。
+	DefaultPageSize = 15
 	// MaxPageSize 单页上限，防止一次拉全量
 	MaxPageSize = 60
 )

@@ -112,7 +112,7 @@ function item(id: string, name: string, category: string, tags: string[] = [], s
   }
 }
 
-// 30 项（26 图标 + 封面/LOGO/背景各若干）→ size=24 时共 2 页，可测翻页。
+// 30 项（26 图标 + 封面/LOGO/背景各若干）→ size=15 时共 2 页，可测翻页。
 // 非图标素材刻意分散到不同调性，用于验证风格筛选行。
 const LIB_ITEMS = [
   ...Array.from({ length: 26 }, (_, i) =>
@@ -144,7 +144,7 @@ const STYLES = [
 // styleCounts 在「分类+关键字」结果上统计（不含 style 本身），供前端隐藏 0 结果的调性。
 function fakeList(params: Record<string, any> = {}) {
   const page = Number(params?.page) || 1
-  const size = Number(params?.size) || 24
+  const size = Number(params?.size) || 15
   const type = params?.type && params.type !== 'all' ? params.type : ''
   const style = params?.style && params.style !== 'all' ? params.style : ''
   const kw = String(params?.keyword || '').trim().toLowerCase()
@@ -196,8 +196,8 @@ describe('AssetPicker', () => {
     await vi.waitFor(() => expect(listLibrary).toHaveBeenCalled())
     await nextTick()
     await nextTick()
-    // 首页按 size=24 截断，footer 显示总数 30
-    expect(w.findAll('.asset-card')).toHaveLength(24)
+    // 首页按 size=15 截断（5 列 × 3 排），footer 显示总数 30
+    expect(w.findAll('.asset-card')).toHaveLength(15)
     expect(w.text()).toContain('共 30 项')
     expect(listLibrary).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }))
   })
@@ -275,8 +275,8 @@ describe('AssetPicker', () => {
     )
     await nextTick()
     await nextTick()
-    // 第二页只剩 6 项（30 - 24）
-    expect(w.findAll('.asset-card')).toHaveLength(6)
+    // 第二页 15 项（30 - 15）
+    expect(w.findAll('.asset-card')).toHaveLength(15)
   })
 
   it('搜索关键字（防抖）走服务端过滤：请求带 keyword 并回填结果', async () => {

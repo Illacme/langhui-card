@@ -34,8 +34,8 @@ func TestAssetLibrary(t *testing.T) {
 	total := int(data["total"].(float64))
 	require.GreaterOrEqual(t, total, 900, "素材应覆盖五大类九百项以上（含图标配色变体）")
 	require.EqualValues(t, 1, data["page"])
-	require.EqualValues(t, 24, data["size"], "缺省每页 24 条")
-	require.EqualValues(t, 24, len(items), "第一页按 size 截断")
+	require.EqualValues(t, 15, data["size"], "缺省每页 15 条（5 列 × 3 排）")
+	require.EqualValues(t, 15, len(items), "第一页按 size 截断")
 	pages := int(data["pages"].(float64))
 	require.GreaterOrEqual(t, pages, 37, "九百项素材应有多页")
 
