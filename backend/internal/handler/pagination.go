@@ -28,6 +28,33 @@ const (
 	maxPageSize     = 100
 )
 
+// limitParam 解析 ?limit=：只做「上限保护」，不做分页。
+//
+// 适用对象与 pageParams 不同——小程序端的案例 / 服务 / 首页精选是「一次全量展示」
+// 的内容型列表（端上没有分页 UI，也不该有：案例就那么多，翻页反而打断浏览）。
+// 但全量 ≠ 无上限：内容是可增长的，必须给一个天花板，否则首屏 payload 会随运营
+// 时间单调膨胀。缺省值与上限都由调用方给出（各列表的合理量级不同）。
+func limitParam(c *gin.Context, def, max int) int {
+	n, err := strconv.Atoi(c.Query("limit"))
+	if err != nil || n <= 0 {
+		return def
+	}
+	if n > max {
+		return max
+	}
+	return n
+}
+
+// cdnCache 给公开只读接口加短缓存。
+//
+// 小程序自身的 wx.request 不利用 HTTP 缓存，所以这不是给端上用的——是给反向代理
+// / CDN 用的：内容型列表重复访问比例很高（同一个访客反复进出首页），短缓存能把
+// 这部分重复回源挡掉。时长刻意取短（分钟级）：后台改了内容后，访客不该长时间
+// 看到旧数据。
+func cdnCache(c *gin.Context, seconds int) {
+	c.Header("Cache-Control", "public, max-age="+strconv.Itoa(seconds))
+}
+
 // pageParams 解析分页参数：非法值回落缺省，size 超上限截断。
 func pageParams(c *gin.Context) (page, size int) {
 	page = atoiDefault(c.Query("page"), 1)

@@ -79,12 +79,15 @@ func New(db *gorm.DB) *gin.Engine {
 		if !ok {
 			return
 		}
-		cats, featured, err := repository.GetAchievements(db, cid)
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "categories": cats, "featured": featured})
+	cats, featured, err := repository.GetAchievements(db, cid)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+		return
+	}
+	// 公开只读接口：短缓存给 CDN / 反代用（端上不受益，详见 cdnCache 注释）。
+	// 只在成功分支设置——错误响应不该被缓存。
+	cdnCache(c, 60)
+	c.JSON(http.StatusOK, gin.H{"code": 0, "categories": cats, "featured": featured})
 	})
 
 	// 项目列表（按分类，按租户）
@@ -94,11 +97,14 @@ func New(db *gorm.DB) *gin.Engine {
 			return
 		}
 		catID, _ := strconv.ParseInt(c.Query("categoryId"), 10, 64)
-		ps, err := repository.ListProjects(db, cid, catID)
+		// ?limit= 只做上限保护（缺省与上限见 repository.MaxProjectsList），端上无分页 UI
+		limit := limitParam(c, repository.MaxProjectsList, repository.MaxProjectsList)
+		ps, err := repository.ListProjects(db, cid, catID, limit)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
 		}
+		cdnCache(c, 60)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": ps})
 	})
 
@@ -138,11 +144,13 @@ func New(db *gorm.DB) *gin.Engine {
 		if !ok {
 			return
 		}
-		s, err := repository.ListServices(db, cid)
+		limit := limitParam(c, repository.MaxServicesList, repository.MaxServicesList)
+		s, err := repository.ListServices(db, cid, limit)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
 		}
+		cdnCache(c, 60)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": s})
 	})
 

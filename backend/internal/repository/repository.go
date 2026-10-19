@@ -22,22 +22,49 @@ func GetCard(db *gorm.DB, staffID int64) (model.Employee, model.CompanyInfo, mod
 	return e, c, p, nil
 }
 
+// C 端列表的条数上限与列裁剪（2026-10-19）。
+//
+// 这三个接口都是「一次全量展示」：小程序端没有分页 UI，靠 Limit 给天花板防止
+// payload 随内容增长无上限膨胀。列裁剪的收益比条数上限更大——案例的 detail 是
+// 富文本、album 是图集 JSON，服务的 content 是富文本，单条就可能几十 KB；
+// 而列表页只画封面 + 标题 + 摘要（详情由 /xxx/:id 单独取，不复用列表数据）。
+const (
+	MaxProjectsList = 200 // 案例列表（含分类筛选）
+	MaxFeaturedList = 20  // 首页精选：首页只画得下这么多个
+	MaxServicesList = 50  // 业务服务：实际业务量级在个位数到十几个
+)
+
+// 列表只取展示所需列；未选中的列为零值（detail 会是空串而不是富文本正文）。
+const (
+	projectBriefCols = "id, category_id, name, summary, cover"
+	serviceBriefCols = "id, title, icon, sort"
+)
+
 // GetAchievements 分类（按 sort）+ 首页精选项目（按租户隔离）
 func GetAchievements(db *gorm.DB, companyID int64) ([]model.AchievementCategory, []model.ProjectCase, error) {
 	var cats []model.AchievementCategory
-	var featured []model.ProjectCase
 	if err := db.Where("company_id = ?", companyID).Order("sort asc").Find(&cats).Error; err != nil {
 		return nil, nil, err
 	}
-	if err := db.Where("company_id = ? AND is_home_featured = ? AND enabled = ?", companyID, true, true).Order("sort asc").Find(&featured).Error; err != nil {
+	var featured []model.ProjectCase
+	if err := db.Where("company_id = ? AND is_home_featured = ? AND enabled = ?", companyID, true, true).
+		Select(projectBriefCols).
+		Order("sort asc").Limit(MaxFeaturedList).Find(&featured).Error; err != nil {
 		return nil, nil, err
 	}
 	return cats, featured, nil
 }
 
-func ListProjects(db *gorm.DB, companyID int64, categoryID int64) ([]model.ProjectCase, error) {
+// ListProjects 案例列表（按租户；categoryID=0 表示全部上架案例）。
+// limit<=0 或超过上限时夹到上限：调用方（小程序）不传即用默认量级。
+func ListProjects(db *gorm.DB, companyID int64, categoryID int64, limit int) ([]model.ProjectCase, error) {
 	var ps []model.ProjectCase
-	q := db.Where("company_id = ?", companyID).Order("sort asc")
+	if limit <= 0 || limit > MaxProjectsList {
+		limit = MaxProjectsList
+	}
+	q := db.Where("company_id = ?", companyID).
+		Select(projectBriefCols).
+		Order("sort asc").Limit(limit)
 	if categoryID > 0 {
 		q = q.Where("category_id = ? AND enabled = ?", categoryID, true)
 	} else {
@@ -94,9 +121,16 @@ func fillCategoryNames(db *gorm.DB, ps []model.ProjectCase) {
 	}
 }
 
-func ListServices(db *gorm.DB, companyID int64) ([]model.BizService, error) {
+// ListServices 业务服务列表（按租户）。列表只取卡片字段：
+// content 是富文本正文，只有详情页需要（/api/services/:id 单取）。
+func ListServices(db *gorm.DB, companyID int64, limit int) ([]model.BizService, error) {
 	var s []model.BizService
-	err := db.Where("company_id = ?", companyID).Order("sort asc").Find(&s).Error
+	if limit <= 0 || limit > MaxServicesList {
+		limit = MaxServicesList
+	}
+	err := db.Where("company_id = ?", companyID).
+		Select(serviceBriefCols).
+		Order("sort asc").Limit(limit).Find(&s).Error
 	return s, err
 }
 

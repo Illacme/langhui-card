@@ -145,6 +145,10 @@ paths:
     get:
       tags: [公开内容]
       summary: 经典业绩（分类 + 首页精选项目）
+      description: >-
+        featured 为首页精选，最多 20 条（首页只画得下这些）；只返回 id / categoryId /
+        name / summary / cover，不含 detail 富文本。分类列表不受此上限约束。
+        响应带 Cache-Control: public, max-age=60。
       responses:
         "200":
           description: code=0 成功
@@ -167,14 +171,26 @@ paths:
   /api/projects:
     get:
       tags: [公开内容]
-      summary: 项目案例列表（按分类）
+      summary: 项目案例列表（按分类；列表字段，不含富文本正文）
+      description: >-
+        一次全量展示（端上无分页 UI）。条数上限 200，可用 limit 调小；超上限一律夹到 200。
+        列表只返回 id / categoryId / name / summary / cover / categoryName——detail 富文本
+        与 album 图集不随列表下发，详情请取 /api/projects/{id}。响应带 Cache-Control:
+        public, max-age=60（给 CDN / 反代用）。
       parameters:
         - name: categoryId
           in: query
-          required: true
+          required: false
+          description: 分类 ID；不传表示全部上架案例
           schema:
             type: integer
             format: int64
+        - name: limit
+          in: query
+          required: false
+          description: 返回条数上限，默认 200、最大 200；非法值或 0 回落默认
+          schema:
+            type: integer
       responses:
         "200":
           description: code=0 成功
@@ -217,7 +233,17 @@ paths:
   /api/services:
     get:
       tags: [公开内容]
-      summary: 业务服务列表
+      summary: 业务服务列表（列表字段，不含富文本正文）
+      description: >-
+        条数上限 50，可用 limit 调小。列表只返回 id / title / icon / sort——content 富文本
+        不随列表下发，详情请取 /api/services/{id}。响应带 Cache-Control: public, max-age=60。
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: 返回条数上限，默认 50、最大 50
+          schema:
+            type: integer
       responses:
         "200":
           description: code=0 成功
