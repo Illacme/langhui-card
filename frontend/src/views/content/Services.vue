@@ -241,10 +241,6 @@ onMounted(load)
   align-items: center;
   gap: 8px;
 }
-.table-pager {
-  margin-top: 14px;
-  justify-content: flex-end;
-}
 .muted {
   color: #909399;
 }

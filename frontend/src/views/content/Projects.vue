@@ -317,10 +317,6 @@ onMounted(load)
   gap: 8px;
   flex-wrap: wrap;
 }
-.table-pager {
-  margin-top: 14px;
-  justify-content: flex-end;
-}
 .muted {
   color: #c0c4cc;
 }

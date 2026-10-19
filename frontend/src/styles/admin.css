@@ -57,3 +57,18 @@
 .sort-cell .drag-handle:active {
   cursor: grabbing;
 }
+
+/* ===== 列表分页器：统一右对齐 =====
+   桌面端分页栏贴表格右下角，与「筛选区在左上、操作在右上」的视觉动线一致。
+   选择器写到 `.el-pagination.table-pager`（0,2,0）而不是裸 `.table-pager`：
+   Element Plus 自己的 `.el-pagination` 也是单类选择器，两者同权时胜负取决于
+   注入顺序，而按需引入的组件样式是在编译期注入的、顺序不可控；双类选择器则稳赢。
+
+   这条规则过去在每个列表页的 scoped 样式里各复制一份（`justify-content: flex-end`
+   + `margin-top: 14px`）。漏加的页面会静默退化成左对齐——企业管理与平台管理的
+   账号管理 / 操作日志三页正是这样中招的，而漏加不会报任何错。
+   收敛到全局一处，新增列表页只要挂 `class="table-pager"` 就自动对齐。 */
+.el-pagination.table-pager {
+  margin-top: 14px;
+  justify-content: flex-end;
+}

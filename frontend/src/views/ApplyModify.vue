@@ -229,10 +229,6 @@ onMounted(load)
   align-items: center;
   gap: 8px;
 }
-.table-pager {
-  margin-top: 14px;
-  justify-content: flex-end;
-}
 .sum-tag {
   margin: 2px 4px 2px 0;
 }

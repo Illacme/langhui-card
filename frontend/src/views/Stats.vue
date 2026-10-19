@@ -128,10 +128,6 @@ onMounted(load)
   font-weight: 600;
   color: #303133;
 }
-.table-pager {
-  margin-top: 14px;
-  justify-content: flex-end;
-}
 .tip {
   margin: 12px 0 0;
   color: #909399;
