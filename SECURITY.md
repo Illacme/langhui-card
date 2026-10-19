@@ -40,4 +40,7 @@
   覆盖后台写操作与登录失败，敏感值脱敏不落明文、只提供查询。仍未落地的是集中式密钥管理与完整监控告警栈。
 - 多实例部署下，小程序码 / access_token 等内存缓存不共享，需引入 Redis。
 
-> 上线前务必修改默认 `JWT_KEY` 与初始超管口令 `ADMIN_PASS`（服务启动时会打印 `[SECURITY]` 告警）。
+> 上线前务必修改默认 `JWT_KEY` 与初始超管口令 `ADMIN_PASS`（这两个默认值连同演示账号写进了公开文档，属已知凭据）。
+> 已由代码强制把关，不依赖人记住：`docker-compose.yml` 中三者为必填变量（未设置则 compose 报错）；
+> `cmd/server` 启动检测到缺省 / 过短的 `JWT_KEY` 或缺省口令时**拒绝启动**并打印 `[SECURITY][FATAL]`（本地联调加 `ALLOW_INSECURE=1` 放行，切勿用于生产）。
+> 部署前可先跑 `scripts/preflight.sh` 做静态自检（含小程序端 `DEFAULT_BASE_URL` 种子是否仍指向 127.0.0.1）。

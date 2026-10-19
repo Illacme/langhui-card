@@ -122,6 +122,30 @@ openssl rand -base64 12   # → ADMIN_PASS（或自定义强口令）
 
 编辑 `.env`，生产必改项：`JWT_KEY`、`MYSQL_ROOT_PASSWORD`、`ADMIN_PASS`、`COOKIE_SECURE=true`（HTTPS 生产必须，见第 5 节）。可选按需：`WX_APPID/WX_APPSECRET`（小程序码）、`MINIO_*`/`OSS_*`（对象存储）、`METRICS_ENABLED=1`。
 
+> **三处「忘了改就出事」的项，已由代码强制把关**（不是靠人记住）：
+> 1. `JWT_KEY` / `ADMIN_PASS` / `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 里是**必填变量**
+>    （`${VAR:?提示}` 语法），未设置时 `docker compose up` 直接报错、不会带默认值悄悄启动；
+> 2. 后端 `cmd/server` 启动时若检测到 `JWT_KEY` 仍是缺省值 `change-me`（或长度 < 16）、
+>    或 `ADMIN_PASS` 仍是内置缺省口令，会**拒绝启动**并打印 `[SECURITY][FATAL]`
+>    （这两个默认值连同演示账号写进了公开文档，等于已知凭据）；
+>    本地联调确需放行加 `ALLOW_INSECURE=1`，**切勿用于生产**；
+> 3. 部署前可先跑一遍静态自检（服务不必先启动），它会逐项列出还差什么：
+>    ```bash
+>    scripts/preflight.sh                 # 有 FAIL 则退出码 1
+>    PREFLIGHT_STRICT=1 scripts/preflight.sh   # WARN 也算失败（接发布流水线用）
+>    ```
+
+### 小程序端必改（容易漏，且只影响真机）
+
+`miniprogram/utils/config.ts` 的 `DEFAULT_BASE_URL` 默认是 `http://127.0.0.1:8080`。
+它是小程序**首次**拉配置用的引导种子——真机上 127.0.0.1 是手机自身、不可达，
+首连失败后就永远拿不到后台下发的正确基址（后台配置只有在种子能连通一次之后才生效）。
+
+- 真机联调：改成本机局域网 IP（如 `http://192.168.1.20:8080`）
+- 生产：改成 https 域名（如 `https://card.example.com`）
+
+`preflight.sh` 第 3 项会检查这一处；未改时判 FAIL。
+
 ## 2. 启动
 
 ```bash

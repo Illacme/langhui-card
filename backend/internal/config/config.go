@@ -6,6 +6,17 @@ import (
 	"time"
 )
 
+// 安全相关常量：默认密钥 / 默认超管口令与其判定下限。
+//
+// 默认口令之所以能被「硬门槛」拦住，是因为它连同演示账号一起写进了 README 与联调
+// 文档——它已经不是秘密了。带它上线等于任何人都能进后台，所以必须是致命项而非提示项。
+const (
+	DefaultJWTKey    = "change-me"   // JWT_KEY 内置缺省值
+	MinJWTKeyLen     = 16            // 低于此长度视为可暴力伪造
+	DefaultAdminPass = "admin123456" // ADMIN_PASS 内置缺省值（首启动 seed 用）
+	MinAdminPassLen  = 8             // 低于此长度仅告警：口令是给人记的，不宜卡太死
+)
+
 // Config 通过环境变量注入，不写死（保证可平滑迁云托管）
 type Config struct {
 	DBDSN              string
@@ -44,7 +55,7 @@ func Load() Config {
 	return Config{
 		DBDSN:              getEnv("DB_DSN", "root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true"),
 		Port:               getEnv("PORT", "8080"),
-		JWTKey:             getEnv("JWT_KEY", "change-me"),
+		JWTKey:             getEnv("JWT_KEY", DefaultJWTKey),
 		UploadDir:          getEnv("UPLOAD_DIR", "./uploads"),
 		UploadBaseURL:      getEnv("UPLOAD_BASE_URL", "http://127.0.0.1:8080/uploads"),
 		StorageDriver:      getEnv("STORAGE_DRIVER", "local"),
@@ -65,7 +76,7 @@ func Load() Config {
 		WXAppID:            getEnv("WX_APPID", ""),
 		WXAppSecret:        getEnv("WX_APPSECRET", ""),
 		AdminUser:          getEnv("ADMIN_USER", "admin"),
-		AdminPass:          getEnv("ADMIN_PASS", "admin123456"),
+		AdminPass:          getEnv("ADMIN_PASS", DefaultAdminPass),
 		CookieSecure:       parseBool(getEnv("COOKIE_SECURE", "false")),
 		CookieDomain:       getEnv("COOKIE_DOMAIN", ""),
 		MetricsEnabled:     parseBool(getEnv("METRICS_ENABLED", "false")),
@@ -74,16 +85,36 @@ func Load() Config {
 	}
 }
 
-// InsecureWarnings 返回上线前应修正的不安全配置提示（默认 JWT 密钥 / 默认超管口令）。
+// InsecureWarnings 返回上线前应修正的不安全配置提示（超管口令偏弱）。
+//
+// 与 InsecureGates 的分工：Warnings 只提示、不拦启动（改不改都不影响系统可用）；
+// Gates 命中则 cmd/server 拒绝启动。判断依据是「这个默认值是否已经不 secret」——
+// JWT 密钥与初始口令都原样写在公开文档里，属于已知凭据，必须拦；
+// 口令长度只是强弱问题，交给运维判断，不卡启动。
 func (c Config) InsecureWarnings() []string {
 	var ws []string
-	if c.JWTKey == "change-me" || len(c.JWTKey) < 16 {
-		ws = append(ws, "JWT_KEY 仍为默认值或长度不足 16 位，token 可被轻易伪造，请设置为足够长的随机字符串")
-	}
-	if c.AdminPass == "admin123456" {
-		ws = append(ws, "初始超管口令仍为默认 admin123456，请通过 ADMIN_PASS 修改并在首登后及时改密")
+	if len(c.AdminPass) < MinAdminPassLen {
+		ws = append(ws, "初始超管口令长度不足 8 位，建议通过 ADMIN_PASS 设置更强口令并在首登后及时改密")
 	}
 	return ws
+}
+
+// InsecureGates 返回「命中即拒绝在生产启动」的安全硬门槛。
+//
+// 设计取舍：这里只放「带默认凭据上线等于把后台开放给所有人」的项，且每一项都能靠
+// 改一个环境变量自愈（不像 db_dsn / cookie_* 那样会把「改回来的入口」一起弄丢），
+// 所以「拒绝启动」是安全且不危险的。逃生门是 ALLOW_INSECURE=1（仅本地联调用）。
+func (c Config) InsecureGates() []string {
+	var gs []string
+	if c.JWTKey == DefaultJWTKey {
+		gs = append(gs, "JWT_KEY 仍为内置缺省值 change-me：任何人都能伪造任意身份的 token，请用 openssl rand -base64 32 生成后设置 JWT_KEY")
+	} else if len(c.JWTKey) < MinJWTKeyLen {
+		gs = append(gs, "JWT_KEY 长度不足 16 位，可被暴力破解，请用 openssl rand -base64 32 生成后设置 JWT_KEY")
+	}
+	if c.AdminPass == DefaultAdminPass {
+		gs = append(gs, "初始超管口令仍为内置缺省值（该口令已随演示账号写入公开文档）：任何人都能登录后台，请设置 ADMIN_PASS 后启动")
+	}
+	return gs
 }
 
 func getEnv(k, def string) string {

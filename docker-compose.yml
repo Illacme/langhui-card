@@ -16,7 +16,8 @@ services:
     container_name: langhui-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-langhui123}
+      # 必填：不设则 compose 直接报错，而不是悄悄带着编排里的示例口令起库
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置：请 cp .env.example .env 后改成强随机值}
       MYSQL_DATABASE: langhui
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_general_ci
@@ -45,11 +46,13 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      DB_DSN: "root:${MYSQL_ROOT_PASSWORD:-langhui123}@tcp(mysql:3306)/langhui?charset=utf8mb4&parseTime=true"
+      DB_DSN: "root:${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置}@tcp(mysql:3306)/langhui?charset=utf8mb4&parseTime=true"
       PORT: "8080"
-      JWT_KEY: ${JWT_KEY:-change-me}
+      # 必填：不设则 compose 直接报错，而不是悄悄带着内置缺省值把服务跑起来
+      # （后端 cmd/server 也会拒绝用缺省密钥/缺省口令启动，这里是更早的一道闸）
+      JWT_KEY: ${JWT_KEY:?JWT_KEY 未设置：请 cp .env.example .env 后填入 openssl rand -base64 32 生成的随机串}
+      ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS 未设置：初始超管口令，上线必改（openssl rand -base64 12）}
       ADMIN_USER: ${ADMIN_USER:-admin}
-      ADMIN_PASS: ${ADMIN_PASS:-admin123456}
       STORAGE_DRIVER: local
       STORAGE_PUBLIC: "true"
       UPLOAD_DIR: /app/uploads

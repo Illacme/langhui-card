@@ -14,7 +14,7 @@
 | `miniprogram/` | 原生微信小程序前端（员工 / 访客侧） |
 | `backend/migrations/` | MySQL 建表与种子 SQL（含软删除迁移 `0003` 等） |
 | `docs/` | OpenAPI 3 接口规范（`openapi.yaml`）· 分支保护协作规范（`branch-protection.md`）· 生产上线 Runbook（`deploy-runbook.md`） |
-| `scripts/` | 运维脚本（`backup.sh`：MySQL 逻辑备份 + 轮转；`alert_check.sh`：最小告警三规则） |
+| `scripts/` | 运维脚本（`preflight.sh`：上线前配置自检；`backup.sh`：MySQL 逻辑备份 + 轮转；`alert_check.sh`：最小告警三规则） |
 | `*.md`（根目录） | 需求 / 架构 / 接口字段映射等中文文档 |
 
 ## 技术栈
@@ -38,9 +38,12 @@ cd backend && go run ./cmd/devserver      # 监听 :8080
 
 ### 方式二：容器一键起（MySQL + 后端 + 前端）
 ```bash
-cp .env.example .env          # 按需修改 JWT_KEY / ADMIN_PASS 等
+cp .env.example .env          # 必改 JWT_KEY / ADMIN_PASS / MYSQL_ROOT_PASSWORD（三者为必填变量）
 docker compose up -d --build  # 访问 http://localhost:8080
 ```
+> `JWT_KEY` / `ADMIN_PASS` / `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 中是**必填**变量（`${VAR:?提示}`），
+> 未设置时 compose 直接报错，不会带默认值悄悄启动；后端 `cmd/server` 也会拒绝用缺省密钥 / 缺省口令启动。
+> 上线前可跑 `scripts/preflight.sh` 做一次静态自检（含小程序端引导基址是否仍指向 127.0.0.1）。
 
 ### 方式三：分别启动（开发态）
 ```bash
@@ -128,6 +131,7 @@ CI 见 `.github/workflows/ci.yml`，四个 job：
 - JWT **双令牌 + 两级即时吊销**：access 15 分钟 / refresh 30 天，`POST /api/refresh` 静默续期；账号级走 `token_version` 安全戳（改密 / 禁用即时失效），会话级走 `revoked_sessions` 黑名单（**单设备精确吊销**，登出只失效当前设备）。
 - PC 管理后台 **httpOnly Cookie 鉴权**（`HttpOnly; SameSite=Lax`），token 不下发到 JS，防 XSS 窃取；小程序端走 Bearer 头。
 - **可观测性**：`X-Request-Id` 贯穿请求（响应头带回，便于报障定位）；每请求一行访问日志（方法/路径/状态/耗时/IP，5xx 单独 `[ACCESS-5XX]` 前缀供告警匹配）；`METRICS_ENABLED=1` 可选开启 `/metrics`（Prometheus 文本格式）。
+- **上线前自检已落地**：`scripts/preflight.sh`（零依赖静态检查：JWT 密钥 / 初始口令 / 小程序引导基址 / 存储凭据 / 上传基址 / Cookie / 数据库口令 / 服务探活，输出 PASS·WARN·FAIL·SKIP，有 FAIL 退出码 1；`PREFLIGHT_STRICT=1` 时 WARN 也算失败，便于接发布流水线）。与后端启动门槛是同一套判据的两道闸——门槛负责「跑不起来」，本脚本负责「跑起来之前先告诉你差哪几项」。
 - **运维脚本**：`scripts/backup.sh` 做 MySQL 逻辑备份（mysqldump → gzip → 按保留天数轮转，可入 crontab）。
 - **测试覆盖**：后端 httptest 集成（SQLite 零外部依赖 + 可选 MySQL parity）+ MinIO/OSS 假服务单测；前端含视图层组件测试；小程序纯逻辑测试经前端 Vitest 运行。
 - **操作审计**：后台写操作（改系统设置 / 管理员增删改 / 企业启停 / 改密码）与**登录失败**
@@ -151,7 +155,7 @@ CI 见 `.github/workflows/ci.yml`，四个 job：
 - 需求与架构：《朗汇机电小程序V1.3_开发内容与工作量确认》《朗汇机电小程序V1.3_自建技术架构方案》
 - 接口 / 字段映射：《首页组件》《跳转页组件》《PC 后台组件与接口字段映射》《三端联调与接口总表》
 - 接口规范：`docs/openapi.yaml`（OpenAPI 3.0.3）
-- 部署与运维：《部署与联调》（联调环境）· `docs/deploy-runbook.md`（生产上线 Runbook）· `scripts/backup.sh` · `scripts/alert_check.sh`
+- 部署与运维：《部署与联调》（联调环境）· `docs/deploy-runbook.md`（生产上线 Runbook）· `scripts/preflight.sh` · `scripts/backup.sh` · `scripts/alert_check.sh`
 - 协作规范：`docs/branch-protection.md`（分支保护 / CI 门禁 / 评审流）
 - 子工程说明：`backend/README.md` · `frontend/README.md` · `miniprogram/README.md`
 

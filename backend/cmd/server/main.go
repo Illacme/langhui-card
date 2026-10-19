@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"langhui/internal/config"
 	"langhui/internal/handler"
@@ -17,7 +18,24 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// 上线配置自检：默认 JWT 密钥 / 默认超管口令会在此明确告警，提醒及时修改
+	// 安全硬门槛：带内置缺省的 JWT 密钥 / 超管口令上线，等于把后台开放给所有人——
+	// 这两个默认值都原样写在公开文档里，属于已知凭据，因此这里拒绝启动而不是只告警。
+	// 自愈方式很简单（改一个环境变量重启），不会像 db_dsn 那样把「改回来的入口」弄丢。
+	// 本地联调确需放行：ALLOW_INSECURE=1。
+	if gates := cfg.InsecureGates(); len(gates) > 0 {
+		if os.Getenv("ALLOW_INSECURE") != "1" {
+			for _, g := range gates {
+				log.Printf("[SECURITY][FATAL] %s", g)
+			}
+			log.Fatal("拒绝以不安全的默认凭据启动：请设置 JWT_KEY / ADMIN_PASS 后重启" +
+				"（本地联调确需放行请加 ALLOW_INSECURE=1，切勿用于生产）")
+		}
+		for _, g := range gates {
+			log.Printf("[SECURITY][ALLOW_INSECURE] 已放行：%s", g)
+		}
+	}
+
+	// 其余不安全配置只提示不拦截（如超管口令偏弱），由运维自行判断。
 	for _, w := range cfg.InsecureWarnings() {
 		log.Printf("[SECURITY] %s", w)
 	}

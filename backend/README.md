@@ -297,7 +297,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 - **上传内容嗅探**：`storage.checkFile` 在校验扩展名白名单后，进一步按文件头（魔法字节）校验真实类型（PNG / JPG / GIF / WEBP / MP4），防止把可执行文件改名图片上传。`backend/internal/storage/storage_test.go` 覆盖各类型的合法/伪造场景。
 - **登录限流**：`middleware.NewLoginRateLimiter` 按客户端 IP 做固定窗口限流（默认每 IP 每分钟 10 次登录尝试），防爆破；超限返回 `{code:429}`（与现有鉴权约定一致）。`backend/internal/middleware/ratelimit_test.go` 覆盖计数与隔离逻辑。
-- **启动自检告警**：`config.InsecureWarnings()` 在 `JWT_KEY` 为默认值或长度不足 16、或初始超管口令仍为 `admin123456` 时，由 `cmd/server/main.go` 打印 `[SECURITY]` 告警，提醒上线前修改。
+- **启动安全门槛（拒绝启动）**：`config.InsecureGates()` 命中「`JWT_KEY` 仍是缺省值 `change-me` 或长度 < 16」「`ADMIN_PASS` 仍是内置缺省口令」时，`cmd/server/main.go` 打印 `[SECURITY][FATAL]` 并 `log.Fatal` **拒绝启动**——这两个默认值连同演示账号写进了公开文档，属已知凭据，带它们上线等于把后台开放给所有人。自愈方式是改一个环境变量重启（不会像 `db_dsn` / `cookie_*` 那样把「改回来的入口」一起弄丢）；本地联调加 `ALLOW_INSECURE=1` 放行。测试见 `internal/config/config_test.go`。
+- **启动自检告警（只提示不拦）**：`config.InsecureWarnings()` 对「超管口令长度不足 8 位」打印 `[SECURITY]` 告警。与上面的门槛分工：口令是给人记的，强弱交给运维判断，不卡启动。
 - **健康检查（就绪探针）**：`GET /healthz` 先 `SELECT 1` 探活数据库——正常 `200 {status:"ok",db:"up"}`，DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。详见《运维与部署》。
 - **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
 - **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
