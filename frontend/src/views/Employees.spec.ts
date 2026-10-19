@@ -4,16 +4,24 @@ import { nextTick, defineComponent, h, provide, inject } from 'vue'
 import Employees from './Employees.vue'
 
 // 员工管理页依赖 api/employees（列表 / 增 / 停启用 / 重置密码）与 element-plus 的消息 / 确认框，
-// 全部 mock 掉网络与 UI 反馈层；useTable（分页 + 搜索）用真实实现，顺带覆盖其与视图的联动。
+// 全部 mock 掉网络与 UI 反馈层；分页用真实的 useServerTable（服务端分页组合式函数），
+// 顺带覆盖其与视图的联动（翻页 / 改每页条数 / 操作后重载）。
 // 注意：vi.mock 工厂会被提升到文件顶部，里面引用的 mock 必须经 vi.hoisted 预先创建，
 // 否则访问 const 会撞 TDZ（Cannot access before initialization）。
 const mocks = vi.hoisted(() => ({
   getWxacode: vi.fn(),
-  listEmployees: vi.fn(async () => [
-    { staffId: 1, name: '张三', title: '工程师', phone: '13800000001', landline: '021-11111111', email: 'z@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-01 10:00:00' },
-    { staffId: 2, name: '李四', title: '销售', phone: '13900000002', landline: '', email: 'l@a.com', avatar: '', status: 'disabled', createdAt: '2026-01-02 10:00:00' },
-    { staffId: 3, name: '王五', title: '经理', phone: '13700000003', landline: '', email: 'w@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-03 10:00:00' },
-  ]),
+  // 列表接口返回服务端分页信封 { list, total, page, size }（见 api/request.ts 的 Paged）
+  // 标注 any：夹具只填断言用到的字段，免去为每行补齐全部 Employee 字段
+  listEmployees: vi.fn(async (): Promise<any> => ({
+    list: [
+      { staffId: 1, name: '张三', title: '工程师', phone: '13800000001', landline: '021-11111111', email: 'z@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-01 10:00:00' },
+      { staffId: 2, name: '李四', title: '销售', phone: '13900000002', landline: '', email: 'l@a.com', avatar: '', status: 'disabled', createdAt: '2026-01-02 10:00:00' },
+      { staffId: 3, name: '王五', title: '经理', phone: '13700000003', landline: '', email: 'w@a.com', avatar: '', status: 'enabled', createdAt: '2026-01-03 10:00:00' },
+    ],
+    total: 3,
+    page: 1,
+    size: 10,
+  })),
   createEmployee: vi.fn(async () => ({ staffId: 99, initialPassword: 'init123' })),
   updateEmployee: vi.fn(async () => ({ code: 0 })),
   disableEmployee: vi.fn(async () => ({ code: 0 })),
@@ -206,19 +214,28 @@ describe('Employees', () => {
     expect(labels).not.toContain('岗位')
   })
 
-  it('关键字搜索按姓名 / 手机过滤表格数据', async () => {
+  // 关键字筛选已下沉到服务端：界面只负责把关键字传进请求参数，
+  // 「筛完剩几条」由后端回包的 list/total 决定（见 composables/useServerTable）。
+  it('关键字输入后把关键字带进请求参数（服务端筛选）', async () => {
     const w = mountEmployees()
     await flushLoad(w)
 
+    // 命中手机：mock 只回 1 条，界面按回包渲染
+    vi.mocked(listEmployees).mockImplementation(async (): Promise<any> => ({
+      list: [{ staffId: 3, name: '王五', title: '经理', phone: '13700000003', status: 'enabled', createdAt: '2026-01-03 10:00:00' }],
+      total: 1,
+      page: 1,
+      size: 10,
+    }))
     await w.find('input.el-input').setValue('137')
-    await nextTick()
-    expect(w.findComponent(ElTable).props('data')).toHaveLength(1)
-    expect(w.findComponent(ElTable).props('data')[0].name).toBe('王五')
+    await vi.waitFor(() => expect(vi.mocked(listEmployees)).toHaveBeenCalledTimes(2))
+    await vi.waitFor(() => expect(w.findComponent(ElTable).props('data')).toHaveLength(1))
 
-    await w.find('input.el-input').setValue('李四')
-    await nextTick()
-    expect(w.findComponent(ElTable).props('data')).toHaveLength(1)
-    expect(w.findComponent(ElTable).props('data')[0].staffId).toBe(2)
+    const calls = vi.mocked(listEmployees).mock.calls as any[]
+    expect(calls[calls.length - 1][0]).toMatchObject({ keyword: '137' })
+    expect(w.findComponent(ElTable).props('data')[0].name).toBe('王五')
+    // 总数来自服务端回包（不是前端数出来的长度）
+    expect(w.findComponent(ElPagination).props('total')).toBe(1)
   })
 
   it('停用：确认后调 disableEmployee 并重新加载', async () => {

@@ -1,4 +1,4 @@
-import http from './request'
+import http, { toPaged, type Paged } from './request'
 
 // 操作审计日志（只读查询）。
 // 后台能改系统设置（含密钥）、重置他人密码、删除超管、启停企业，这些操作必须留痕，
@@ -18,14 +18,8 @@ export interface AuditLog {
   createdAt: string
 }
 
-export interface AuditLogPage {
-  total: number
-  page: number
-  size: number
-  list: AuditLog[]
-}
-
 // 查询审计日志（平台超管）。支持 action / actorType / actorId / result 过滤与分页。
+// 与其它管理端列表同构：data 是当前页数组，total/page/size 在顶层（见 api/request.ts）。
 export function listAuditLogs(params: {
   page?: number
   size?: number
@@ -33,8 +27,8 @@ export function listAuditLogs(params: {
   actorType?: string
   actorId?: string
   result?: string
-}) {
-  return http.get<{ code: number; data?: AuditLogPage }>('/admin/audit-logs', { params })
+}): Promise<Paged<AuditLog>> {
+  return http.get('/admin/audit-logs', { params }).then((r) => toPaged<AuditLog>(r))
 }
 
 // 动作的中文名：界面给运营看，不能把 setting.update 这样的键直接摊开。

@@ -23,6 +23,32 @@ export interface ApiResp {
   [key: string]: any
 }
 
+/**
+ * 服务端分页结果（管理端列表统一形状）。
+ *
+ * 后端回包信封：{ code: 0, data: [...当前页...], total, page, size }
+ * ——data 仍是数组（与未分页时同构），总数/页码在顶层（见 backend/internal/handler/pagination.go）。
+ * 分页必须落在服务端：员工/申请/租户这些列表随运营时间单调增长，
+ * 前端拉全量再切片只是把问题藏起来（网络照样传了全部数据）。
+ */
+export interface Paged<T = any> {
+  list: T[]
+  total: number
+  page: number
+  size: number
+}
+
+/** 把分页接口的响应体收敛成 Paged；后端异常时退化为空列表而不是抛错。 */
+export function toPaged<T = any>(r?: ApiResp | null): Paged<T> {
+  const list = Array.isArray(r?.data) ? ((r?.data as unknown) as T[]) : []
+  return {
+    list,
+    total: Number(r?.total ?? list.length) || 0,
+    page: Number(r?.page ?? 1) || 1,
+    size: Number(r?.size ?? list.length ?? 20) || 20,
+  }
+}
+
 // 业务约定：响应拦截器把成功响应体（ApiResp）直接透传给调用方，
 // 故把实例方法的返回类型收敛为 ApiResp（默认泛型参数），调用侧无需再取 .data。
 type ApiHttp = Omit<

@@ -6,7 +6,7 @@
         <div class="bar-right">
           <el-input
             v-model="keyword"
-            placeholder="搜索员工ID/字段变更"
+            placeholder="搜索员工姓名"
             clearable
             :prefix-icon="Search"
             style="width: 240px"
@@ -15,7 +15,7 @@
         </div>
       </div>
 
-      <el-table :data="paged" v-loading="loading" border stripe>
+      <el-table :data="rows" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="员工ID" width="90" align="center" v-if="!isPhone" />
         <el-table-column label="变更摘要" min-width="240">
           <template #default="{ row }">
@@ -86,11 +86,12 @@
 <script setup lang="ts">
 const { isPhone } = useBreakpoint()
 import { ElMessage } from 'element-plus'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { Refresh, Right, Search } from '@element-plus/icons-vue'
 import { listModifyApply, approveModify, rejectModify } from '@/api/apply'
 import { listEmployees } from '@/api/employees'
-import { useTable } from '@/composables/useTable'
+// 服务端分页：关键字（员工姓名）/ 页码都交给后端
+import { useServerTable } from '@/composables/useServerTable'
 import { formatDateTime } from '@/utils/datetime'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 
@@ -103,13 +104,12 @@ const FIELD_LABELS: Record<string, string> = {
   email: '邮箱',
 }
 
-const rows = ref<any[]>([])
-const { keyword, currentPage, size, total, paged } = useTable(
-  rows,
-  (r, kw) => JSON.stringify(r).toLowerCase().includes(kw)
+const { rows, keyword, currentPage, size, total, loading, load } = useServerTable((q) =>
+  listModifyApply(q)
 )
+// 员工原值映射：只按本页申请涉及的 staffId 精确取（?staffIds=），
+// 不再为「显示旧值」拉全量员工表——分页改造后全量拉取等于把省下的传输又吃回去。
 const employeesMap = ref<Record<number, any>>({})
-const loading = ref(false)
 const actingId = ref<number | null>(null)
 
 const rejectVisible = ref(false)
@@ -142,20 +142,26 @@ function statusTag(s: string) {
   return s === 'pending' ? 'success' : s === 'approved' ? 'primary' : 'danger'
 }
 
-async function load() {
-  loading.value = true
+// 明细弹窗需要的「旧值」来自员工表：按本页申请涉及的 staffId 精确取（?staffIds=），
+// 不再为「显示旧值」拉全量员工表——分页改造后全量拉取等于把省下的传输又吃回去。
+async function loadEmployees() {
+  const ids = Array.from(new Set(rows.value.map((r: any) => r.staffId).filter(Boolean)))
+  if (!ids.length) {
+    employeesMap.value = {}
+    return
+  }
   try {
-    const [applies, emps] = await Promise.all([listModifyApply(), listEmployees()])
-    rows.value = applies
+    const p = await listEmployees({ staffIds: ids.join(',') })
     const map: Record<number, any> = {}
-    emps.forEach((e: any) => (map[e.staffId] = e))
+    p.list.forEach((e: any) => (map[e.staffId] = e))
     employeesMap.value = map
   } catch {
-    /* 拦截器已提示 */
-  } finally {
-    loading.value = false
+    // 取不到只影响「旧值」展示，不阻断列表
   }
 }
+
+// 每页数据到位后再补一次员工原值（有界：条数 = 当前页条数）
+watch(rows, () => loadEmployees())
 
 function openDetail(row: any) {
   detailRow.value = row

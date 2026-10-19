@@ -22,7 +22,7 @@
         合计 1380px 超出容器，fixed="right" 的操作列直接压住「创建时间」列。
         改动列宽时请按同一口径重算，宁紧勿松。
       -->
-      <el-table v-if="!isPhone" :data="paged" v-loading="loading" border stripe>
+      <el-table v-if="!isPhone" :data="rows" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="编号" width="62" align="center" />
         <el-table-column prop="name" label="姓名" min-width="90" class-name="cell-nowrap" show-overflow-tooltip />
         <el-table-column prop="title" label="职位" width="96" class-name="cell-nowrap" show-overflow-tooltip />
@@ -90,10 +90,10 @@
         </el-table-column>
       </el-table>
 
-      <!-- 手机端（<768）卡片列表：复用 paged 与既有操作函数，桌面仍走 el-table。
+      <!-- 手机端（<768）卡片列表：复用 rows 与既有操作函数，桌面仍走 el-table。
            卡片只保留核心字段 + 操作，避免窄屏横向滚动。 -->
       <div v-else class="emp-cards" v-loading="loading">
-        <div class="emp-card" v-for="row in paged" :key="row.staffId">
+        <div class="emp-card" v-for="row in rows" :key="row.staffId">
           <div class="emp-card-head">
             <el-image v-if="row.avatar" :src="row.avatar" class="emp-avatar" fit="cover" />
             <div v-else class="emp-avatar ph">—</div>
@@ -251,22 +251,20 @@ import {
 } from '@/api/employees'
 import { getWxacode } from '@/api/wechat'
 import UploadField from '@/components/UploadField.vue'
-import { useTable } from '@/composables/useTable'
+// 服务端分页：员工数会随运营增长，关键字/页码都交给后端（详见 composables/useServerTable）
+import { useServerTable } from '@/composables/useServerTable'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { formatDateTime } from '@/utils/datetime'
 
-const rows = ref<any[]>([])
-const { keyword, currentPage, size, total, paged } = useTable(
+const {
   rows,
-  (r, kw) =>
-    (r.name || '').toLowerCase().includes(kw) ||
-    (r.phone || '').includes(kw) ||
-    (r.title || '').toLowerCase().includes(kw) ||
-    (r.landline || '').includes(kw) ||
-    (r.nickname || '').toLowerCase().includes(kw) ||
-    (r.openid || '').includes(kw)
-)
-const loading = ref(false)
+  keyword,
+  currentPage,
+  size,
+  total,
+  loading,
+  load,
+} = useServerTable((q) => listEmployees(q), { pageSize: 10 })
 const actingId = ref<number | null>(null)
 // 手机端（<768）隐藏次要列，避免表格过宽；平板/桌面保留全部列并横向滚动
 const { isPhone } = useBreakpoint()
@@ -294,17 +292,6 @@ async function preview(row: any) {
   previewQr.value = ''
   previewVisible.value = true
   previewQr.value = await getWxacode(row.staffId)
-}
-
-async function load() {
-  loading.value = true
-  try {
-    rows.value = await listEmployees()
-  } catch {
-    /* 拦截器已提示 */
-  } finally {
-    loading.value = false
-  }
 }
 
 function openCreate() {

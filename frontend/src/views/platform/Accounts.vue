@@ -45,6 +45,16 @@
       </el-table-column>
     </el-table>
 
+    <el-pagination
+      class="table-pager"
+      v-model:current-page="currentPage"
+      v-model:page-size="size"
+      :total="total"
+      :page-sizes="[10, 20, 50]"
+      layout="total, sizes, prev, pager, next"
+      background
+    />
+
     <!-- 新增管理员 -->
     <el-dialog v-model="createVisible" title="新增平台管理员" width="440px" @closed="resetCreate">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
@@ -81,26 +91,17 @@ import { adminLogout, getMe } from '@/api/auth'
 import { useAuthStore } from '@/store/auth'
 import { formatDateTime } from '@/utils/datetime'
 import { useBreakpoint } from '@/composables/useBreakpoint'
+// 服务端分页：与其它管理端列表同构（平台超管数量本就不多，但保持契约一致）
+import { useServerTable } from '@/composables/useServerTable'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const rows = ref<PlatformAdmin[]>([])
-const loading = ref(false)
+const { rows, currentPage, size, total, loading, load } = useServerTable((q) =>
+  listPlatformAdmins(q)
+)
 // 当前登录账号 id：用于标注「当前登录」并禁用自删按钮（后端也有护栏，这里是界面层）
 const myId = ref<number>(0)
-
-async function load() {
-  loading.value = true
-  try {
-    const resp = await listPlatformAdmins()
-    rows.value = resp.data || []
-  } catch {
-    // 拦截器已提示
-  } finally {
-    loading.value = false
-  }
-}
 
 // 当前登录账号 id 从 /admin/me 取（列表接口不返回，避免多余耦合）
 async function loadMe() {

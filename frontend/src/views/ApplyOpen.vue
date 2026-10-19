@@ -20,7 +20,7 @@
         本表历史上曾达 1200px（头像 80 / 状态 100 / 邮箱与驳回原因 min 160）超出容器，
         与 Employees 同款遮挡风险。改动列宽请按同一口径重算，宁紧勿松。
       -->
-      <el-table v-if="!isPhone" :data="paged" v-loading="loading" border stripe>
+      <el-table v-if="!isPhone" :data="rows" v-loading="loading" border stripe>
         <el-table-column prop="name" label="姓名" width="100" />
         <el-table-column prop="phone" label="手机" width="120" />
         <el-table-column prop="nickname" label="微信昵称" width="100" show-overflow-tooltip>
@@ -67,9 +67,9 @@
         </el-table-column>
       </el-table>
 
-      <!-- 手机端（<768）卡片列表：复用 paged 与 approve/openReject，桌面仍走 el-table -->
+      <!-- 手机端（<768）卡片列表：复用 rows 与 approve/openReject，桌面仍走 el-table -->
       <div v-else class="apply-cards" v-loading="loading">
-        <div class="apply-card" v-for="row in paged" :key="row.id">
+        <div class="apply-card" v-for="row in rows" :key="row.id">
           <div class="apply-card-head">
             <div class="apply-card-id">
               <div class="apply-name">{{ row.name }}</div>
@@ -140,21 +140,14 @@ import { ElMessage } from 'element-plus'
 import { ref, onMounted } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { listOpenApply, approveOpen, rejectOpen } from '@/api/apply'
-import { useTable } from '@/composables/useTable'
+// 服务端分页：申请记录只增不减（已处理的也留档），关键字/页码都交给后端
+import { useServerTable } from '@/composables/useServerTable'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { formatDateTime } from '@/utils/datetime'
 
-const rows = ref<any[]>([])
-const { keyword, currentPage, size, total, paged } = useTable(
-  rows,
-  (r, kw) =>
-    (r.name || '').toLowerCase().includes(kw) ||
-    (r.phone || '').includes(kw) ||
-    (r.email || '').toLowerCase().includes(kw) ||
-    (r.nickname || '').toLowerCase().includes(kw) ||
-    (r.openid || '').includes(kw)
+const { rows, keyword, currentPage, size, total, loading, load } = useServerTable((q) =>
+  listOpenApply(q)
 )
-const loading = ref(false)
 const actingId = ref<number | null>(null)
 // 手机端（<768）隐藏表格、改走卡片列表；平板/桌面保留 el-table + 横滚
 const { isPhone } = useBreakpoint()
@@ -171,17 +164,6 @@ function statusText(s: string) {
 }
 function statusTag(s: string) {
   return s === 'pending' ? 'success' : s === 'approved' ? 'primary' : 'danger'
-}
-
-async function load() {
-  loading.value = true
-  try {
-    rows.value = await listOpenApply()
-  } catch {
-    /* 拦截器已提示 */
-  } finally {
-    loading.value = false
-  }
 }
 
 async function approve(row: any) {

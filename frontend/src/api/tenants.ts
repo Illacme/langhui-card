@@ -1,7 +1,8 @@
-import http from './request'
+import http, { toPaged, type Paged } from './request'
 
 // 企业管理（多租户第一期，仅平台超级管理员可用）：
 // 开通/停用企业、企业管理员管理。企业管理员调用会被后端 403 拒绝。
+// 列表走服务端分页（page/size/keyword/status），见 api/request.ts 的 Paged 约定。
 
 export interface CompanyItem {
   id: number
@@ -19,9 +20,14 @@ export interface CompanyAdminItem {
   createdAt: string
 }
 
-// 企业列表（含员工/管理员数量）
-export function listCompanies() {
-  return http.get<{ code: number; data?: CompanyItem[] }>('/admin/companies')
+// 企业列表（含员工/管理员数量），服务端分页 + 关键字（名称/简称）+ 状态筛选
+export function listCompanies(params: {
+  page?: number
+  size?: number
+  keyword?: string
+  status?: string
+} = {}): Promise<Paged<CompanyItem>> {
+  return http.get('/admin/companies', { params }).then((r) => toPaged<CompanyItem>(r))
 }
 
 // 开通企业：name 必填，shortName 为企业简称（侧边栏品牌名 + 公司信息简称初始值）；
@@ -49,7 +55,8 @@ export function setCompanyStatus(id: number, status: 'enabled' | 'disabled') {
   return http.post(`/admin/companies/${id}/status`, { status })
 }
 
-// 企业管理员列表
+// 企业管理员列表：单个企业下的管理员数量天然有界（几个），不做分页，
+// 保持返回数组——分页只为「会随时间增长」的列表服务，别为了统一而统一。
 export function listCompanyAdmins(id: number) {
   return http.get<{ code: number; data?: CompanyAdminItem[] }>(`/admin/companies/${id}/admins`)
 }

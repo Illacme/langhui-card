@@ -19,6 +19,13 @@ info:
       不是 HTTP 状态码；HTTP 4xx/5xx 仅用于网关 / 框架层错误。
     - 登录限流超限返回 `{code:429}`（按客户端 IP 固定窗口）。
 
+    ## 分页约定（管理端列表）
+    - 管理端「会随时间增长」的列表（员工 / 企业 / 申请 / 平台账号 / 审计日志）一律服务端分页：
+      请求 `?page=&size=`（size 缺省 20、上限 100），响应 `{ code:0, data:[...当前页...], total, page, size }`——
+      **data 仍是数组**，总数与页码在顶层。越界页码由后端夹到末页并回传夹后的 page。
+    - 关键字段筛选（keyword / status）同样在服务端完成：前端只筛当前页会出现
+      「搜得到但翻页后又没了」的错觉。
+
     ## 两种鉴权方式
     - **小程序端（Bearer）**：`Authorization: Bearer <access token>`，token 由 JS 显式携带。
     - **PC 管理后台（httpOnly Cookie）**：登录后服务端下发 `access_token` / `refresh_token`
@@ -546,9 +553,24 @@ paths:
   /api/admin/apply/open:
     get:
       tags: [超管-申请审核]
-      summary: 开通申请列表
+      summary: 开通申请列表（服务端分页）
       security:
         - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+        - name: keyword
+          in: query
+          required: false
+          description: 模糊匹配姓名 / 手机 / 邮箱 / 昵称
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
       responses:
         "200":
           description: code=0 成功
@@ -563,6 +585,12 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/OpenApply"
+                  total:
+                    $ref: "#/components/schemas/PageTotal"
+                  page:
+                    $ref: "#/components/schemas/PageIndex"
+                  size:
+                    $ref: "#/components/schemas/PageSize"
 
   /api/admin/apply/open/{id}/approve:
     post:
@@ -622,9 +650,25 @@ paths:
   /api/admin/apply/modify:
     get:
       tags: [超管-申请审核]
-      summary: 名片修改申请列表
+      summary: 名片修改申请列表（服务端分页）
+      description: keyword 按**员工姓名**匹配（申请行只有 staff_id + 变更快照）。
       security:
         - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+        - name: keyword
+          in: query
+          required: false
+          description: 员工姓名（子查询匹配）
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
       responses:
         "200":
           description: code=0 成功
@@ -639,6 +683,12 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/CardModifyApply"
+                  total:
+                    $ref: "#/components/schemas/PageTotal"
+                  page:
+                    $ref: "#/components/schemas/PageIndex"
+                  size:
+                    $ref: "#/components/schemas/PageSize"
 
   /api/admin/apply/modify/{id}/approve:
     post:
@@ -687,9 +737,40 @@ paths:
   /api/admin/employees:
     get:
       tags: [超管-员工管理]
-      summary: 员工列表
+      summary: 员工列表（服务端分页）
+      description: |
+        按租户隔离（企业管理员只看本企业；平台超管可用 ?companyId= 收窄）。
+        staffIds 为按 id 精确取（上限 200 条），用于名片修改审核页回显员工原值。
       security:
         - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+        - name: keyword
+          in: query
+          required: false
+          description: 模糊匹配姓名 / 手机 / 职位 / 座机 / 昵称 / openid
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [enabled, disabled]
+        - name: staffIds
+          in: query
+          required: false
+          description: 逗号分隔的 staff_id，如 1,2,3
+          schema:
+            type: string
+        - name: companyId
+          in: query
+          required: false
+          description: 仅平台超管可用
+          schema:
+            type: integer
+            format: int64
       responses:
         "200":
           description: code=0 成功
@@ -704,6 +785,12 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Employee"
+                  total:
+                    $ref: "#/components/schemas/PageTotal"
+                  page:
+                    $ref: "#/components/schemas/PageIndex"
+                  size:
+                    $ref: "#/components/schemas/PageSize"
     post:
       tags: [超管-员工管理]
       summary: 新增员工（返回初始密码，仅展示一次）
@@ -1691,8 +1778,11 @@ paths:
   # ===== 平台超管账号管理 =====
   /api/admin/platform-admins:
     get:
-      summary: 平台超管列表（company_id=0）
+      summary: 平台超管列表（company_id=0，服务端分页）
       tags: [账号]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
       responses:
         "200":
           description: code=0
@@ -1707,6 +1797,12 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/PlatformAdmin"
+                  total:
+                    $ref: "#/components/schemas/PageTotal"
+                  page:
+                    $ref: "#/components/schemas/PageIndex"
+                  size:
+                    $ref: "#/components/schemas/PageSize"
     post:
       summary: 新增平台超管
       description: 用户名全表唯一（含企业管理员）。护栏不能绕过：至少一个平台超管。
@@ -1866,20 +1962,212 @@ paths:
                   code:
                     $ref: "#/components/schemas/Code"
                   data:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                      page:
-                        type: integer
-                      size:
-                        type: integer
-                      list:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/AuditLog"
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditLog"
+                  total:
+                    $ref: "#/components/schemas/PageTotal"
+                  page:
+                    $ref: "#/components/schemas/PageIndex"
+                  size:
+                    $ref: "#/components/schemas/PageSize"
+
+  # ===== 租户（企业）管理：仅平台超管 =====
+  /api/admin/companies:
+    get:
+      summary: 企业列表（含员工数 / 管理员数）
+      description: |
+        服务端分页：page/size 见「分页约定」。员工数与管理员数按当前页的企业批量统计，
+        不是逐企业 COUNT。
+      tags: [租户]
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Size"
+        - name: keyword
+          in: query
+          required: false
+          description: 模糊匹配企业名称 / 简称
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [enabled, disabled]
+      responses:
+        "200":
+          description: code=0；code=403 非平台超管
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CompanyItem"
+                  total:
+                    $ref: "#/components/schemas/PageTotal"
+                  page:
+                    $ref: "#/components/schemas/PageIndex"
+                  size:
+                    $ref: "#/components/schemas/PageSize"
+    post:
+      summary: 开通企业（可选一并创建企业管理员）
+      description: |
+        简称（shortName）：PC 后台侧边栏品牌名缺省「智能名片」；显式填写的值同时作为
+        公司信息简称的初始值，此后两者相互独立。
+        independent_lock 开启时整体只读，写操作一律 code=403。
+      tags: [租户]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                shortName:
+                  type: string
+                adminUsername:
+                  type: string
+                  description: 与 adminPassword 必须同时填写或同时留空
+                adminPassword:
+                  type: string
+      responses:
+        "200":
+          description: code=0（data.id / data.name / data.shortName）；code=1 参数错误 / 用户名已存在
+
+  /api/admin/companies/{id}:
+    put:
+      summary: 编辑企业（名称 / 简称）
+      tags: [租户]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                shortName:
+                  type: string
+      responses:
+        "200":
+          description: code=0；code=1 未找到
+
+  /api/admin/companies/{id}/status:
+    post:
+      summary: 停用 / 启用企业（停用后该企业管理员与员工均不能登录）
+      tags: [租户]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [enabled, disabled]
+      responses:
+        "200":
+          description: code=0；code=1 未找到
+
+  /api/admin/companies/{id}/admins:
+    get:
+      summary: 企业管理员列表
+      description: 单个企业下的管理员数量天然有界（几个），不分页，返回数组。
+      tags: [租户]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: code=0
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PlatformAdmin"
+    post:
+      summary: 新增企业管理员（用户名全表唯一）
+      tags: [租户]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: code=0（data.id / data.username）；code=1 企业不存在 / 用户名已存在
 
 components:
+  # 分页约定（管理端列表统一）：请求 ?page=&size=，响应 data 为**当前页数组**，
+  # total/page/size 放在顶层。实现见 backend/internal/handler/pagination.go。
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 1
+    Size:
+      name: size
+      in: query
+      required: false
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+
   securitySchemes:
     bearerAuth:
       type: http
@@ -1896,6 +2184,39 @@ components:
       type: integer
       description: 0=成功；1=业务失败；2=特殊状态；401=未登录/失效；403=无权限；429=限流
       enum: [0, 1, 2, 401, 403, 429]
+
+    # ── 分页元信息（与 data 同级，见 components/parameters 的分页约定）──
+    PageTotal:
+      type: integer
+      description: 符合条件的总条数（不是当前页条数）
+    PageIndex:
+      type: integer
+      description: 实际生效的页码（越界时后端会夹到末页并回传夹后的值）
+    PageSize:
+      type: integer
+      description: 实际生效的每页条数（缺省 20，上限 100）
+
+    CompanyItem:
+      type: object
+      description: 企业列表项（含员工 / 管理员数量）
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        shortName:
+          type: string
+        status:
+          type: string
+          enum: [enabled, disabled]
+        employeeCount:
+          type: integer
+        adminCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
 
     Employee:
       type: object

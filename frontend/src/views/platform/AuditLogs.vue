@@ -115,17 +115,15 @@ function onFilter() {
 async function load() {
   loading.value = true
   try {
-    const r = await listAuditLogs({
+    const p = await listAuditLogs({
       page: page.value,
       size: size.value,
       action: action.value || undefined,
       result: result.value || undefined,
       actorType: actorType.value || undefined,
     })
-    if (r.code === 0 && r.data) {
-      rows.value = r.data.list || []
-      total.value = r.data.total || 0
-    }
+    rows.value = p?.list ?? []
+    total.value = p?.total ?? 0
   } catch {
     // 拦截器已提示（如非平台超管越权）
   } finally {

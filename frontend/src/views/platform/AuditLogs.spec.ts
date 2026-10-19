@@ -104,7 +104,14 @@ async function setup() {
 describe('AuditLogs 操作日志', () => {
   beforeEach(() => {
     vi.mocked(listAuditLogs).mockReset()
-    vi.mocked(listAuditLogs).mockImplementation(async () => ({ code: 0, data: page1 }) as any)
+    // 分页信封：data 是当前页数组，total/page/size 在顶层（见 api/request.ts 的 Paged）
+    vi.mocked(listAuditLogs).mockImplementation(async () => ({
+      code: 0,
+      data: page1.list,
+      total: page1.total,
+      page: page1.page,
+      size: page1.size,
+    }) as any)
   })
 
   it('挂载即按默认分页查询一次', async () => {

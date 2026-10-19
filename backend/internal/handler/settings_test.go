@@ -438,10 +438,12 @@ func TestAuditLogRecordsAdminOperations(t *testing.T) {
 	require.EqualValues(t, 0, body["code"])
 
 	// 3) 查询审计日志：四条动作都在，且操作人是当前登录的超管
+	//    分页信封：data 是当前页数组，总数与页码在顶层（见 handler/pagination.go）
 	_, body = c.do("GET", "/api/admin/audit-logs", nil, adminToken)
 	require.EqualValues(t, 0, body["code"])
-	list := body["data"].(map[string]interface{})["list"].([]interface{})
+	list := body["data"].([]interface{})
 	require.NotEmpty(t, list)
+	require.NotZero(t, body["total"], "分页回包应带总数")
 
 	actions := map[string]bool{}
 	for _, it := range list {
@@ -459,7 +461,7 @@ func TestAuditLogRecordsAdminOperations(t *testing.T) {
 
 	// 4) 按 action 过滤可用
 	_, body = c.do("GET", "/api/admin/audit-logs?action=admin.delete", nil, adminToken)
-	filtered := body["data"].(map[string]interface{})["list"].([]interface{})
+	filtered := body["data"].([]interface{})
 	require.Len(t, filtered, 1)
 	// 账号已删除，详情里仍应留着用户名（只存 id 就追溯不到删的是谁）
 	require.Contains(t, filtered[0].(map[string]interface{})["detail"], "audit-boss")
@@ -480,7 +482,7 @@ func TestAuditLogNeverStoresSecretValues(t *testing.T) {
 	require.EqualValues(t, 0, body["code"])
 
 	_, body = c.do("GET", "/api/admin/audit-logs?action=setting.update", nil, adminToken)
-	list := body["data"].(map[string]interface{})["list"].([]interface{})
+	list := body["data"].([]interface{})
 	require.NotEmpty(t, list)
 	detail := list[0].(map[string]interface{})["detail"].(string)
 	require.NotContains(t, detail, secret, "审计详情绝不能出现密钥明文")
@@ -501,7 +503,7 @@ func TestAuditLogRecordsFailedLogin(t *testing.T) {
 
 	_, body = c.do("GET", "/api/admin/audit-logs?action=login.fail", nil, adminToken)
 	require.EqualValues(t, 0, body["code"])
-	list := body["data"].(map[string]interface{})["list"].([]interface{})
+	list := body["data"].([]interface{})
 	require.NotEmpty(t, list)
 	m := list[0].(map[string]interface{})
 	require.Equal(t, "fail", m["result"])

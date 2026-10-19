@@ -48,6 +48,28 @@ func writeLocked(c *gin.Context) bool {
 	return true
 }
 
+// countByCompany 批量统计「某企业下的记录数」：一次 group by 拿到所有目标企业的计数，
+// 替代原先逐企业 COUNT 的 N+1 写法。ids 为空时返回空 map（不再查库）。
+func countByCompany(db *gorm.DB, tableModel interface{}, ids []int64) map[int64]int64 {
+	out := make(map[int64]int64, len(ids))
+	if len(ids) == 0 {
+		return out
+	}
+	var rows []struct {
+		CompanyID int64 `gorm:"column:company_id"`
+		Cnt       int64 `gorm:"column:cnt"`
+	}
+	db.Model(tableModel).
+		Select("company_id, count(*) as cnt").
+		Where("company_id IN ?", ids).
+		Group("company_id").
+		Scan(&rows)
+	for _, r := range rows {
+		out[r.CompanyID] = r.Cnt
+	}
+	return out
+}
+
 // RegisterCompanies 注册租户（企业）管理接口——仅平台超级管理员可用
 // （middleware.PlatformAdminMiddleware：登录 + role=admin + company_id=0）。
 // 覆盖：企业列表 / 开通企业（可一并建企业管理员）/ 停用启用 / 企业管理员管理。
@@ -85,21 +107,41 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 		}})
 	})
 
-	// 企业列表（含员工数，供平台方总览）
+	// 企业列表（含员工数/管理员数，供平台方总览）
+	//
+	// 分页 + 关键字（名称/简称）+ 状态筛选，参数见 handler/pagination.go 的文件头约定。
+	// 数量统计改为「按当前页 id 批量 group by」：原写法是每行 2 次 COUNT（N+1），
+	// 租户一多就是 2N 次查询；现在固定 2 次，与页数无关。
 	r.GET("/api/admin/companies", plat, func(c *gin.Context) {
+		page, size := pageParams(c)
+
+		q := db.Model(&model.Company{})
+		if cond, args := keywordCond(c.Query("keyword"), "name", "short_name"); cond != "" {
+			q = q.Where(cond, args...)
+		}
+		if cond, v := statusCond(c.Query("status"), "enabled", "disabled"); cond != "" {
+			q = q.Where(cond, v)
+		}
+
 		var comps []model.Company
-		db.Order("id asc").Find(&comps)
+		total, page := pagedQuery(q, "id asc", &comps, page, size)
+
+		ids := make([]int64, 0, len(comps))
+		for _, comp := range comps {
+			ids = append(ids, comp.ID)
+		}
+		empCnt := countByCompany(db, &model.Employee{}, ids)
+		adminCnt := countByCompany(db, &model.Admin{}, ids)
+
 		data := make([]gin.H, 0, len(comps))
 		for _, comp := range comps {
-			var empCnt, adminCnt int64
-			db.Model(&model.Employee{}).Where("company_id = ?", comp.ID).Count(&empCnt)
-			db.Model(&model.Admin{}).Where("company_id = ?", comp.ID).Count(&adminCnt)
 			data = append(data, gin.H{
 				"id": comp.ID, "name": comp.Name, "shortName": comp.ShortName, "status": comp.Status,
-				"createdAt": comp.CreatedAt, "employeeCount": empCnt, "adminCount": adminCnt,
+				"createdAt": comp.CreatedAt,
+				"employeeCount": empCnt[comp.ID], "adminCount": adminCnt[comp.ID],
 			})
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": data})
+		pagedOK(c, data, total, page, size)
 	})
 
 	// 开通企业：建租户行 + 种子企业内容三件套（公司信息/简介/首页布局）；

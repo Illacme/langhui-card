@@ -31,15 +31,16 @@ import (
 func RegisterAdmins(r *gin.Engine, db *gorm.DB) {
 	plat := middleware.PlatformAdminMiddleware(db)
 
-	// 平台超管列表
+	// 平台超管列表（page / size 见 handler/pagination.go 的文件头约定）
 	r.GET("/api/admin/platform-admins", plat, func(c *gin.Context) {
+		page, size := pageParams(c)
 		var list []model.Admin
-		db.Where("company_id = ?", 0).Order("id asc").Find(&list)
+		total, page := pagedQuery(db.Model(&model.Admin{}).Where("company_id = ?", 0), "id asc", &list, page, size)
 		data := make([]gin.H, 0, len(list))
 		for _, a := range list {
 			data = append(data, gin.H{"id": a.ID, "username": a.Username, "createdAt": a.CreatedAt})
 		}
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": data})
+		pagedOK(c, data, total, page, size)
 	})
 
 	// 新增平台超管

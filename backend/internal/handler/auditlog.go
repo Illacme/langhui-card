@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"net/http"
 	"strconv"
 
 	"langhui/internal/middleware"
@@ -19,14 +18,7 @@ func RegisterAuditLogs(r *gin.Engine, db *gorm.DB) {
 	plat := middleware.PlatformAdminMiddleware(db)
 
 	r.GET("/api/admin/audit-logs", plat, func(c *gin.Context) {
-		page := atoiDefault(c.Query("page"), 1)
-		size := atoiDefault(c.Query("size"), 20)
-		if size > 100 {
-			size = 100 // 上限保护：避免一次拉全量把内存打满
-		}
-		if page < 1 {
-			page = 1
-		}
+		page, size := pageParams(c)
 
 		q := db.Model(&model.AuditLog{})
 		if v := c.Query("action"); v != "" {
@@ -42,15 +34,9 @@ func RegisterAuditLogs(r *gin.Engine, db *gorm.DB) {
 			q = q.Where("actor_id = ?", v)
 		}
 
-		var total int64
-		q.Count(&total)
-
 		var rows []model.AuditLog
-		q.Order("id desc").Offset((page - 1) * size).Limit(size).Find(&rows)
-
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
-			"total": total, "page": page, "size": size, "list": rows,
-		}})
+		total, page := pagedQuery(q, "id desc", &rows, page, size)
+		pagedOK(c, rows, total, page, size)
 	})
 }
 

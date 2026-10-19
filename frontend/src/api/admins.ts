@@ -1,4 +1,4 @@
-import http from './request'
+import http, { toPaged, type Paged } from './request'
 
 // 平台超管账号管理。与「企业管理 → 企业管理员」是两套：
 // 这里只管 company_id=0 的平台超管账号，企业管理员仍归 api/tenants。
@@ -8,9 +8,11 @@ export interface PlatformAdmin {
   createdAt: string
 }
 
-// 平台超管列表
-export function listPlatformAdmins() {
-  return http.get<{ code: number; data?: PlatformAdmin[] }>('/admin/platform-admins')
+// 平台超管列表（服务端分页）
+export function listPlatformAdmins(params: { page?: number; size?: number } = {}): Promise<
+  Paged<PlatformAdmin>
+> {
+  return http.get('/admin/platform-admins', { params }).then((r) => toPaged<PlatformAdmin>(r))
 }
 
 // 新增平台超管（用户名全表唯一，含企业管理员）

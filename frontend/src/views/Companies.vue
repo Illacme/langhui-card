@@ -5,6 +5,13 @@
         <h3>企业管理</h3>
         <div class="bar-right">
           <span class="bar-tip">平台超级管理员：开通/停用企业、管理企业管理员</span>
+          <el-input
+            v-model="keyword"
+            placeholder="搜索企业名称/简称"
+            clearable
+            :prefix-icon="Search"
+            style="width: 200px"
+          />
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
           <el-button type="primary" :icon="Plus" :disabled="locked" @click="openCreate"
             >开通企业</el-button
@@ -66,6 +73,16 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <el-pagination
+        class="table-pager"
+        v-model:current-page="currentPage"
+        v-model:page-size="size"
+        :total="total"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next"
+        background
+      />
     </el-card>
 
     <!-- 开通企业 -->
@@ -148,7 +165,7 @@
 <script setup lang="ts">
 const { isPhone } = useBreakpoint()
 import { computed, onMounted, reactive, ref } from 'vue'
-import { Plus, Refresh } from '@element-plus/icons-vue'
+import { Plus, Refresh, Search } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import {
   createCompany,
@@ -163,6 +180,8 @@ import {
 import { formatDateTime } from '@/utils/datetime'
 import { useAuthStore } from '@/store/auth'
 import { useBreakpoint } from '@/composables/useBreakpoint'
+// 服务端分页：租户数会随业务增长，关键字（名称/简称）也交给后端匹配
+import { useServerTable } from '@/composables/useServerTable'
 
 const auth = useAuthStore()
 // 独立版企业锁定（后台「系统设置 → independent_lock」）：企业管理页整体只读。
@@ -170,21 +189,10 @@ const auth = useAuthStore()
 // 后端 writeLocked 才是最终防线，前端只是避免「点了才报错」。
 const locked = computed(() => auth.independentLock)
 
-const rows = ref<any[]>([])
-const loading = ref(false)
+const { rows, keyword, currentPage, size, total, loading, load } = useServerTable((q) =>
+  listCompanies(q)
+)
 const actingId = ref<number | null>(null)
-
-async function load() {
-  loading.value = true
-  try {
-    const resp = await listCompanies()
-    rows.value = resp.data || []
-  } catch {
-    // 拦截器已提示
-  } finally {
-    loading.value = false
-  }
-}
 
 onMounted(load)
 

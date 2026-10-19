@@ -130,11 +130,21 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		return all || scid == cid
 	}
 
-	// 开通申请列表（按租户）
+	// 开通申请列表（按租户）：分页 + 状态筛选（pending/approved/rejected，空=全部）
+	// + 关键字（姓名/手机/邮箱/昵称）——关键字必须落在服务端，否则前端「只筛当前页」
+	// 会让运营以为搜到的数据翻页后丢了。
 	r.GET("/api/admin/apply/open", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		page, size := pageParams(c)
+		q := db.Model(&model.OpenApply{}).Scopes(scopeCond(c))
+		if cond, args := keywordCond(c.Query("keyword"), "name", "phone", "email", "nickname"); cond != "" {
+			q = q.Where(cond, args...)
+		}
+		if cond, v := statusCond(c.Query("status"), "pending", "approved", "rejected"); cond != "" {
+			q = q.Where(cond, v)
+		}
 		var list []model.OpenApply
-		db.Scopes(scopeCond(c)).Order("created_at desc").Find(&list)
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
+		total, page := pagedQuery(q, "created_at desc", &list, page, size)
+		pagedOK(c, list, total, page, size)
 	})
 
 	// 开通申请通过 → 自动建员工账号（员工落到申请所属租户）
@@ -177,11 +187,23 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 名片修改申请列表（按租户：company_id 冗余自员工归属）
+	// 名片修改申请列表（按租户：company_id 冗余自员工归属）：分页 + 状态筛选。
+	// 关键字按**员工姓名**匹配（子查询）：申请行本身只有 staff_id + 变更快照，
+	// 直接对快照做 LIKE 在 MySQL 的 JSON 列上行为不一致（SQLite 存的是 TEXT），
+	// 而运营搜索的实际意图就是「找某个人的申请」。
 	r.GET("/api/admin/apply/modify", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		page, size := pageParams(c)
+		q := db.Model(&model.CardModifyApply{}).Scopes(scopeCond(c))
+		if like := likeKeyword(c.Query("keyword")); like != "" {
+			sub := db.Model(&model.Employee{}).Select("staff_id").Where("name LIKE ?", like)
+			q = q.Where("staff_id IN (?)", sub)
+		}
+		if cond, v := statusCond(c.Query("status"), "pending", "approved", "rejected"); cond != "" {
+			q = q.Where(cond, v)
+		}
 		var list []model.CardModifyApply
-		db.Scopes(scopeCond(c)).Order("created_at desc").Find(&list)
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
+		total, page := pagedQuery(q, "created_at desc", &list, page, size)
+		pagedOK(c, list, total, page, size)
 	})
 
 	// 名片修改通过 → 应用快照到员工（按租户校验）
@@ -304,10 +326,36 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 员工列表（按租户）
+	//
+	// 分页 + 关键字（姓名/手机/职位/座机/昵称/openid）+ 状态筛选。
+	// 关键字覆盖的字段与 PC 后台搜索框的匹配范围保持一致——否则「搜得到但翻页后
+	// 又没了」（前端只筛当前页）会让运营以为数据丢了。
+	//
+	// 另有 ?staffIds=1,2,3：按 id 精确取少数几条，供「名片修改申请」页回显
+	// 员工原值（替代原先拉全量员工建映射的做法），上限 200 条。
 	r.GET("/api/admin/employees", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		page, size := pageParams(c)
+		q := db.Model(&model.Employee{}).Scopes(scopeCond(c))
+		if cond, args := keywordCond(c.Query("keyword"),
+			"name", "phone", "title", "landline", "nickname", "openid"); cond != "" {
+			q = q.Where(cond, args...)
+		}
+		if cond, v := statusCond(c.Query("status"), "enabled", "disabled"); cond != "" {
+			q = q.Where(cond, v)
+		}
+		if ids := intListParam(c.Query("staffIds"), 200); len(ids) > 0 {
+			// 精确取：条数由调用方给的 id 数决定，不再分页（本身已是有界集合）
+			var list []model.Employee
+			q.Where("staff_id IN ?", ids).Order("staff_id asc").Find(&list)
+			if size = len(list); size == 0 {
+				size = defaultPageSize
+			}
+			pagedOK(c, list, int64(len(list)), 1, size)
+			return
+		}
 		var list []model.Employee
-		db.Scopes(scopeCond(c)).Order("staff_id asc").Find(&list)
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": list})
+		total, page := pagedQuery(q, "staff_id asc", &list, page, size)
+		pagedOK(c, list, total, page, size)
 	})
 
 	// 启用 / 禁用（禁用同时自增安全戳 → 该员工在线会话立即失效；按租户）
