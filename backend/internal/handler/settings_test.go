@@ -511,3 +511,59 @@ func TestAuditLogRecordsFailedLogin(t *testing.T) {
 	require.Equal(t, "anonymous", m["actorType"])
 	require.Equal(t, "admin", m["targetId"])
 }
+
+// TestSettingsValueValidation 值域校验：类型合法 ≠ 取值合法。
+// 类型校验（整数 / 布尔）拦不住「上传上限填 0」「基址漏写协议头」这类——
+// 它们不会报错在配置上，而是表现为「所有上传失败」「小程序永远连不上」，
+// 排查方向完全跑偏。这些项必须在保存入口拦下。
+func TestSettingsValueValidation(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	// 合法值：先确认放行路径没被校验误伤
+	for k, v := range map[string]string{
+		"upload_max_mb":         "30",
+		"miniprogram_base_url":  "https://api.example.com",
+		"upload_base_url":       "http://127.0.0.1:8080/uploads",
+		"storage_driver":        "oss",
+		"pinned_company_id":     "1", // 朗汇（seed 的 1 号租户，enabled）
+	} {
+		_, body := c.do("PUT", "/api/admin/settings", map[string]string{k: v}, adminToken)
+		require.EqualValues(t, 0, body["code"], "%s=%s 应合法：%v", k, v, body["msg"])
+	}
+
+	// 上传上限：0 / 负数 / 超上限都拒绝（0 会让所有上传失败且不指向配置）
+	for _, bad := range []string{"0", "-5", "99999"} {
+		_, body := c.do("PUT", "/api/admin/settings", map[string]string{"upload_max_mb": bad}, adminToken)
+		require.EqualValues(t, 1, body["code"], "upload_max_mb=%s 应被拒绝", bad)
+		require.Contains(t, body["msg"], "1 ~ 1024")
+	}
+
+	// 接口基址：漏写协议头（真机上最典型的手误：直接填 127.0.0.1:8080）
+	_, body := c.do("PUT", "/api/admin/settings",
+		map[string]string{"miniprogram_base_url": "127.0.0.1:8080"}, adminToken)
+	require.EqualValues(t, 1, body["code"])
+	require.Contains(t, body["msg"], "http://")
+
+	_, body = c.do("PUT", "/api/admin/settings",
+		map[string]string{"upload_base_url": "/uploads"}, adminToken)
+	require.EqualValues(t, 1, body["code"], "相对路径当基址会导致小程序拼出错误 URL")
+
+	// 存储驱动：枚举之外的值（重启后会静默降级本地磁盘，运营以为在用对象存储）
+	_, body = c.do("PUT", "/api/admin/settings",
+		map[string]string{"storage_driver": "ftp"}, adminToken)
+	require.EqualValues(t, 1, body["code"])
+	require.Contains(t, body["msg"], "local / minio / oss")
+
+	// 锁定租户：不存在 / 已停用的企业会让小程序全部接口报「企业不存在或已停用」
+	_, body = c.do("PUT", "/api/admin/settings",
+		map[string]string{"pinned_company_id": "9999"}, adminToken)
+	require.EqualValues(t, 1, body["code"])
+	require.Contains(t, body["msg"], "不存在或已停用")
+
+	// 0 = 平台模式（不锁定），必须放行
+	_, body = c.do("PUT", "/api/admin/settings",
+		map[string]string{"pinned_company_id": "0"}, adminToken)
+	require.EqualValues(t, 0, body["code"], "0 表示平台模式，不应被拒")
+}

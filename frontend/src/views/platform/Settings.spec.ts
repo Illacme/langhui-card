@@ -119,6 +119,10 @@ function textInputOf(w: any, key: string) {
 function numberInputOf(w: any, key: string) {
   return rowOf(w, key).find('input.el-input-number')
 }
+// 断言组件 props（min 只存在于组件上，DOM 上没有对应属性）
+function numberComponentOf(w: any, key: string) {
+  return rowOf(w, key).findComponent({ name: 'ElInputNumber' })
+}
 function selectOf(w: any, key: string) {
   return rowOf(w, key).find('select.el-select')
 }
@@ -268,5 +272,24 @@ describe('Settings 系统设置', () => {
     await nextTick()
     expect((input.element as HTMLInputElement).value).toBe('智能名片')
     expect(saveButton(w).attributes('disabled')).toBeDefined()
+  })
+
+  // 只写「只读」不够：运营会以为功能没生效。必须同时说清「现在配了没」和「去哪改」。
+  it('只读项标明当前是否已配置，并给出部署环境的改法', async () => {
+    const { w } = await setup()
+    expect(rowOf(w, 'db_dsn').text()).toContain('已配置')
+    // cookie_domain 未配置 = 进程在用内置缺省值，属上线前要修的项
+    expect(rowOf(w, 'cookie_domain').text()).toContain('未配置')
+    expect(rowOf(w, 'cookie_domain').text()).toContain('COOKIE_DOMAIN')
+    // 改法要指向部署环境，而不是让人在本页白找
+    expect(rowOf(w, 'db_dsn').text()).toContain('部署环境')
+    expect(rowOf(w, 'db_dsn').text()).toContain('重启')
+  })
+
+  it('有安全下限的整数项：上传上限最小为 1，界面就选不到 0', async () => {
+    const { w } = await setup()
+    expect(numberComponentOf(w, 'upload_max_mb').props('min')).toBe(1)
+    // 其它整数项（如小程序码 TTL）仍允许 0：后端有回落逻辑，不该在界面硬拦
+    expect(numberComponentOf(w, 'wxacode_ttl_hours').props('min')).toBe(0)
   })
 })

@@ -1744,6 +1744,9 @@ paths:
         - 非敏感项：提交空串 = 清空并回退同名环境变量
         - 敏感项：留空 = 不修改；提交掩码 "******" 会被拒绝（避免把掩码写成真值）
         - readOnly 项一律拒绝，msg 里提示改用环境变量
+        - **值域校验**（类型合法 ≠ 取值合法），非法值直接 code=1 并在 msg 说明原因：
+          upload_max_mb 取 1~1024；miniprogram_base_url / upload_base_url 必须 http(s):// 开头；
+          storage_driver 只能 local / minio / oss；pinned_company_id 须为 0 或存在且启用的企业 ID
         回包 data.restartKeys 点名「需重启才生效」的项，前端据此提示。
       tags: [设置]
       requestBody:
@@ -1757,7 +1760,7 @@ paths:
               example: { "brand_name": "朗汇机电", "upload_max_mb": "20" }
       responses:
         "200":
-          description: code=0 保存成功；code=1 校验失败（类型非法 / 未知 key / 只读项 / 掩码值）
+          description: code=0 保存成功；code=1 校验失败（类型非法 / 值域越界 / 未知 key / 只读项 / 掩码值）
           content:
             application/json:
               schema:

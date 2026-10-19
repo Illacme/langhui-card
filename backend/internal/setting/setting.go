@@ -55,6 +55,11 @@ type def struct {
 	ReadOnly bool
 	// EnvVar：对应环境变量名。界面据此提示改法；未设置时回退该环境变量。
 	EnvVar string
+	// Validate 业务校验（可选）：**类型之外**的取值约束（上下限 / 枚举 / URL 前缀 /
+	// 租户是否存在）。只给「填错会造成大面积故障或把自己锁住」的项加，不做普遍校验——
+	// 处处拦截会让运营改个配置处处碰壁，不如让它自愈（见 validate.go 的包注释）。
+	// 需要查库的校验也走这里，db 为当前库连接（未初始化时为 nil，校验需自行跳过）。
+	Validate func(db *gorm.DB, value string) error
 }
 
 // Mask 敏感项在接口响应里的掩码（界面据此显示「已配置」，不回传真实值）。
@@ -90,11 +95,14 @@ var registry = []def{
 	{Key: "brand_name", Group: "general", Type: "string", Value: "智能名片",
 		Desc: "后台侧边栏 / 页标题品牌名（未设置回落此值）"},
 	{Key: "miniprogram_base_url", Group: "miniprogram", Type: "string",
-		Desc: "小程序端默认接口基址；空则小程序用自身内置 baseUrl"},
+		Validate: httpURLOrEmpty(),
+		Desc:     "小程序端默认接口基址；空则小程序用自身内置 baseUrl。必须是 http:// 或 https:// 开头的完整地址"},
 	{Key: "pinned_company_id", Group: "miniprogram", Type: "int", Value: "0",
-		Desc: "企业独立版锁定租户：>0 锁定该企业，0=平台模式"},
+		Validate: companyEnabledOrZero,
+		Desc:     "企业独立版锁定租户：>0 锁定该企业（必须存在且启用），0=平台模式"},
 	{Key: "upload_max_mb", Group: "upload", Type: "int", Value: "10",
-		Desc: "单文件上传上限（MB）"},
+		Validate: intRange(1, 1024),
+		Desc:     "单文件上传上限（MB），1~1024"},
 	{Key: "upload_allow_ext", Group: "upload", Type: "string_slice", Value: "png,jpg,jpeg,gif,webp,mp4",
 		Desc: "允许上传的扩展名（小写，逗号分隔）"},
 	// 签名有效期：直传 PUT 与私有桶 GET 的限时链接时长。太短前端还没传完就过期，
@@ -128,7 +136,8 @@ var registry = []def{
 	// 凭据写错最坏结果是「上传失败」，改回来重启即可自愈，不会把自己锁在系统外，
 	// 因此允许在界面维护；留空则回退同名环境变量。
 	{Key: "storage_driver", Group: "storage", Type: "string", Restart: true, EnvVar: "STORAGE_DRIVER",
-		Desc: "存储驱动：local(本地磁盘) | minio(MinIO/S3 兼容) | oss(阿里云 OSS)；留空回退环境变量"},
+		Validate: oneOf("local", "minio", "oss"),
+		Desc:     "存储驱动：local(本地磁盘) | minio(MinIO/S3 兼容) | oss(阿里云 OSS)；留空回退环境变量"},
 	{Key: "storage_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ENDPOINT",
 		Desc: "对象存储端点（不含协议头）；MinIO 对应 MINIO_ENDPOINT，OSS 对应 OSS_ENDPOINT"},
 	{Key: "storage_bucket", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_BUCKET",
@@ -144,7 +153,8 @@ var registry = []def{
 	{Key: "upload_dir", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_DIR",
 		Desc: "本地存储目录（仅 local 驱动；小程序码缓存也落这里）"},
 	{Key: "upload_base_url", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_BASE_URL",
-		Desc: "上传文件公开访问基址（小程序 / 前端拼绝对 URL 用）"},
+		Validate: httpURLOrEmpty(),
+		Desc:     "上传文件公开访问基址（小程序 / 前端拼绝对 URL 用），须为 http(s) 完整地址"},
 	{Key: "cdn_enabled", Group: "storage", Type: "bool", Restart: true, EnvVar: "CDN_ENABLED",
 		Desc: "是否启用 CDN 缓存刷新（覆盖写后使边缘缓存失效）"},
 	{Key: "cdn_access_key_id", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ACCESS_KEY_ID",
@@ -340,6 +350,13 @@ func (s *Store) Set(key, value string) error {
 	}
 	if err := validateType(d.Type, value); err != nil {
 		return fmt.Errorf("%s: %w", key, err)
+	}
+	// 业务校验（值域 / 枚举 / 租户存在性）：类型合法不代表取值合法，
+	// 例如上传上限填 0 会让所有上传失败，基址漏写协议头会让小程序永远拿不到正确地址。
+	if d.Validate != nil {
+		if err := d.Validate(s.db, value); err != nil {
+			return fmt.Errorf("%s: %w", key, err)
+		}
 	}
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		var existing Setting

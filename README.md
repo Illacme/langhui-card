@@ -67,9 +67,9 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 分组 | 配置项 | 说明 |
 | --- | --- | --- |
 | 通用 | `brand_name` | 后台侧边栏 / 登录页 / 页标题品牌名 |
-| 小程序 | `miniprogram_base_url` | 小程序端接口基址（冷启动拉 `/api/public/settings` 覆盖） |
-| 小程序 | `pinned_company_id` | 企业独立版锁定租户（>0 锁定，0 = 平台模式） |
-| 上传 | `upload_max_mb` | 单文件上传上限（MB） |
+| 小程序 | `miniprogram_base_url` | 小程序端接口基址（须 `http(s)://` 开头；冷启动拉 `/api/public/settings` 覆盖） |
+| 小程序 | `pinned_company_id` | 企业独立版锁定租户（>0 锁定且该企业须存在并启用，0 = 平台模式） |
+| 上传 | `upload_max_mb` | 单文件上传上限（MB，1~1024） |
 | 上传 | `upload_allow_ext` | 允许上传的扩展名（逗号分隔） |
 | 上传 | `presign_put_ttl_minutes` / `sign_get_ttl_minutes` | 直传 PUT / 私有桶 GET 签名链接有效期（分钟，最短 1） |
 | 微信 | `wxacode_ttl_hours` | 小程序码缓存有效期（小时） |
@@ -78,7 +78,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 微信 | `wx_appsecret` | 小程序 AppSecret（敏感；留空回退 `WX_APPSECRET`，改完即时生效） |
 | 登录与令牌 | `access_token_ttl_minutes` / `refresh_token_ttl_days` | 令牌有效期（最短 1 分钟 / 1 天，非法值回落缺省） |
 | 登录与令牌 | `login_rate_limit_per_min` / `refresh_rate_limit_per_min` | 每 IP 每分钟登录 / 刷新次数（防爆破，最小 1） |
-| 文件存储与 CDN | `storage_driver` | `local` / `minio` / `oss`（留空回退 `STORAGE_DRIVER`，**需重启**） |
+| 文件存储与 CDN | `storage_driver` | `local` / `minio` / `oss`（只能取这三个值；留空回退 `STORAGE_DRIVER`，**需重启**） |
 | 文件存储与 CDN | `storage_endpoint` / `storage_bucket` | 对象存储端点与桶名（MinIO 与 OSS 共用这两个字段） |
 | 文件存储与 CDN | `storage_access_key` / `storage_secret_key` | 对象存储凭据（后者敏感，界面只回传掩码） |
 | 文件存储与 CDN | `storage_use_ssl` / `storage_public` | MinIO 走 HTTPS / 是否公开桶（私有桶走限时签名） |
@@ -95,6 +95,11 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 > - 敏感项（密钥 / 连接串）接口**只回传掩码**，真实值永不出现在响应里；界面输入框留空 = 不修改。
 > - 令牌有效期与签名时长这类「设成 0 就等于把功能关死、甚至把自己锁在外面」的项，
 >   代码内保留**安全下限**：界面填 0 / 负数一律回落缺省值。
+> - **类型合法 ≠ 取值合法**：对「填错会造成大面积故障」的项，保存入口还会做值域校验并当场拒绝——
+>   `upload_max_mb`（1~1024）、`miniprogram_base_url` / `upload_base_url`（必须 `http(s)://` 开头）、
+>   `storage_driver`（只能 `local` / `minio` / `oss`）、`pinned_company_id`（必须是存在且启用的企业，0 = 平台模式）。
+>   例如上传上限填 0 会让所有上传失败、报错却指向文件；基址漏写协议头会让小程序永远连不上，
+>   且「后台下发正确基址」只在种子地址能连通一次之后才生效，等于自愈不了。
 >
 > 另：云存储驱动初始化失败时会**降级为本地磁盘**而不是让进程退出——否则管理员
 > 连后台都进不去，就再也改不回来（见 `cmd/server` 的 `newUploaderWithFallback`）。

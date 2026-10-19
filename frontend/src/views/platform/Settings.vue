@@ -14,7 +14,7 @@
       type="info"
       :closable="false"
       title="在此维护产品运行参数。常规项保存后即时生效；标注「需重启」的项要重启服务后才生效；标注「只读」的项只能改环境变量后重启。"
-      description="敏感项（密钥 / 连接串）不会回传真实值，界面只显示「已配置」；输入框留空表示不修改，填新值即覆盖。"
+      description="敏感项（密钥 / 连接串）不会回传真实值，界面只显示「已配置」；输入框留空表示不修改，填新值即覆盖。带范围 / 格式约束的项（上传上限、接口基址、存储驱动、锁定租户）保存时会校验，非法值直接拒绝并说明原因——与其让你保存后排查半天，不如当场拦住。"
       style="margin-bottom: 16px"
     />
 
@@ -36,11 +36,26 @@
               <el-tag size="small" effect="plain">{{ typeLabel(item.type) }}</el-tag>
               <el-tag v-if="item.restart" size="small" type="warning" effect="plain">需重启</el-tag>
               <el-tag v-if="item.readOnly" size="small" type="info" effect="plain">只读</el-tag>
+              <!-- 只读项也要说清「现在到底配了没」：只写「只读」会让运营以为功能没生效。
+                   未配置 = 进程在用内置缺省值（如 JWT_KEY 仍是 change-me），属上线前要修的项。 -->
+              <el-tag
+                v-if="item.readOnly"
+                size="small"
+                effect="plain"
+                :type="item.configured ? 'success' : 'warning'"
+              >
+                {{ item.configured ? '已配置' : '未配置·用缺省值' }}
+              </el-tag>
               <el-tag v-if="item.secret" size="small" type="danger" effect="plain">敏感</el-tag>
             </div>
             <div class="row-desc">
               {{ item.description }}
-              <span v-if="item.envVar" class="env-hint">环境变量：{{ item.envVar }}</span>
+              <span v-if="item.envVar" class="env-hint">
+                环境变量：{{ item.envVar }}
+                <template v-if="item.readOnly">
+                  ——请到部署环境（docker-compose.yml / .env / k8s ConfigMap）修改后重启服务，本页不可改
+                </template>
+              </span>
             </div>
           </div>
 
@@ -61,7 +76,7 @@
             <el-input-number
               v-else-if="item.type === 'int'"
               :model-value="numVal(item.key)"
-              :min="0"
+              :min="minOf(item)"
               :disabled="item.readOnly"
               controls-position="right"
               @change="(v: any) => setVal(item.key, String(v ?? 0))"
@@ -162,6 +177,13 @@ const changedCount = computed(() => changedKeys.value.length)
 
 function typeLabel(t: string) {
   return { int: '整数', bool: '开关', string: '文本', string_slice: '列表' }[t] || t
+}
+
+// 有安全下限的整数项：界面先拦一道（后端也会拒绝，但能在选数时就提示更直观）。
+// 例如上传上限填 0 会让所有上传失败，报错还指向文件而不是配置。
+const INT_MIN: Record<string, number> = { upload_max_mb: 1 }
+function minOf(item: SettingItem) {
+  return INT_MIN[item.key] ?? 0
 }
 function placeholderOf(item: SettingItem) {
   if (item.readOnly) return '只读'
