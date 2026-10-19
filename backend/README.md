@@ -52,12 +52,29 @@ backend/
 ```
 
 ## 本地运行
+
+`DB_DSN` 同时支持 MySQL 与 SQLite，驱动按 DSN 形态自动选择（`internal/dbopen`），同一个二进制不用换包：
+
+| 写法 | 驱动 | 说明 |
+|---|---|---|
+| `root:pw@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true` | MySQL | 生产标准路径，表结构由 `migrations/*.sql` 建立 |
+| `sqlite:///var/lib/langhui/langhui.db` | SQLite | 免装数据库；启动时按模型 `AutoMigrate` 建表，自动补 WAL / busy_timeout / foreign_keys |
+| `file:/var/lib/langhui/langhui.db` | SQLite | 同上，URI 写法 |
+| `/var/lib/langhui/langhui.db` | SQLite | 裸路径兜底（仅认 `.db` / `.sqlite` / `.sqlite3` 结尾） |
+
+> 用 MySQL 时先建库并导入迁移；用 SQLite 时**不要**执行 `migrations/*.sql`
+> （那些是 MySQL 方言，`ENGINE=InnoDB` / `AUTO_INCREMENT` / 反引号 SQLite 都不认）。
+> SQLite 的适用边界（单机单进程、库文件必须在本地磁盘、备份用 `VACUUM INTO`）
+> 见仓库根 `docs/deploy-runbook.md`「路径 D：SQLite 单机生产」。
+
 ```bash
-# 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单 / 多租户 company_id）
+# 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单 / 多租户 company_id）——仅 MySQL 需要
 for f in migrations/000*.sql; do mysql -u root -p langhui < "$f"; done
 
 # 2. 配置环境变量（JWT_KEY 必填，用于 token 签名）
 export DB_DSN="root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true"
+# 或走 SQLite（免装数据库，表由服务启动时自动建）：
+# export DB_DSN="sqlite:///var/lib/langhui/langhui.db"
 export PORT=8080
 export JWT_KEY="change-me-to-a-long-random-string"
 # 文件上传（可选，有默认值）
@@ -112,11 +129,11 @@ docker run -e DB_DSN="$DB_DSN" -e JWT_KEY="$JWT_KEY" -e UPLOAD_DIR="./uploads" -
 ```bash
 go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ```
-演示账号：超管 `admin/admin123456`；员工手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）。生产部署仍走 `cmd/server`（MySQL + docker-compose）。
+演示账号：超管 `admin/admin123456`；员工手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）。生产部署走 `cmd/server`（MySQL + docker-compose；小体量也可用 SQLite 单机，见「本地运行」的 DSN 表与 `docs/deploy-runbook.md` 路径 D）。
 
 两个联调注意点：
 - **真机 / 局域网上传**：上传基址默认 `http://127.0.0.1:<port>/uploads`（同机测试可直接用）；手机取不到图时设 `DEV_UPLOAD_BASE_URL=http://<本机IP>:8080/uploads` 再启动（启动日志 `upload base url:` 显示生效值）。
-- **数据不持久**：SQLite 库在系统临时目录，重启即丢并重新 seed；要持久化运行见仓库根 `docs/deploy-runbook.md`「无 Docker 部署」路径 B/C。
+- **数据不持久**：SQLite 库在系统临时目录，重启即丢并重新 seed；要持久化运行见仓库根 `docs/deploy-runbook.md`「无 Docker 部署」路径 B/C/D（D 是生产可用的 SQLite 单机方案）。
 
 ## 生产文件存储（MinIO / OSS）
 - 通过 `STORAGE_DRIVER` 切换，业务代码（handler / 前端 / 小程序）完全不变，仅 `main.go` 的 `newUploader` 工厂按环境变量选择实现，统一满足 `storage.Uploader` 接口：
@@ -398,7 +415,7 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 ```
 环境变量：`DB_CONTAINER`(默认 langhui-mysql) / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `BACKUP_DIR`(默认 ./backups) / `KEEP_DAYS`(默认 7)。逻辑备份不含 binlog，需 PITR 时另行开启 binlog 并定期备份。
 
-> 开发态 `cmd/devserver` 用 SQLite 临时库（每次启动全新、自动 seed），本就无需备份；生产走 `cmd/server` + MySQL，用本脚本。
+> 开发态 `cmd/devserver` 用 SQLite 临时库（每次启动全新、自动 seed），本就无需备份；生产走 `cmd/server`，用本脚本。若生产用的是 SQLite 单机（路径 D），备份改用 `VACUUM INTO` 取在线一致性快照，不要用 `cp`。
 
 ### 4. 最小告警（零依赖）
 `scripts/alert_check.sh` 三条规则，配 crontab **每分钟**运行：

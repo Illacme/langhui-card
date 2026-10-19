@@ -5,14 +5,13 @@ import (
 	"os"
 
 	"langhui/internal/config"
+	"langhui/internal/dbopen"
 	"langhui/internal/handler"
 	"langhui/internal/middleware"
+	"langhui/internal/model"
 	"langhui/internal/repository"
 	"langhui/internal/setting"
 	"langhui/internal/storage"
-
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 func main() {
@@ -40,9 +39,27 @@ func main() {
 		log.Printf("[SECURITY] %s", w)
 	}
 
-	db, err := gorm.Open(mysql.Open(cfg.DBDSN), &gorm.Config{})
+	// 驱动由 DB_DSN 形态决定：默认是 MySQL；写成 sqlite://<路径> / file:<URI> /
+	// *.db 则走 SQLite（详见 docs/deploy-runbook.md「路径 D：SQLite 单机部署」）。
+	// 注意 db_dsn 是系统设置里的只读项——改错会连不上库、把「改回来的入口」一起弄丢，
+	// 所以库地址只能在启动时用环境变量定好，上线后改不动。
+	db, driver, err := dbopen.Open(cfg.DBDSN)
 	if err != nil {
-		log.Fatalf("db connect: %v", err)
+		log.Fatalf("db connect (%s): %v", driver, err)
+	}
+
+	// SQLite 没有可执行的 migrations：`migrations/*.sql` 是 MySQL 方言
+	// （ENGINE=InnoDB / AUTO_INCREMENT / 反引号），这里改为按模型建表。
+	// MySQL 侧不动——生产库的表结构由迁移脚本管，AutoMigrate 擅自改列类型风险更大。
+	if driver == dbopen.DriverSQLite {
+		if err := db.AutoMigrate(model.All()...); err != nil {
+			log.Fatalf("auto migrate: %v", err)
+		}
+	}
+	log.Printf("database driver=%s", driver)
+	if driver == dbopen.DriverSQLite {
+		log.Printf("[INFO] SQLite 为单写者且不支持多副本：请勿将库文件放在 NFS 等网络盘，" +
+			"备份请用 VACUUM INTO 取在线一致性快照（详见 docs/deploy-runbook.md）")
 	}
 
 	handler.SeedAdmin(db, cfg) // 首启动若 admin 表为空则创建初始超管

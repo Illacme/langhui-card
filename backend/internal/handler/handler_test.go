@@ -156,13 +156,7 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(
-		&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
-		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
-		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
-		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
-		&model.Company{}, &setting.Setting{}, &model.AuditLog{},
-	))
+	require.NoError(t, db.AutoMigrate(model.All()...))
 	// 1 号租户（朗汇）：公开接口缺省落点；存量行为不随多租户改造而变
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 
@@ -987,13 +981,7 @@ func newSeedDB(t *testing.T) *gorm.DB {
 	t.Cleanup(func() { os.Remove(dbPath) })
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(
-		&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
-		&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
-		&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
-		&model.OpenApply{}, &model.CardModifyApply{}, &model.RevokedSession{},
-		&model.Company{}, &setting.Setting{}, &model.AuditLog{},
-	))
+	require.NoError(t, db.AutoMigrate(model.All()...))
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 	return db
 }

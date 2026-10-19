@@ -41,19 +41,13 @@ import (
 //go:embed seedassets/*.png
 var seedAssetFS embed.FS
 
-// devModels devserver 的建表清单，须与 model 包的全部模型保持一致。
-// 新增 GORM 模型时必须同步追加——漏加不会编译报错，只会在运行期
-// 查询时报「no such table」（曾漏加 RevokedSession 导致 devserver
-// 下每次鉴权请求都被误判为「会话已吊销」而 401，见 main_test.go 的守卫）。
-var devModels = []interface{}{
-	&model.Employee{}, &model.CompanyInfo{}, &model.CompanyProfile{},
-	&model.AchievementCategory{}, &model.ProjectCase{}, &model.BizService{},
-	&model.HomeLayout{}, &model.StatEvent{}, &model.Admin{},
-	&model.OpenApply{}, &model.CardModifyApply{},
-	&model.RevokedSession{}, &model.Company{},
-	&setting.Setting{}, // 系统设置表（后台「系统设置」界面维护运行参数）
-	&model.AuditLog{},  // 操作审计日志（后台写操作与登录失败留痕）
-}
+// devModels devserver 的建表清单，直接取 model 包的权威清单（新增模型只改那里一处）。
+// sys_setting 表由 setting.Init 自行 AutoMigrate，不在此列。
+//
+// 为什么曾经需要手工维护：漏加不报编译错，只在运行期查询时报「no such table」
+// （曾漏加 RevokedSession 导致 devserver 下每次鉴权请求都被误判为「会话已吊销」
+// 而 401，见 main_test.go 的守卫）。
+var devModels = model.All()
 
 func main() {
 	port := os.Getenv("PORT")

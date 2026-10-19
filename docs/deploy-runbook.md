@@ -1,7 +1,7 @@
 # 生产上线 Runbook（从零到发布）
 
 > 适用场景：首次部署到生产服务器。联调 / 日常开发见《部署与联调.md》，本文只讲生产路径。
-> **没有 Docker，或想先跑起来测试？** 直接看下方「无 Docker 部署」一节（三条路径，A 路径十分钟可跑通）；就绪后再按第 0 节起的 Docker 主流程上生产。
+> **没有 Docker，或想先跑起来测试？** 直接看下方「无 Docker 部署」一节（四条路径，A 路径十分钟可跑通；小体量上线可用 D 路径的 SQLite 单机方案，免装数据库）；就绪后再按第 0 节起的 Docker 主流程上生产。
 > 预计耗时：服务器与域名就绪后 1–2 小时（不含微信审核等待）。
 
 ## 无 Docker 部署（先测试 / 无 Docker 环境）
@@ -84,15 +84,70 @@ sudo systemctl daemon-reload && sudo systemctl enable --now langhui
 4. nginx 反代（同 B）+ HTTPS：前置 Caddy 自动证书（配置见第 5 节）。
 5. **MySQL parity 验证照常执行（第 6 节）**——与是否用 Docker 无关，生产用 MySQL 就必须跑。
 
-### 三条路径对比
+### D. SQLite 单机生产（免装数据库，但**真持久化**）
 
-| | A 先跑起来 | B 二进制 + nginx | C 完整生产 |
-|---|---|---|---|
-| MySQL | 不用 | 不用 | 要（原生安装） |
-| 数据持久 | 重启丢 | 重启丢 | 持久 |
-| 真机 / 内网上传 | ✅ 设 `DEV_UPLOAD_BASE_URL` | ✅ 同 A | ✅ `UPLOAD_BASE_URL` 可配 |
-| HTTPS | 无 | 无（可加 Caddy） | ✅ |
-| 适合 | 功能测试 / 演示 | 内网部署 / 给同事看 | 上线 |
+`cmd/server` 按 `DB_DSN` 形态自动选驱动：默认 MySQL，写成下面任意一种即走 SQLite——
+**同一个二进制，不用换包**：
+
+```bash
+DB_DSN=sqlite:///var/lib/langhui/langhui.db
+DB_DSN=file:/var/lib/langhui/langhui.db      # 等价的 URI 写法
+DB_DSN=/var/lib/langhui/langhui.db           # 裸路径兜底（仅认 .db/.sqlite/.sqlite3 结尾）
+```
+
+```bash
+cd backend && go build -o langhui-server ./cmd/server
+sudo mkdir -p /var/lib/langhui /var/lib/langhui/uploads
+export DB_DSN=sqlite:///var/lib/langhui/langhui.db
+export JWT_KEY=$(openssl rand -base64 32)     # 上线前必改
+export ADMIN_PASS=$(openssl rand -base64 12)  # 上线前必改
+export UPLOAD_DIR=/var/lib/langhui/uploads
+export COOKIE_SECURE=true
+./langhui-server                              # 日志首行会打印 database driver=sqlite
+```
+
+与路径 A/B 的 devserver 区别：devserver 用**临时库 + 强制 seed 演示数据 + 写死 JWT 密钥**，
+只能测功能；本路径是**真正的生产入口**，数据持久、走 `InsecureGates` 安全门槛。
+
+建表无需手工执行 `migrations/*.sql`（那是 MySQL 方言，`ENGINE=InnoDB` / `AUTO_INCREMENT` /
+反引号 SQLite 都不认）：SQLite 下服务启动时按模型 `AutoMigrate` 自动建表，
+`sys_setting` 由 `setting.Init` 自建。启动时会自动补三项必需 pragma：
+
+| pragma | 值 | 不设会怎样 |
+|---|---|---|
+| `journal_mode` | `WAL` | 一次写挡住所有读，名片页与后台并发时大面积卡顿 |
+| `busy_timeout` | `5000` | 并发写直接报 `database is locked`（SQLite 是单写者） |
+| `foreign_keys` | `1` | SQLite 默认**关闭**外键约束，配了等于没配 |
+
+想覆盖默认值就在 DSN 里显式写同名 pragma，例如
+`sqlite:///var/lib/langhui/langhui.db?_pragma=busy_timeout(15000)`——
+只覆盖你写的那一项，其余仍取默认值。
+
+**边界（上生产前请确认都能接受）**：
+
+- **单机单进程**。SQLite 不支持多副本 / 多实例同时写同一个库文件。要横向扩展就回 MySQL（路径 C）。
+- **库文件必须在本地磁盘**。NFS / SMB 等网络文件系统上 SQLite 的文件锁不可靠，会静默损坏数据。
+- **备份用 `VACUUM INTO`，不要 `cp`**。WAL 模式下裸拷贝可能拿到残缺快照：
+
+  ```bash
+  sqlite3 /var/lib/langhui/langhui.db "VACUUM INTO '/backup/langhui-$(date +%F).db'"
+  ```
+
+  没有 `sqlite3` 客户端时，可用后端自带驱动跑一次性 Go 脚本，或直接停服后拷贝（简单但会中断）。
+- **不需要跑第 6 节的 MySQL parity 验证**（那是 MySQL 生产路的检查项）。
+- `db_dsn` 是系统设置里的**只读项**：改错会连不上库、把「改回来的入口」一起弄丢，
+  所以库路径只能在启动时用环境变量定好，上线后改不动。
+
+### 四条路径对比
+
+| | A 先跑起来 | B 二进制 + nginx | C 完整生产 | D SQLite 单机 |
+|---|---|---|---|---|
+| 数据库 | 无（devserver 临时 SQLite） | 同 A | MySQL（原生安装） | SQLite（本地文件） |
+| 数据持久 | 重启丢 | 重启丢 | 持久 | **持久** |
+| 真机 / 内网上传 | ✅ 设 `DEV_UPLOAD_BASE_URL` | ✅ 同 A | ✅ `UPLOAD_BASE_URL` 可配 | ✅ 同 C |
+| HTTPS | 无 | 无（可加 Caddy） | ✅ | ✅ 同 C |
+| 多副本 / 横向扩展 | — | — | ✅ | ❌ 单机单进程 |
+| 适合 | 功能测试 / 演示 | 内网部署 / 给同事看 | 上线（标准） | 上线（小体量免运维） |
 
 ## 0. 前置条件
 

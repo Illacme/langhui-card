@@ -205,15 +205,30 @@ fi
 
 # ── 7. 数据库口令 ──
 sec "7. 数据库"
-mrp="${MYSQL_ROOT_PASSWORD:-}"
-# 示例值也从编排文件现读，避免改了 compose、脚本还在检查旧值
-def_mysql="$(sed -n 's/.*MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD:[-?]\([^}]*\)}.*/\1/p' "$ROOT/docker-compose.yml" | head -1)"
-if [ -z "$mrp" ]; then
-  warn "MYSQL_ROOT_PASSWORD 未设置：docker-compose 会回退内置示例值，生产请改强随机值"
-elif [ -n "$def_mysql" ] && [ "$mrp" = "$def_mysql" ]; then
-  warn "MYSQL_ROOT_PASSWORD 仍是编排文件里的示例值：生产请改强随机值"
+# 驱动按 DSN 形态自动选择（internal/dbopen）：SQLite 部署没有 MySQL 口令可查，
+# 硬查只会产出一条误导性 WARN，这里改为 SKIP 并提示 SQLite 自己的注意点。
+dsn="${DB_DSN:-}"
+dsn_path="${dsn%%\?*}"
+is_sqlite=0
+case "$dsn" in
+  sqlite:* | file:*) is_sqlite=1 ;;
+esac
+case "$dsn_path" in
+  *.db | *.sqlite | *.sqlite3) is_sqlite=1 ;;
+esac
+if [ "$is_sqlite" = "1" ]; then
+  skip "DB_DSN 指向 SQLite（${dsn_path:-未设置}）：跳过 MySQL 口令检查。请自行确认——库文件在本地磁盘（勿放 NFS）、单机单进程、备份用 VACUUM INTO"
 else
-  pass "MYSQL_ROOT_PASSWORD 已自定义"
+  mrp="${MYSQL_ROOT_PASSWORD:-}"
+  # 示例值也从编排文件现读，避免改了 compose、脚本还在检查旧值
+  def_mysql="$(sed -n 's/.*MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD:[-?]\([^}]*\)}.*/\1/p' "$ROOT/docker-compose.yml" | head -1)"
+  if [ -z "$mrp" ]; then
+    warn "MYSQL_ROOT_PASSWORD 未设置：docker-compose 会回退内置示例值，生产请改强随机值"
+  elif [ -n "$def_mysql" ] && [ "$mrp" = "$def_mysql" ]; then
+    warn "MYSQL_ROOT_PASSWORD 仍是编排文件里的示例值：生产请改强随机值"
+  else
+    pass "MYSQL_ROOT_PASSWORD 已自定义"
+  fi
 fi
 
 # ── 8. 服务探活（可选：服务已运行时才判）──
