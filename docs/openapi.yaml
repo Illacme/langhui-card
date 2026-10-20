@@ -501,6 +501,9 @@ paths:
                     type: string
                   phone:
                     type: string
+                  phone2:
+                    type: string
+                    description: 第二个手机号（选填）；名片上与主号并列展示，不参与登录
                   landline:
                     type: string
                   email:
@@ -588,7 +591,7 @@ paths:
         - name: keyword
           in: query
           required: false
-          description: 模糊匹配姓名 / 手机 / 邮箱 / 昵称
+          description: 模糊匹配姓名 / 手机 / 手机2 / 邮箱 / 昵称
           schema:
             type: string
         - name: status
@@ -775,7 +778,7 @@ paths:
         - name: keyword
           in: query
           required: false
-          description: 模糊匹配姓名 / 手机 / 职位 / 座机 / 昵称 / openid
+          description: 模糊匹配姓名 / 手机 / 手机2 / 职位 / 座机 / 昵称 / openid
           schema:
             type: string
         - name: status
@@ -834,6 +837,9 @@ paths:
                   type: string
                 phone:
                   type: string
+                phone2:
+                  type: string
+                  description: 第二个手机号（选填）；名片上与主号并列展示，不参与登录
                 title:
                   type: string
                 email:
@@ -863,7 +869,7 @@ paths:
       tags: [超管-员工管理]
       summary: 编辑员工资料（即时生效，不经过员工端审核流）
       description: |
-        只开放白名单字段：姓名 / 职位 / 手机 / 座机 / 邮箱 / 头像。
+        只开放白名单字段：姓名 / 职位 / 手机 / 手机号2 / 座机 / 邮箱 / 头像。
         状态、密码各有专门端点（disable/enable/reset-password），此处不混写，避免绕过安全戳逻辑。
       security:
         - cookieAuth: []
@@ -887,6 +893,9 @@ paths:
                   type: string
                 phone:
                   type: string
+                phone2:
+                  type: string
+                  description: 第二个手机号（选填）；名片上与主号并列展示，不参与登录
                 landline:
                   type: string
                 email:
@@ -1539,6 +1548,44 @@ paths:
                         type: string
                       key:
                         type: string
+
+  /api/admin/upload/capability:
+    get:
+      tags: [存储]
+      summary: 存储能力探测
+      description: >-
+        供后台「公司简介 → 视频来源」判断「云存储上传」档能否选择。
+        videoUpload 为 true 的条件是：驱动为对象存储（非本地磁盘）且实现了直传预签名。
+        本地磁盘驱动下上传视频会占用应用服务器磁盘与出网带宽，故必须禁用该档。
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: code=0 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: object
+                    properties:
+                      driver:
+                        type: string
+                        example: oss
+                      presign:
+                        type: boolean
+                      videoUpload:
+                        type: boolean
+                        description: 视频上传档是否可用（driver 非 local 且 presign）
+                      videoMaxMb:
+                        type: integer
+                        description: 视频上传上限，来自系统设置 upload_video_max_mb
+                      reason:
+                        type: string
+                        description: 不可用时给用户的中文原因，可用时为空串
 
   /api/employee/upload/presign:
     get:
@@ -2261,6 +2308,9 @@ components:
           type: string
         phone:
           type: string
+        phone2:
+          type: string
+          description: 第二个手机号（选填）；名片上与主号并列展示，不参与登录
         landline:
           type: string
           description: 座机
@@ -2304,10 +2354,36 @@ components:
         introText:
           type: string
           description: 富文本
+        videoSource:
+          type: string
+          enum: [none, channels, upload, url, tencent]
+          description: >-
+            视频来源，决定小程序端渲染哪一档：none 不展示视频（显示封面占位）；
+            channels 微信视频号（存储与流量由微信承担，官方声明该组件无视听资质要求）；
+            upload 云存储上传（对象存储直传，不经应用服务器）；
+            url 外部 MP4 直链（流量与资质由客户承担）；
+            tencent 腾讯视频插件（预留，服务端暂拒：插件须在 app.json 静态声明）
         videoChannelId:
           type: string
-        backupMp4URL:
+          description: 视频号 ID，sph 开头（留档用；定位具体视频靠 videoFeedId）
+        videoFeedId:
           type: string
+          description: 视频号视频 feedId，**仅同主体生效**（可自动播放，优先）
+        videoFeedToken:
+          type: string
+          description: >-
+            跨主体凭证。官方明确 feed-id「仅同主体时生效」，视频号与小程序不同主体时必须改用它
+            （基础库 2.31.1+，非个人主体小程序），代价是强制 autoplay=false。
+            与 videoFeedId 二选一，videoFeedId 非空时本字段不生效
+        videoVid:
+          type: string
+          description: 腾讯视频 vid（预留字段，当前不可选）
+        videoUrl:
+          type: string
+          description: MP4 地址，由 upload 与 url 两档共用，也是开启兜底时的回落源
+        videoFallbackUrl:
+          type: boolean
+          description: 主源（视频号/腾讯视频）播放失败时是否改用 videoUrl
         cover:
           type: string
 
@@ -2316,10 +2392,21 @@ components:
       properties:
         introText:
           type: string
+        videoSource:
+          type: string
+          enum: [none, channels, upload, url, tencent]
         videoChannelId:
           type: string
-        backupMp4URL:
+        videoFeedId:
           type: string
+        videoFeedToken:
+          type: string
+        videoVid:
+          type: string
+        videoUrl:
+          type: string
+        videoFallbackUrl:
+          type: boolean
         cover:
           type: string
 
@@ -2429,7 +2516,10 @@ components:
           type: string
         content:
           type: string
-          description: 富文本，视频号块为 <wx-video channel-id="gh_xxx"></wx-video>
+          description: >-
+            富文本，视频号块为 <wx-video feed-id="…" feed-token="…" channel-id="sph_…"></wx-video>。
+            优先级 feed-id（同主体，可自动播放）> feed-token（跨主体，强制不能自动播放）>
+            channel-id（视频号 ID，sph 开头，仅在两者都缺失时回退展示视频号主页，兼容存量内容）
         sort:
           type: integer
         createdAt:
@@ -2446,6 +2536,9 @@ components:
           type: string
         phone:
           type: string
+        phone2:
+          type: string
+          description: 第二个手机号（选填）；名片上与主号并列展示，不参与登录
         email:
           type: string
         title:
