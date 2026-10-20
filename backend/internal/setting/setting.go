@@ -105,6 +105,14 @@ var registry = []def{
 		Desc:     "单文件上传上限（MB），1~1024"},
 	{Key: "upload_allow_ext", Group: "upload", Type: "string_slice", Value: "png,jpg,jpeg,gif,webp,mp4",
 		Desc: "允许上传的扩展名（小写，逗号分隔）"},
+	// 视频单独一个上限：图片 10MB 够用，视频动辄几十上百 MB。
+	// 若复用 upload_max_mb，为迁就视频把上限拉到 100MB，等于把图片的限制一起放开
+	// （误传超大图片、占满磁盘都更难收场），故两条线分开。
+	// 注意：本值只约束「前端选文件时的预校验」——直传预签名由对象存储直接收文件，
+	// 应用服务器看不到内容，无法在服务端强拦；要真正封顶需在对象存储侧配 Post Policy。
+	{Key: "upload_video_max_mb", Group: "upload", Type: "int", Value: "100",
+		Validate: intRange(1, 2048),
+		Desc:     "视频上传上限（MB），1~2048；仅作用于视频，图片仍受 upload_max_mb 约束"},
 	// 签名有效期：直传 PUT 与私有桶 GET 的限时链接时长。太短前端还没传完就过期，
 	// 太长等于把对象存储写成公开读，故留界面可调，但代码内有下限兜底。
 	{Key: "presign_put_ttl_minutes", Group: "upload", Type: "int", Value: "15",

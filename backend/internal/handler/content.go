@@ -50,34 +50,80 @@ func RegisterContent(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": ci})
 	})
 
-	// ===== 公司简介 + 视频号（按租户） =====
+	// ===== 公司简介 + 视频（按租户） =====
 	r.GET("/api/admin/company-profile", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		cid := targetCompanyID(c)
 		var cp model.CompanyProfile
 		if db.First(&cp, "company_id = ?", cid).Error != nil {
-			c.JSON(http.StatusOK, gin.H{"code": 0, "data": model.CompanyProfile{CompanyID: cid}})
+			cp = model.CompanyProfile{CompanyID: cid, VideoSource: model.VideoSourceNone}
+			c.JSON(http.StatusOK, gin.H{"code": 0, "data": cp})
 			return
+		}
+		// 该列后加，历史行是空串；归一成 none 免得前端下拉框落到未选中态
+		if cp.VideoSource == "" {
+			cp.VideoSource = model.VideoSourceNone
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": cp})
 	})
 	r.PUT("/api/admin/company-profile", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		cid := targetCompanyID(c)
 		var req struct {
-			IntroText      string `json:"introText"`
-			VideoChannelID string `json:"videoChannelId"`
-			BackupMp4URL   string `json:"backupMp4Url"`
-			Cover          string `json:"cover"`
+			IntroText        string `json:"introText"`
+			VideoSource      string `json:"videoSource"`
+			VideoChannelID   string `json:"videoChannelId"`
+			VideoFeedID      string `json:"videoFeedId"`
+			VideoFeedToken   string `json:"videoFeedToken"`
+			VideoVid         string `json:"videoVid"`
+			VideoURL         string `json:"videoUrl"`
+			VideoFallbackURL bool   `json:"videoFallbackUrl"`
+			Cover            string `json:"cover"`
 		}
 		if c.ShouldBindJSON(&req) != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
 			return
 		}
+		if !model.IsValidVideoSource(req.VideoSource) {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "视频来源取值非法"})
+			return
+		}
+		if req.VideoSource == "" {
+			req.VideoSource = model.VideoSourceNone
+		}
+		// 腾讯视频档未接线：插件必须在 app.json 静态声明，统一声明会让未通过插件授权的
+		// 客户小程序直接报「插件未授权」，故服务端一并拦住，避免前端置灰被绕过。
+		// 部署方确已申请插件并声明后，删掉本段即可启用。
+		if req.VideoSource == model.VideoSourceTencent {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "腾讯视频档未启用：需先在小程序后台添加腾讯视频插件并在 app.json 声明"})
+			return
+		}
 		var cp model.CompanyProfile
+		fields := map[string]interface{}{
+			"intro_text":         req.IntroText,
+			"video_source":       req.VideoSource,
+			"video_channel_id":   req.VideoChannelID,
+			"video_feed_id":      req.VideoFeedID,
+			"video_feed_token":   req.VideoFeedToken,
+			"video_vid":          req.VideoVid,
+			"video_url":          req.VideoURL,
+			"video_fallback_url": req.VideoFallbackURL,
+			"cover":              req.Cover,
+		}
 		if db.First(&cp, "company_id = ?", cid).Error != nil {
-			cp = model.CompanyProfile{CompanyID: cid, IntroText: req.IntroText, VideoChannelID: req.VideoChannelID, BackupMp4URL: req.BackupMp4URL, Cover: req.Cover}
+			cp = model.CompanyProfile{
+				CompanyID:        cid,
+				IntroText:        req.IntroText,
+				VideoSource:      req.VideoSource,
+				VideoChannelID:   req.VideoChannelID,
+				VideoFeedID:      req.VideoFeedID,
+				VideoFeedToken:   req.VideoFeedToken,
+				VideoVid:         req.VideoVid,
+				VideoURL:         req.VideoURL,
+				VideoFallbackURL: req.VideoFallbackURL,
+				Cover:            req.Cover,
+			}
 			db.Create(&cp)
 		} else {
-			db.Model(&cp).Updates(map[string]interface{}{"intro_text": req.IntroText, "video_channel_id": req.VideoChannelID, "backup_mp4_url": req.BackupMp4URL, "cover": req.Cover})
+			db.Model(&cp).Updates(fields)
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": cp})
 	})

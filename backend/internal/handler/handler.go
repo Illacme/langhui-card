@@ -50,6 +50,10 @@ func New(db *gorm.DB) *gin.Engine {
 			c.JSON(http.StatusOK, gin.H{"code": 2, "msg": "该员工名片已停用"})
 			return
 		}
+		// video_source 是后加列，历史行是空串；归一成 none，免得每个消费端各写一遍兜底
+		if cp.VideoSource == "" {
+			cp.VideoSource = model.VideoSourceNone
+		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "employee": e, "company": ci, "profile": cp})
 	})
 

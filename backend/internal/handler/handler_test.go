@@ -302,10 +302,10 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
-		// 超管编辑员工资料（即时生效，不经员工端审核流）——含座机字段
+		// 超管编辑员工资料（即时生效，不经员工端审核流）——含座机、手机 2 字段
 		_, body = c.do("PUT", fmt.Sprintf("/api/admin/employees/%d", empID), map[string]interface{}{
 			"name": "李四四", "title": "高级销售", "phone": "13900000002",
-			"landline": "021-12345678", "email": "l4@a.com", "avatar": "http://x/a.png",
+			"phone2": "13900000022", "landline": "021-12345678", "email": "l4@a.com", "avatar": "http://x/a.png",
 		}, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
@@ -320,10 +320,23 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 			found = true
 			require.Equal(t, "李四四", m["name"])
 			require.Equal(t, "高级销售", m["title"])
+			require.Equal(t, "13900000022", m["phone2"])
 			require.Equal(t, "021-12345678", m["landline"])
 			require.Equal(t, "l4@a.com", m["email"])
 		}
 		require.True(t, found, "编辑后的员工应仍在列表中")
+
+		// 手机 2 也要能被搜索命中（服务端关键字范围含 phone2）
+		_, body = c.do("GET", "/api/admin/employees?keyword=13900000022", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		var hit2 bool
+		for _, it := range body["data"].([]interface{}) {
+			m := it.(map[string]interface{})
+			if int64(m["staffId"].(float64)) == empID {
+				hit2 = true
+			}
+		}
+		require.True(t, hit2, "按手机 2 搜索应能查到该员工")
 
 		// 编辑不存在的员工 / 姓名为空 → code:1
 		_, body = c.do("PUT", "/api/admin/employees/999999", map[string]interface{}{
@@ -386,9 +399,9 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		}, empToken)
 		require.EqualValues(t, 403, body["code"])
 
-		// 员工提交名片修改申请（含座机，审核通过后应落到员工资料上）
+		// 员工提交名片修改申请（含座机与手机 2，审核通过后应落到员工资料上）
 		_, body = c.do("PUT", "/api/employee/me", map[string]interface{}{
-			"title": "高级销售", "landline": "021-87654321",
+			"title": "高级销售", "landline": "021-87654321", "phone2": "13900000222",
 		}, empToken)
 		require.EqualValues(t, 0, body["code"])
 
@@ -411,7 +424,7 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		require.EqualValues(t, 0, body["code"])
 		require.Equal(t, false, body["pendingModify"])
 
-		// 审核通过后快照生效：title 与 landline 都写到员工资料
+		// 审核通过后快照生效：title / landline / phone2 都写到员工资料
 		_, body = c.do("GET", "/api/admin/employees", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 		for _, it := range body["data"].([]interface{}) {
@@ -421,6 +434,7 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 			}
 			require.Equal(t, "高级销售", m["title"])
 			require.Equal(t, "021-87654321", m["landline"])
+			require.Equal(t, "13900000222", m["phone2"])
 		}
 	})
 
@@ -513,7 +527,8 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		require.EqualValues(t, 0, body["code"])
 
 		_, body = c.do("PUT", "/api/admin/company-profile", map[string]interface{}{
-			"introText": "简介", "videoChannelId": "gh_abc", "backupMp4Url": "", "cover": "c.png",
+			"introText": "简介", "videoSource": "channels", "videoChannelId": "sph_abc",
+			"videoFeedId": "feed123", "videoUrl": "", "videoFallbackUrl": false, "cover": "c.png",
 		}, adminToken)
 		require.EqualValues(t, 0, body["code"])
 		_, body = c.do("GET", "/api/admin/company-profile", nil, adminToken)
@@ -641,6 +656,66 @@ func TestAPIFlow(t *testing.T) {
 	c := newTestClient(r, t)
 	adminToken := loginAdmin(t, c)
 	runAPIFlow(t, c, adminToken)
+}
+
+// TestCompanyProfileVideoSource 钉死「视频多来源」的语义。
+// 这几条一旦松动，小程序端就会出现「明明配了却播不出来」的疑难问题——
+// 排查时根本看不出当前走的是哪一路，所以必须在服务端把档位收敛成显式枚举。
+func TestCompanyProfileVideoSource(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	put := func(m map[string]interface{}) map[string]interface{} {
+		_, body := c.do("PUT", "/api/admin/company-profile", m, adminToken)
+		return body
+	}
+	get := func() map[string]interface{} {
+		_, body := c.do("GET", "/api/admin/company-profile", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		return body["data"].(map[string]interface{})
+	}
+
+	// 1) 档位是显式枚举，不在枚举内一律拒绝
+	require.EqualValues(t, 1, put(map[string]interface{}{"videoSource": "bilibili"})["code"])
+
+	// 2) 腾讯视频档未接线：插件必须在 app.json 静态声明，统一声明会让未通过插件授权的
+	//    客户小程序直接报「插件未授权」，故服务端也拦，防前端置灰被绕过
+	require.EqualValues(t, 1, put(map[string]interface{}{"videoSource": "tencent", "videoVid": "v001"})["code"])
+
+	// 3) 视频号档：channelId 只作留档，真正定位视频的是 feedId；兜底开关独立
+	require.EqualValues(t, 0, put(map[string]interface{}{
+		"videoSource": "channels", "videoChannelId": "sph_abc", "videoFeedId": "feed_1",
+		"videoFeedToken": "tok_1",
+		"videoUrl": "https://cdn.example.com/fallback.mp4", "videoFallbackUrl": true,
+	})["code"])
+	d := get()
+	require.Equal(t, "channels", d["videoSource"])
+	require.Equal(t, "sph_abc", d["videoChannelId"])
+	require.Equal(t, "feed_1", d["videoFeedId"])
+	require.Equal(t, "tok_1", d["videoFeedToken"])
+	require.EqualValues(t, true, d["videoFallbackUrl"])
+
+	// 3.1) 只填 feed-token 也必须能保存：平台模式下客户视频号与我们小程序不同主体，
+	//      feed-id 官方明确「仅同主体生效」，跨主体只能靠 feed-token
+	require.EqualValues(t, 0, put(map[string]interface{}{
+		"videoSource": "channels", "videoFeedId": "", "videoFeedToken": "tok_cross",
+	})["code"])
+	d = get()
+	require.Equal(t, "", d["videoFeedId"])
+	require.Equal(t, "tok_cross", d["videoFeedToken"])
+
+	// 4) 外部直链档：videoUrl 是主源而非兜底
+	require.EqualValues(t, 0, put(map[string]interface{}{
+		"videoSource": "url", "videoUrl": "https://cdn.example.com/a.mp4",
+	})["code"])
+	d = get()
+	require.Equal(t, "url", d["videoSource"])
+	require.Equal(t, "https://cdn.example.com/a.mp4", d["videoUrl"])
+
+	// 5) 空串归一为 none：该列后加，老客户端 / 脚本可能不带该字段
+	require.EqualValues(t, 0, put(map[string]interface{}{"videoSource": ""})["code"])
+	require.Equal(t, "none", get()["videoSource"])
 }
 
 // TestAPIFlowMySQL 生产契约 parity：连真实 MySQL、应用 migrations/*.sql，再跑同一套断言。
@@ -1172,7 +1247,7 @@ func TestMultiTenantIsolation(t *testing.T) {
 
 	// 显式 companyId=2 的申请 → 企业管理员可见并可审核
 	_, body = plat.do("POST", "/api/apply/open", map[string]interface{}{
-		"name": "乙公司申请人", "phone": "13800000003", "title": "销售", "companyId": comp2ID,
+		"name": "乙公司申请人", "phone": "13800000003", "phone2": "13800000033", "title": "销售", "companyId": comp2ID,
 	}, "")
 	require.EqualValues(t, 0, body["code"])
 	_, body = comp2.doWithCookie("GET", "/api/admin/apply/open", nil)
@@ -1191,10 +1266,12 @@ func TestMultiTenantIsolation(t *testing.T) {
 	_, body = plat.doWithCookie("GET", "/api/admin/employees?companyId=1", nil)
 	require.Len(t, body["data"].([]interface{}), 1, "朗汇仍只有手动建的那个员工")
 
-	// 公开名片按员工归属企业取公司信息（乙公司的 CompanyInfo 为空但可读）
+	// 公开名片按员工归属企业取公司信息（乙公司的 CompanyInfo 为空但可读）；
+	// 同时校验申请里填的第二个手机号已随审核落到员工资料（名片联系表第二行要用）
 	_, body = plat.do("GET", "/api/card?staffId="+fmt.Sprint(newStaff), nil, "")
 	require.EqualValues(t, 0, body["code"])
 	require.EqualValues(t, comp2ID, body["company"].(map[string]interface{})["companyId"])
+	require.Equal(t, "13800000033", body["employee"].(map[string]interface{})["phone2"])
 
 	// ===== 7. 企业停用：管理员不能登录 =====
 	_, body = plat.doWithCookie("POST", "/api/admin/companies/"+fmt.Sprint(comp2ID)+"/status", map[string]interface{}{"status": "disabled"})

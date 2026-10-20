@@ -32,3 +32,8 @@ backend/cmd/devserver/devserver
 
 # ── 微信小程序开发者工具本地私有配置 ──
 project.private.config.json
+
+# ── 工作产物（非源码，不入库）──
+# 真机复验脚本与截图、AI 出图：本轮联调产生的临时文件
+outputs/
+generated-images/

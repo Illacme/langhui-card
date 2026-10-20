@@ -68,6 +68,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			Name     string `json:"name"`
 			Title    string `json:"title"`
 			Phone    string `json:"phone"`
+			Phone2   string `json:"phone2"`
 			Landline string `json:"landline"`
 			Email    string `json:"email"`
 		}
@@ -165,7 +166,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		emp := model.Employee{CompanyID: a.CompanyID, Name: a.Name, Phone: a.Phone, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, OpenID: a.OpenID, Nickname: a.Nickname, PasswordHash: hash, Status: "enabled"}
+		emp := model.Employee{CompanyID: a.CompanyID, Name: a.Name, Phone: a.Phone, Phone2: a.Phone2, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, OpenID: a.OpenID, Nickname: a.Nickname, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		a.Status = "approved"
 		db.Save(&a)
@@ -242,6 +243,9 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		if v, ok := patch["phone"]; ok {
 			updates["phone"] = v
 		}
+		if v, ok := patch["phone2"]; ok {
+			updates["phone2"] = v
+		}
 		if v, ok := patch["landline"]; ok {
 			updates["landline"] = v
 		}
@@ -287,13 +291,13 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		pwd := genPassword()
 		hash, _ := auth.HashPassword(pwd)
-		emp := model.Employee{CompanyID: cid, Name: req.Name, Phone: req.Phone, Email: req.Email, Title: req.Title, Landline: req.Landline, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
+		emp := model.Employee{CompanyID: cid, Name: req.Name, Phone: req.Phone, Phone2: req.Phone2, Email: req.Email, Title: req.Title, Landline: req.Landline, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "staffId": emp.StaffID, "initialPassword": pwd})
 	})
 
 	// 超管编辑员工资料（即时生效，不经过员工端审核流）。
-	// 只开放白名单字段：姓名 / 职位 / 手机 / 座机 / 邮箱 / 头像。
+	// 只开放白名单字段：姓名 / 职位 / 手机 / 手机 2 / 座机 / 邮箱 / 头像。
 	// 状态、密码各有专门端点（disable/enable/reset-password），此处不混写，避免绕过安全戳逻辑。
 	// 租户条件进 Where：企业管理员编辑不到别家员工。
 	r.PUT("/api/admin/employees/:id", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
@@ -302,6 +306,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			Name     string `json:"name"`
 			Title    string `json:"title"`
 			Phone    string `json:"phone"`
+			Phone2   string `json:"phone2"`
 			Landline string `json:"landline"`
 			Email    string `json:"email"`
 			Avatar   string `json:"avatar"`
@@ -316,7 +321,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		}
 		if db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{
-				"name": req.Name, "title": req.Title, "phone": req.Phone,
+				"name": req.Name, "title": req.Title, "phone": req.Phone, "phone2": req.Phone2,
 				"landline": req.Landline, "email": req.Email, "avatar": req.Avatar,
 			}).RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
@@ -327,7 +332,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 
 	// 员工列表（按租户）
 	//
-	// 分页 + 关键字（姓名/手机/职位/座机/昵称/openid）+ 状态筛选。
+	// 分页 + 关键字（姓名/手机/手机 2/职位/座机/昵称/openid）+ 状态筛选。
 	// 关键字覆盖的字段与 PC 后台搜索框的匹配范围保持一致——否则「搜得到但翻页后
 	// 又没了」（前端只筛当前页）会让运营以为数据丢了。
 	//
@@ -337,7 +342,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		page, size := pageParams(c)
 		q := db.Model(&model.Employee{}).Scopes(scopeCond(c))
 		if cond, args := keywordCond(c.Query("keyword"),
-			"name", "phone", "title", "landline", "nickname", "openid"); cond != "" {
+			"name", "phone", "phone2", "title", "landline", "nickname", "openid"); cond != "" {
 			q = q.Where(cond, args...)
 		}
 		if cond, v := statusCond(c.Query("status"), "enabled", "disabled"); cond != "" {

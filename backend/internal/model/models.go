@@ -16,7 +16,8 @@ type Employee struct {
 	Name         string    `gorm:"column:name" json:"name"`
 	Title        string    `gorm:"column:title" json:"title"` // 职位（对外展示）
 	Avatar       string    `gorm:"column:avatar" json:"avatar"`
-	Phone        string    `gorm:"column:phone" json:"phone"`       // 手机
+	Phone        string    `gorm:"column:phone" json:"phone"`       // 手机（主号，同时是登录账号）
+	Phone2       string    `gorm:"column:phone2" json:"phone2"`     // 手机 2（选填）：名片「手机」行下方并列展示，不参与登录
 	Landline     string    `gorm:"column:landline" json:"landline"` // 座机
 	Email        string    `gorm:"column:email" json:"email"`
 	OpenID       string    `gorm:"column:openid" json:"openid"`     // 微信 openid（登录时采集，供后台核实身份）
@@ -55,17 +56,57 @@ type CompanyInfo struct {
 	Logo      string `gorm:"column:logo" json:"logo"`
 }
 
-// CompanyProfile 公司简介 + 视频号 + 备用 MP4（按租户隔离，company_id 唯一）
+// CompanyProfile 公司简介 + 视频（按租户隔离，company_id 唯一）
+//
+// videoSource 决定小程序端渲染哪一档（取值见下方 VideoSource* 常量，空串等同 none）：
+//   none     不展示视频，显示封面占位（默认）
+//   channels 微信视频号：<channel-video feed-id>；存储与流量全由微信承担，且官方声明「组件调用无资质要求」
+//            同主体填 videoFeedId（可自动播放）；跨主体改填 videoFeedToken——
+//            feed-id 官方明确「仅同主体时生效」，跨主体必须走 feed-token（基础库 2.31.1+，
+//            非个人主体小程序，且强制 autoplay=false）。两者二选一，feedId 优先。
+//   upload   云存储上传：文件落在已配置的对象存储（OSS/COS/MinIO），直传不经应用服务器
+//   url      外部 MP4 直链：客户自备 URL，流量与视听类目资质由客户自行承担
+//   tencent  腾讯视频插件（AppID wxa75efa648b60994b）：预留档——插件必须在 app.json 静态声明，
+//            故默认不可选，需客户小程序后台申请通过后再由部署方接线，避免未授权拖垮整个小程序
+//
+// videoUrl 由 upload / url 两档共用，同时充当 channels / tencent 开启 videoFallbackUrl 时的兜底源。
 type CompanyProfile struct {
-	ID             int64  `gorm:"primaryKey;column:id" json:"id"`
-	CompanyID      int64  `gorm:"column:company_id;uniqueIndex" json:"companyId"`
-	IntroText      string `gorm:"column:intro_text;type:text" json:"introText"`
-	VideoChannelID string `gorm:"column:video_channel_id" json:"videoChannelId"`
-	BackupMp4URL   string `gorm:"column:backup_mp4_url" json:"backupMp4Url"`
-	Cover          string `gorm:"column:cover" json:"cover"`
+	ID               int64  `gorm:"primaryKey;column:id" json:"id"`
+	CompanyID        int64  `gorm:"column:company_id;uniqueIndex" json:"companyId"`
+	IntroText        string `gorm:"column:intro_text;type:text" json:"introText"`
+	VideoSource      string `gorm:"column:video_source" json:"videoSource"`
+	VideoChannelID   string `gorm:"column:video_channel_id" json:"videoChannelId"`
+	VideoFeedID      string `gorm:"column:video_feed_id" json:"videoFeedId"`
+	// 跨主体兜底：视频号与我们小程序不同主体时，feed-id 无效，必须改用 feed-token。
+	// 二者二选一，feedId 优先（同主体可自动播放，体验更好）。
+	VideoFeedToken   string `gorm:"column:video_feed_token" json:"videoFeedToken"`
+	VideoVid         string `gorm:"column:video_vid" json:"videoVid"`
+	VideoURL         string `gorm:"column:video_url" json:"videoUrl"`
+	VideoFallbackURL bool   `gorm:"column:video_fallback_url;default:false" json:"videoFallbackUrl"`
+	Cover            string `gorm:"column:cover" json:"cover"`
 }
 
-// AchievementCategory 经典业绩分类（种子 7 类，按租户隔离）
+// 视频来源枚举（company_profile.video_source）。
+// 新增档位必须同步：handler/content.go 的 PUT 入参、小程序 company-video 组件、后台 CompanyProfile.vue。
+const (
+	VideoSourceNone     = "none"     // 不展示视频，显示封面占位
+	VideoSourceChannels = "channels" // 微信视频号（推荐：零存储零流量零资质）
+	VideoSourceUpload   = "upload"   // 云存储上传（对象存储，客户自有账号）
+	VideoSourceURL      = "url"      // 外部 MP4 直链
+	VideoSourceTencent  = "tencent"  // 腾讯视频插件（预留，默认不可选）
+)
+
+// IsValidVideoSource 校验 video_source 取值。空串按 none 处理：
+// 该列是后加的，历史行没有值，不能因为缺省就把保存整个拒掉。
+func IsValidVideoSource(s string) bool {
+	switch s {
+	case "", VideoSourceNone, VideoSourceChannels, VideoSourceUpload, VideoSourceURL, VideoSourceTencent:
+		return true
+	}
+	return false
+}
+
+// AchievementCategory 经典业绩分类（种子 8 类，按租户隔离）
 type AchievementCategory struct {
 	ID        int64          `gorm:"primaryKey;column:id" json:"id"`
 	CompanyID int64          `gorm:"column:company_id;index" json:"companyId"`
@@ -167,6 +208,7 @@ type OpenApply struct {
 	CompanyID    int64     `gorm:"column:company_id;index" json:"companyId"`
 	Name         string    `gorm:"column:name" json:"name"`
 	Phone        string    `gorm:"column:phone" json:"phone"`
+	Phone2       string    `gorm:"column:phone2" json:"phone2"` // 手机 2（选填），审核通过后一并写入员工资料
 	Email        string    `gorm:"column:email" json:"email"`
 	Title        string    `gorm:"column:title" json:"title"`
 	Landline     string    `gorm:"column:landline" json:"landline"` // 座机（选填）

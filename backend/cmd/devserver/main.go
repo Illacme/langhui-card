@@ -23,6 +23,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gin-gonic/gin"
+
 	"langhui/internal/auth"
 	"langhui/internal/config"
 	"langhui/internal/handler"
@@ -38,7 +40,7 @@ import (
 // seedAssetFS 内嵌设计还原用的蓝色主题 PNG 占位素材（由 gen_seed_assets.py 生成）。
 // 这些仅用于本地联调/演示占位；正式上线请在 PC 后台上传真实图片替换。
 //
-//go:embed seedassets/*.png
+//go:embed seedassets/*.png seedassets/*.jpg
 var seedAssetFS embed.FS
 
 // devModels devserver 的建表清单，直接取 model 包的权威清单（新增模型只改那里一处）。
@@ -134,6 +136,14 @@ func main() {
 		AllowExt: storage.DefaultAllowExt,
 	}
 	var refresher storage.CDNRefresher // 开发态不接 CDN
+	// 联调期 /uploads 下的文件（含种子素材）经常被同名覆盖，浏览器按 Last-Modified
+	// 启发式缓存会拿到旧图（症状：小程序已更新、后台还是旧图标）→ 开发态一律 no-cache。
+	r.Use(func(c *gin.Context) {
+		if strings.HasPrefix(c.Request.URL.Path, "/uploads/") {
+			c.Header("Cache-Control", "no-cache")
+		}
+		c.Next()
+	})
 	r.Static("/uploads", cfg.UploadDir)
 	handler.RegisterUpload(r, db, up, refresher)
 	handler.RegisterStorage(r, db, up, refresher, cfg)
@@ -179,22 +189,24 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	// 公司信息 / 简介（company_id=1）
 	db.Where("company_id = ?", 1).FirstOrCreate(&model.CompanyInfo{
 		CompanyID: 1, FullName: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Address: "廊坊市广阳区紫金城商住楼1-2-1911",
-		Tel: "0316-823950", Logo: assets["logo.png"],
+		Tel: "0316-8023950", Logo: assets["logo.png"],
 	})
 	db.Where("company_id = ?", 1).FirstOrCreate(&model.CompanyProfile{
-		CompanyID: 1, IntroText: "朗汇机电设备有限公司专注于电梯销售、安装、维修保养与改造服务，为住宅、政务中心、医疗、商业、公共交通、生产制造与仓储物流等多场景提供机电一体化解决方案。",
-		VideoChannelID: "", BackupMp4URL: "", Cover: assets["cover-company.png"],
+		// 视频默认 none（展示封面占位）：种子里没有真实 feedId，填了反而会渲染出一个播不了的组件
+		CompanyID: 1, IntroText: "成立于 2015 年 11 月，专注于电梯销售、安装、维修保养与改造服务，为住宅、政务中心、医疗、商业、公共交通、生产制造与仓储物流等多场景提供机电一体化解决方案。",
+		VideoSource: model.VideoSourceNone, Cover: assets["cover-company.jpg"],
 	})
 
-	// 经典业绩 7 分类（与设计稿一致，客户已确认锁定）
+	// 经典业绩 8 分类（与设计稿一致，客户已确认锁定；原「生产制造、仓储物流」按设计稿拆为两个分类）
 	cats := []model.AchievementCategory{
 		{ID: 1, CompanyID: 1, Name: "居住住宅", Icon: assets["cat-1.png"], Sort: 1, IsLocked: true},
 		{ID: 2, CompanyID: 1, Name: "政务办公", Icon: assets["cat-2.png"], Sort: 2, IsLocked: true},
 		{ID: 3, CompanyID: 1, Name: "医院、学校", Icon: assets["cat-3.png"], Sort: 3, IsLocked: true},
 		{ID: 4, CompanyID: 1, Name: "商业、酒店", Icon: assets["cat-4.png"], Sort: 4, IsLocked: true},
 		{ID: 5, CompanyID: 1, Name: "公共交通", Icon: assets["cat-5.png"], Sort: 5, IsLocked: true},
-		{ID: 6, CompanyID: 1, Name: "生产制造、仓储物流", Icon: assets["cat-6.png"], Sort: 6, IsLocked: true},
-		{ID: 7, CompanyID: 1, Name: "私人住宅", Icon: assets["cat-7.png"], Sort: 7, IsLocked: true},
+		{ID: 6, CompanyID: 1, Name: "生产制造", Icon: assets["cat-6.png"], Sort: 6, IsLocked: true},
+		{ID: 7, CompanyID: 1, Name: "仓储物流", Icon: assets["cat-7.png"], Sort: 7, IsLocked: true},
+		{ID: 8, CompanyID: 1, Name: "私人住宅", Icon: assets["cat-8.png"], Sort: 8, IsLocked: true},
 	}
 	for _, c := range cats {
 		db.Where("id = ?", c.ID).FirstOrCreate(&c)
@@ -204,39 +216,43 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	projects := []model.ProjectCase{
 		{ID: 101, CompanyID: 1, CategoryID: 1, Name: "大兴临空服务中心", Summary: "临空经济区地标机电总包",
 			Detail: "<p>大兴临空服务中心项目涵盖多栋客货梯与自动扶梯的供货、安装与维保，满足高客流交通枢纽的可靠运行需求。</p>",
-			Cover:  assets["cover-daxing.png"], Album: `["` + assets["album-1.png"] + `","` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-daxing.jpg"], Album: `["` + assets["album-1.png"] + `","` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: true, Enabled: true, Sort: 1},
 		{ID: 102, CompanyID: 1, CategoryID: 3, Name: "某医院电梯项目", Summary: "医疗楼宇专用电梯解决方案",
 			Detail: "<p>某医院电梯项目提供医疗专用电梯的定制、安装与运维，兼顾洁净、安静与应急响应。</p>",
-			Cover:  assets["cover-hospital.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-hospital.jpg"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: true, Enabled: true, Sort: 2},
 		{ID: 103, CompanyID: 1, CategoryID: 1, Name: "某高层住宅电梯项目", Summary: "住宅客梯批量交付",
 			Detail: "<p>为高层住宅提供客梯的批量供货与安装，统一调度的群控方案提升高峰运力。</p>",
-			Cover:  assets["cover-p1b.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p1b.jpg"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 2},
 		{ID: 104, CompanyID: 1, CategoryID: 2, Name: "市民服务中心电梯工程", Summary: "政务大厅无机房客梯",
 			Detail: "<p>市民服务中心采用无机房客梯，节省机房空间，满足政务服务大厅的无障碍通行需求。</p>",
-			Cover:  assets["cover-p2.png"], Album: `["` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-p2.jpg"], Album: `["` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 		{ID: 105, CompanyID: 1, CategoryID: 3, Name: "某学校电梯项目", Summary: "校园电梯安全改造",
 			Detail: "<p>针对校园既有电梯的安全改造，升级制动与监控，保障师生乘梯安全。</p>",
-			Cover:  assets["cover-p3b.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p3b.jpg"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 3},
 		{ID: 106, CompanyID: 1, CategoryID: 4, Name: "商业综合体扶梯项目", Summary: "商场自动扶梯群控",
 			Detail: "<p>商业综合体部署自动扶梯群控系统，结合客流分析优化运行节奏，节能高效。</p>",
-			Cover:  assets["cover-p4.png"], Album: `["` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-p4.jpg"], Album: `["` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 		{ID: 107, CompanyID: 1, CategoryID: 5, Name: "地铁站点电梯项目", Summary: "轨道交通垂直交通",
 			Detail: "<p>地铁站点垂直交通方案，重载电梯与扶梯满足大客流高频率运行。</p>",
-			Cover:  assets["cover-p5.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p5.jpg"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
-		{ID: 108, CompanyID: 1, CategoryID: 6, Name: "智能仓储货梯项目", Summary: "物流仓储货梯定制",
+		{ID: 108, CompanyID: 1, CategoryID: 7, Name: "智能仓储货梯项目", Summary: "物流仓储货梯定制",
 			Detail: "<p>为智能仓储定制货梯，对接 AGV 与 WMS，实现物料垂直转运自动化。</p>",
-			Cover:  assets["cover-p6.png"], Album: `["` + assets["album-2.png"] + `"]`,
+			Cover:  assets["cover-p6.jpg"], Album: `["` + assets["album-2.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
-		{ID: 109, CompanyID: 1, CategoryID: 7, Name: "别墅家用电梯项目", Summary: "私人住宅别墅电梯",
+		{ID: 110, CompanyID: 1, CategoryID: 6, Name: "某生产制造货梯项目", Summary: "工厂车间货梯定制",
+			Detail: "<p>为生产制造车间定制载重货梯，耐粉尘、抗震动，保障产线物料垂直运输稳定可靠。</p>",
+			Cover:  assets["cover-p8.jpg"], Album: `["` + assets["album-1.png"] + `"]`,
+			IsHomeFeatured: false, Enabled: true, Sort: 1},
+		{ID: 109, CompanyID: 1, CategoryID: 8, Name: "别墅家用电梯项目", Summary: "私人住宅别墅电梯",
 			Detail: "<p>私人别墅家用电梯，定制轿厢与静音驱动，兼顾美观与乘坐舒适。</p>",
-			Cover:  assets["cover-p7.png"], Album: `["` + assets["album-1.png"] + `"]`,
+			Cover:  assets["cover-p7.jpg"], Album: `["` + assets["album-1.png"] + `"]`,
 			IsHomeFeatured: false, Enabled: true, Sort: 1},
 	}
 	for _, p := range projects {
@@ -247,7 +263,7 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	svcs := []model.BizService{
 		{ID: 1, CompanyID: 1, Title: "电梯销售", Icon: assets["svc-1.png"], Content: "<p>全系列电梯设备销售与选型咨询，匹配不同楼宇场景需求。</p>", Sort: 1},
 		{ID: 2, CompanyID: 1, Title: "电梯安装", Icon: assets["svc-2.png"], Content: "<p>专业安装团队，标准化施工与验收交付，保障工期与质量。</p>", Sort: 2},
-		{ID: 3, CompanyID: 1, Title: "电梯维修保养", Icon: assets["svc-3.png"], Content: "<p>7x24 应急响应与按需定制的保养计划，延长设备寿命。</p>", Sort: 3},
+		{ID: 3, CompanyID: 1, Title: "电梯维保", Icon: assets["svc-3.png"], Content: "<p>7x24 应急响应与按需定制的保养计划，延长设备寿命。</p>", Sort: 3},
 		{ID: 4, CompanyID: 1, Title: "电梯改造", Icon: assets["svc-4.png"], Content: "<p>旧梯升级改造，提升安全性、乘运体验与能效表现。</p>", Sort: 4},
 	}
 	for _, s := range svcs {
@@ -264,9 +280,11 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 		hash, _ := auth.HashPassword("langhui123")
 		emp := model.Employee{
 			CompanyID: 1,
-			Name:      "高立新", Title: "业务经理", Phone: "13832603521", Landline: "0316-823950",
-			Email:  "138266603521@163.com",
-			Avatar: assets["avatar-gaolixin.png"], PasswordHash: hash, Status: "enabled",
+			// Phone2（第二个手机号，选填）默认不播种：演示名片只展示主号，需副号时编辑填写
+			Name: "高立新", Title: "业务经理", Phone: "13832603521", Phone2: "",
+			Landline: "0316-8023950",
+			Email:    "13832603521@163.com",
+			Avatar:   assets["avatar-gaolixin.png"], PasswordHash: hash, Status: "enabled",
 		}
 		db.Create(&emp)
 		var got model.Employee

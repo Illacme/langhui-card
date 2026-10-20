@@ -20,6 +20,8 @@ func RegisterStorage(r *gin.Engine, db *gorm.DB, up storage.Uploader, refresher 
 	// 直传预签名（超管 / 员工）：客户端拿 putUrl 后直接 PUT 到对象存储
 	r.GET("/api/admin/upload/presign", middleware.AuthMiddleware(db, "admin"), presignHandler(up))
 	r.GET("/api/employee/upload/presign", middleware.AuthMiddleware(db, "employee"), presignHandler(up))
+	// 存储能力探测：后台「公司简介 → 视频来源」用它判断「云存储上传」档是否可选
+	r.GET("/api/admin/upload/capability", middleware.AuthMiddleware(db, "admin"), capabilityHandler(up, cfg))
 	// 私有桶：已存 URL → 限时签名 URL（超管 / 员工）
 	r.POST("/api/admin/storage/sign", middleware.AuthMiddleware(db, "admin"), signHandler(up, cfg))
 	r.POST("/api/employee/storage/sign", middleware.AuthMiddleware(db, "employee"), signHandler(up, cfg))
@@ -52,6 +54,37 @@ func presignHandler(up storage.Uploader) gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"putUrl": putURL, "url": finalURL, "key": key}})
+	}
+}
+
+// capabilityHandler 返回当前存储驱动的能力，供后台决定「云存储上传」档能不能选。
+//
+// 判据：驱动必须是对象存储（非 local），且实现了 Presigner。
+// 本地磁盘驱动下上传视频会把文件落在应用服务器上——磁盘占我们的、出网带宽也算我们的，
+// 与「客户自己承担存储与流量」的前提相悖；没有预签名则大视频只能经服务器中转，
+// 几十上百 MB 走内存拷贝会拖垮服务。两种情况都让界面禁用该档并给出可操作的引导。
+func capabilityHandler(up storage.Uploader, cfg config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		_, presign := up.(storage.Presigner)
+		driver := cfg.StorageDriver
+		if driver == "" {
+			driver = "local"
+		}
+		reason := ""
+		switch {
+		case driver == "local":
+			reason = "当前为本地磁盘存储：视频会占用服务器磁盘与带宽。请先在「系统设置 → 文件存储」配置对象存储"
+		case !presign:
+			reason = "当前存储驱动不支持直传预签名，大视频经服务器中转会拖垮服务"
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
+			"driver":      driver,
+			"presign":     presign,
+			"videoUpload": driver != "local" && presign,
+			// 前端据此在选文件时预校验大小；服务端无法强拦（直传由对象存储直接收文件）
+			"videoMaxMb": setting.GetInt("upload_video_max_mb", 100),
+			"reason":     reason,
+		}})
 	}
 }
 

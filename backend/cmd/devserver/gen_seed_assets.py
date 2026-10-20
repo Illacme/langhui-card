@@ -97,32 +97,16 @@ def make_album(name, label):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    make_logo()
+    # logo.png 已换成客户真实 LOGO（去白底透明版），**不要再生成占位图覆盖**。
+    print("skip: logo.png 为真实 LOGO，不生成占位图")
     make_avatar("高")
-    cats = [
-        ("cat-1.png", "住宅"), ("cat-2.png", "政务"), ("cat-3.png", "医校"),
-        ("cat-4.png", "商酒"), ("cat-5.png", "公交"), ("cat-6.png", "制造"),
-        ("cat-7.png", "私宅"),
-    ]
-    for n, l in cats:
-        make_icon(n, l)
-    make_cover("cover-company.png", "朗汇机电 · 企业宣传")
-    make_cover("cover-daxing.png", "大兴临空服务中心")
-    make_cover("cover-hospital.png", "某医院电梯项目")
-    # 其余分类的项目封面占位（让客户验收时点开任意分类都有内容）
-    make_cover("cover-p1b.png", "高层住宅电梯")
-    make_cover("cover-p2.png", "市民服务中心")
-    make_cover("cover-p3b.png", "学校电梯项目")
-    make_cover("cover-p4.png", "商业综合体")
-    make_cover("cover-p5.png", "地铁站点")
-    make_cover("cover-p6.png", "智能仓储货梯")
-    make_cover("cover-p7.png", "别墅家用电梯")
-    svcs = [
-        ("svc-1.png", "销售"), ("svc-2.png", "安装"),
-        ("svc-3.png", "维保"), ("svc-4.png", "改造"),
-    ]
-    for n, l in svcs:
-        make_icon(n, l)
+    # 分类图标 cat-*.png 与业务服务 svc-*.png 已换成真实设计图，不生成。
+    print("skip: cat-*.png / svc-*.png 为真实设计图，不生成占位图")
+    # 公司简介封面 cover-company.jpg 已换成 AI 实景照片（蓝色玻璃观光电梯，
+    # 与项目封面同风格）；旧 make_cover 占位图不再生成。
+    print("skip: cover-company.jpg 为 AI 实景封面，不生成占位图")
+    # 项目封面 cover-*.jpg 已换成 AI 实景照片（见 seedassets），旧 cover-*.png 已删除。
+    print("skip: cover-<项目>.jpg 为 AI 实景封面，不生成占位图")
     make_album("album-1.png", "项目实景 ①")
     make_album("album-2.png", "项目实景 ②")
     print("done")
