@@ -22,7 +22,13 @@
       -->
       <el-table v-if="!isPhone" :data="rows" v-loading="loading" border stripe>
         <el-table-column prop="name" label="姓名" width="100" />
-        <el-table-column prop="phone" label="手机" width="120" />
+        <!-- 副号并在主号下方（muted 小字）：不加列，沿用员工管理页同款写法 -->
+        <el-table-column label="手机" width="120">
+          <template #default="{ row }">
+            <div>{{ row.phone }}</div>
+            <div v-if="row.phone2" class="sub-phone">{{ row.phone2 }}</div>
+          </template>
+        </el-table-column>
         <el-table-column prop="nickname" label="微信昵称" width="100" show-overflow-tooltip>
           <template #default="{ row }">
             <span :class="{ muted: !row.nickname }">{{ row.nickname || '—' }}</span>
@@ -38,11 +44,11 @@
         <el-table-column prop="title" label="职位" width="110" />
         <el-table-column label="头像" width="62" align="center">
           <template #default="{ row }">
-            <el-image
+            <ImageThumb
               v-if="row.avatar"
               :src="row.avatar"
-              style="width: 36px; height: 36px; border-radius: 4px"
-              fit="cover"
+              :width="36"
+              :height="36"
             />
             <span v-else class="muted">—</span>
           </template>
@@ -80,6 +86,7 @@
             </el-tag>
           </div>
           <div class="apply-card-row"><span class="apply-k">手机</span><span class="apply-v">{{ row.phone }}</span></div>
+          <div class="apply-card-row" v-if="row.phone2"><span class="apply-k">手机2</span><span class="apply-v">{{ row.phone2 }}</span></div>
           <div class="apply-card-row" v-if="row.landline"><span class="apply-k">座机</span><span class="apply-v">{{ row.landline }}</span></div>
           <div class="apply-card-row" v-if="row.email"><span class="apply-k">邮箱</span><span class="apply-v">{{ row.email }}</span></div>
           <div class="apply-card-row" v-if="row.nickname"><span class="apply-k">昵称</span><span class="apply-v">{{ row.nickname }}</span></div>
@@ -142,6 +149,7 @@ import { Refresh, Search } from '@element-plus/icons-vue'
 import { listOpenApply, approveOpen, rejectOpen } from '@/api/apply'
 // 服务端分页：申请记录只增不减（已处理的也留档），关键字/页码都交给后端
 import { useServerTable } from '@/composables/useServerTable'
+import ImageThumb from '@/components/ImageThumb.vue'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 import { formatDateTime } from '@/utils/datetime'
 
@@ -218,6 +226,12 @@ onMounted(load)
 }
 .muted {
   color: #c0c4cc;
+}
+/* 副号：主号下方的次要小字，视觉上从属于「手机」列（同员工管理页） */
+.sub-phone {
+  color: #a8abb2;
+  font-size: 12px;
+  line-height: 1.4;
 }
 .openid-cell {
   font-family: monospace;

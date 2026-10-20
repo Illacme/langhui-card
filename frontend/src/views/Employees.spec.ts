@@ -302,7 +302,7 @@ describe('Employees', () => {
     expect(vi.mocked(resetPassword)).not.toHaveBeenCalled()
   })
 
-  it('编辑员工：回填表单（含座机）→ 调 updateEmployee 保存并重载', async () => {
+  it('编辑员工：默认只回填一个手机号，点「+ 备用手机号」展开后保存副号', async () => {
     const w = mountEmployees()
     await flushLoad(w)
 
@@ -310,22 +310,71 @@ describe('Employees', () => {
     await nextTick()
     expect(w.text()).toContain('编辑员工') // 弹窗标题区分编辑 / 新增
 
-    const inputs = w.findAll('.el-dialog input.el-input')
-    // 姓名 / 手机 / 职位 / 座机 依次回填
+    // 默认收起备用号：姓名 / 手机 / 职位 / 座机 / 邮箱 五个输入框（该员工无 phone2）
+    let inputs = w.findAll('.el-dialog input.el-input')
+    expect(inputs).toHaveLength(5)
     expect((inputs[0].element as HTMLInputElement).value).toBe('张三')
     expect((inputs[1].element as HTMLInputElement).value).toBe('13800000001')
     expect((inputs[2].element as HTMLInputElement).value).toBe('工程师')
     expect((inputs[3].element as HTMLInputElement).value).toBe('021-11111111')
+    expect((inputs[4].element as HTMLInputElement).value).toBe('z@a.com')
 
-    await inputs[3].setValue('021-99999999')
+    // 点右侧「+ 备用手机号」才展开第二个输入框（与小程序端同一套交互）
+    await w.findAll('.el-dialog button.el-button').find((b) => b.text().includes('备用手机号'))!.trigger('click')
+    await nextTick()
+    inputs = w.findAll('.el-dialog input.el-input')
+    expect(inputs).toHaveLength(6)
+    // 展开后插在「手机」之后：姓名 / 手机 / 手机号2 / 职位 / 座机 / 邮箱
+    expect((inputs[2].element as HTMLInputElement).value).toBe('')
+
+    await inputs[4].setValue('021-99999999') // 座机
+    await inputs[2].setValue('13900000009') // 手机号2
     await w.findAll('.el-dialog button.el-button').find((b) => b.text() === '保存')!.trigger('click')
 
     await vi.waitFor(() => expect(vi.mocked(updateEmployee)).toHaveBeenCalledTimes(1))
     expect(vi.mocked(updateEmployee)).toHaveBeenCalledWith(
       1,
-      expect.objectContaining({ name: '张三', phone: '13800000001', landline: '021-99999999' })
+      expect.objectContaining({
+        name: '张三',
+        phone: '13800000001',
+        phone2: '13900000009',
+        landline: '021-99999999',
+      })
     )
     await vi.waitFor(() => expect(vi.mocked(listEmployees)).toHaveBeenCalledTimes(2))
+  })
+
+  it('编辑员工：已有备用号时自动展开输入框', async () => {
+    // 首屏列表就带一个有副号的员工（mockResolvedValueOnce 只作用于挂载后的第一次 load）
+    vi.mocked(listEmployees).mockResolvedValueOnce({
+      list: [
+        {
+          staffId: 9,
+          name: '赵六',
+          title: '总监',
+          phone: '13600000009',
+          phone2: '13500000008',
+          landline: '',
+          email: 'z@a.com',
+          avatar: '',
+          status: 'enabled',
+          createdAt: '2026-01-04 10:00:00',
+        },
+      ],
+      total: 1,
+      page: 1,
+      size: 10,
+    } as any)
+    const w = mountEmployees()
+    await flushLoad(w)
+
+    await w.findAll('button.el-button').find((b) => b.text() === '编辑')!.trigger('click')
+    await nextTick()
+    const inputs = w.findAll('.el-dialog input.el-input')
+    // 有值就自动展开：姓名 / 手机 / 手机号2 / 职位 / 座机 / 邮箱
+    expect(inputs).toHaveLength(6)
+    expect((inputs[1].element as HTMLInputElement).value).toBe('13600000009')
+    expect((inputs[2].element as HTMLInputElement).value).toBe('13500000008')
   })
 
   it('新增员工：校验通过后调 createEmployee、弹初始密码并重载', async () => {

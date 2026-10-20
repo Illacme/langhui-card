@@ -26,6 +26,16 @@
   margin-right: 0;
 }
 
+/* ===== 素材库选择器（AssetPicker）===== */
+/* 与 resp-dialog 的高度上限一致，但 body 自身不滚动：body 变 flex 容器，
+   内部 .asset-picker（flex 纵向）把剩余高度分给网格区滚动、分页栏钉在底部 ——
+   数据多少都不会把分页栏挤出可视区（弹窗 body 滚动会让钉底失效）。 */
+.asset-dialog .el-dialog__body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* 弹窗宽度/全屏的响应式规则已统一收敛到 styles/responsive.css（按 1200/768 断点），
    此处不再重复，避免 94vw 与全屏 100vw 互相覆盖。 */
 

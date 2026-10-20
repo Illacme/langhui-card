@@ -36,7 +36,8 @@
       </el-form-item>
 
       <el-form-item v-if="bgImage" label="效果预览">
-        <div class="bg-preview">
+        <!-- 点击整块预览可放大查看原图（遮罩/卡片只是叠加效果层，原图可能较花看不清细节） -->
+        <div class="bg-preview clickable" @click="bgViewer = true">
           <img class="bg-preview-img" :src="bgImage" alt="背景预览" />
           <div class="bg-preview-mask" :style="{ opacity: bgMask / 100 }" />
           <div class="bg-preview-card">白色内容卡片</div>
@@ -48,6 +49,7 @@
         <el-button v-if="bgImage" link @click="clearBg">清除背景</el-button>
       </el-form-item>
     </el-form>
+    <ImageViewer v-if="bgViewer && bgImage" :url-list="[bgImage]" @close="bgViewer = false" />
   </el-card>
 </template>
 
@@ -57,6 +59,7 @@ import { ref, computed, onMounted } from 'vue'
 import { Refresh } from '@element-plus/icons-vue'
 import { getHomeLayout, saveHomeLayout } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
+import ImageViewer from '@/components/ImageViewer.vue'
 
 const BLOCKS = ['achievement', 'service']
 const loading = ref(false)
@@ -64,6 +67,8 @@ const saving = ref(false)
 const firstBlock = ref<string>('achievement')
 // 首页背景（可选增强）：空串=不设背景；遮罩 0~100
 const bgImage = ref('')
+// 背景原图全屏查看器（点击效果预览块打开）
+const bgViewer = ref(false)
 const bgMask = ref(0)
 
 const order = computed(() => {
@@ -154,6 +159,9 @@ onMounted(load)
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid #ebeef5;
+}
+.bg-preview.clickable {
+  cursor: zoom-in;
 }
 .bg-preview-img {
   position: absolute;

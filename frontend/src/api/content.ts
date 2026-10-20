@@ -14,17 +14,48 @@ export function saveCompanyInfo(p: {
   return http.put('/admin/company-info', p).then((r: any) => r.data as any)
 }
 
-// ===== 公司简介 + 视频号 =====
+// ===== 公司简介 + 视频（多来源） =====
+// videoSource 五档：none / channels（视频号）/ upload（云存储上传）/ url（外部直链）/ tencent（预留）
+// videoUrl 由 upload 与 url 两档共用，并作为 channels 开启 videoFallbackUrl 时的兜底源。
+// channels 档：feedId（同主体，可自动播放）与 feedToken（跨主体，强制不能自动播放）二选一，feedId 优先。
 export function getCompanyProfile() {
   return http.get('/admin/company-profile').then((r: any) => (r.data ?? { id: 1 }) as any)
 }
 export function saveCompanyProfile(p: {
   introText: string
+  videoSource: string
   videoChannelId: string
-  backupMp4Url: string
+  videoFeedId: string
+  videoFeedToken: string
+  videoVid: string
+  videoUrl: string
+  videoFallbackUrl: boolean
   cover: string
 }) {
   return http.put('/admin/company-profile', p).then((r: any) => r.data as any)
+}
+
+// 存储能力探测：决定「云存储上传」档能不能选。
+// videoUpload=false 时界面应禁用该档并展示 reason（本地磁盘存储 / 不支持预签名）。
+export interface UploadCapability {
+  driver: string
+  presign: boolean
+  videoUpload: boolean
+  videoMaxMb: number
+  reason: string
+}
+const CAPABILITY_FALLBACK: UploadCapability = {
+  driver: 'unknown',
+  presign: false,
+  videoUpload: false,
+  videoMaxMb: 100,
+  reason: '存储能力探测失败，已按「不可用」处理',
+}
+export function getUploadCapability(): Promise<UploadCapability> {
+  return http
+    .get('/admin/upload/capability')
+    .then((r: any) => ({ ...CAPABILITY_FALLBACK, ...(r.data ?? {}) }) as UploadCapability)
+    .catch(() => CAPABILITY_FALLBACK)
 }
 
 // ===== 业绩分类 =====

@@ -26,7 +26,7 @@
         </el-table-column>
         <el-table-column label="封面" width="80" align="center" v-if="!isPhone">
           <template #default="{ row }">
-            <el-image v-if="row.cover" :src="row.cover" style="width: 40px; height: 40px" fit="cover" />
+            <ImageThumb v-if="row.cover" :src="row.cover" :width="40" :height="40" />
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
@@ -150,6 +150,7 @@ import {
   listCategories,
 } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
+import ImageThumb from '@/components/ImageThumb.vue'
 // 富文本编辑器体积较大（~800KB），按页面懒加载，避免拖累首屏
 const RichEditor = defineAsyncComponent(() => import('@/components/RichEditor.vue'))
 import { useTable } from '@/composables/useTable'

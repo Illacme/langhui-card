@@ -100,6 +100,7 @@ const FIELD_LABELS: Record<string, string> = {
   name: '姓名',
   title: '职位',
   phone: '手机',
+  phone2: '手机号 2',
   landline: '座机',
   email: '邮箱',
 }

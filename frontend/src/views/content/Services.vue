@@ -20,12 +20,7 @@
         <el-table-column prop="title" label="标题" min-width="200" />
         <el-table-column label="图标" width="90" align="center" v-if="!isPhone">
           <template #default="{ row }">
-            <el-image
-              v-if="row.icon"
-              :src="row.icon"
-              style="width: 36px; height: 36px"
-              fit="cover"
-            />
+            <ImageThumb v-if="row.icon" :src="row.icon" :width="36" :height="64" />
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
@@ -114,6 +109,7 @@ import {
   sortServices,
 } from '@/api/content'
 import { useTable } from '@/composables/useTable'
+import ImageThumb from '@/components/ImageThumb.vue'
 import { useSortableRows } from '@/composables/useSortableRows'
 import { formatDateTime } from '@/utils/datetime'
 import UploadField from '@/components/UploadField.vue'

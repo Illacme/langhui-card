@@ -137,8 +137,9 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 `项目案例.详情` 与 `业务服务.内容` 使用可视化富文本编辑器 `src/components/RichEditor.vue`（基于 wangEditor v5 + `@wangeditor/editor-for-vue`），替换了原先的纯 textarea。
 
 - 工具栏开箱即用（加粗/标题/列表/图片/链接等），并通过 `excludeKeys` 排除了自带视频上传。
-- **视频号块节点**：通过 `src/editor/wxVideoModule.ts` 注册了自定义元素 `wxVideo`，编辑区以绿色占位块显示（视频号图标 + channel-id），保存时序列化为 `<wx-video channel-id="gh_xxx"></wx-video>`，与小程序端 `rich-video` 组件约定一致；回显时 `<wx-video>` 标签会被解析还原为编辑区节点。
-- 编辑器上方有一个「插入视频号块」按钮，弹窗输入 channel-id 后插入（void 原子块，内部不可编辑）。
+- **视频号块节点**：通过 `src/editor/wxVideoModule.ts` 注册了自定义元素 `wxVideo`，编辑区以绿色占位块显示（视频号图标 + 标识），保存时序列化为 `<wx-video feed-id="…" feed-token="…" channel-id="sph_…"></wx-video>`（缺失属性省略），与小程序端 `rich-video` 组件约定一致；回显时 `<wx-video>` 标签会被解析还原为编辑区节点。三个属性的分工与渲染优先级：**`feed-id`**（同主体，视频号助手 → 动态管理复制）> **`feed-token`**（跨主体专用，基础库 2.31.1+，强制不能自动播放）> **`channel-id`**（视频号 ID，**sph 开头**，`gh_` 是公众号 ID，只能展示视频号主页）。存量内容里只有 `channel-id`，故仍读写它以便回退，编辑区会标出「视频号主页」提示它播不了指定视频。
+- 编辑器上方有一个「插入视频号块」按钮，点击弹出对话框填 feedId / feed-token（二选一，前者优先）与视频号 ID（选填）后插入（void 原子块，内部不可编辑）。
+- **已有视频号块可直接点击重新编辑**：`.wx-video-block` 上挂了点击委托（走 DOM 委托而非 snabbdom 的 `on.click`，后者不在 wangEditor 注册的模块之列），命中后带出现值打开同一个对话框；确认后用 `SlateTransforms.setNodes` **就地更新节点属性**（该 API 由 `@wangeditor/editor` 再导出，不必额外引入 slate），不删除重插，光标与上下文都不受影响。节点 id 缺失时退化为按原值匹配。
 - `v-model` 双向绑定 HTML 字符串，保存时直接写入 `detail` / `content` 字段（后端按字符串原样存储）。
 
 > 富文本中的视频号块约定、小程序端渲染（`<wx-video>` → `<channel-video>`）详见《首页/跳转页组件与接口字段映射》。
@@ -151,7 +152,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/composables/useTable.spec.ts`：分页切片、关键字筛选（大小写不敏感）、关键字变化后回到首页等纯逻辑。
 - `src/store/auth.spec.ts`：Pinia 登录态 `setAuth` / `logout` 与 `localStorage` 同步。
 - `src/api/request.spec.ts`：统一响应拦截的**鉴权契约**——`code=0` 透传、`code=401` 清 token + 跳登录并重 reject、`code=403` 警告、`code!=0` 业务失败报错；以及请求拦截注入 `Bearer` 头。
-- `src/editor/wxVideoModule.spec.ts`：`<wx-video channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致）。
+- `src/editor/wxVideoModule.spec.ts`：`<wx-video feed-id / channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致），含**存量只有 channel-id 的内容往返不丢失**。
 - `src/views/Login.spec.ts`：登录页视图层用例——表单校验提示、登录成功后写 Pinia + 跳转、`code=401` 时展示错误并不写登录态（jsdom + Element Plus 组件挂载）。
 - `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
 - `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**、**风格行只渲染 count>0 的档位**、**切换风格带 style 请求**、**单一调性分类隐藏风格行**、**已选调性无素材时自动回落全部**（11 例）。

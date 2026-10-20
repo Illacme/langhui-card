@@ -9,7 +9,7 @@
     title="素材库"
     width="880px"
     top="6vh"
-    class="resp-dialog"
+    class="resp-dialog asset-dialog"
     :close-on-click-modal="false"
     @closed="onClosed"
   >
@@ -58,13 +58,17 @@
       </div>
       <el-empty v-if="!loading && !items.length" description="没有匹配的素材" :image-size="60" />
 
-      <div v-if="pages > 1" class="picker-pager">
+      <!-- 分页栏常驻固定在弹窗底部（居中紧凑 prev/pager/next，footer 已有「共 N 项」总数，
+           不重复显示 total/sizes）。asset-picker 用 flex 布局约束整体高度，
+           网格区内部滚动，分页栏不受数据量影响、永远不会被挤出可视区。 -->
+      <div class="picker-pager">
         <el-pagination
           layout="prev, pager, next"
           :current-page="page"
           :page-size="size"
           :total="total"
           :pager-count="7"
+          background
           @current-change="onPageChange"
         />
       </div>
@@ -129,7 +133,6 @@ const page = ref(1)
 // 每页 15 条 = 网格 5 列 × 3 排，弹窗内一次看全、无需滚动
 const size = ref(15)
 const total = ref(0)
-const pages = ref(0)
 const selected = ref<string[]>([])
 const adoptingId = ref('')
 const batchAdopting = ref(false)
@@ -156,7 +159,6 @@ async function fetchPage() {
       total.value = resp.data.total || 0
       page.value = resp.data.page || page.value
       size.value = resp.data.size || size.value
-      pages.value = resp.data.pages || 0
       // 当前调性在新条件下无素材（例如切到图标分类、或搜索命中面很窄）：
       // 回落「全部」重拉一次，避免停在空白结果页。all 必然可用，不会递归。
       if (styleKey.value !== 'all' && !visibleStyles.value.some((s) => s.key === styleKey.value)) {
@@ -272,10 +274,17 @@ function onClosed() {
 </script>
 
 <style scoped>
+/* 弹窗 body（.asset-dialog）已是 flex 容器且自身不滚动：这里占满剩余高度，
+   工具条与分页栏固定，网格区吃剩余高度并内部滚动 —— 分页栏因此钉在底部，
+   数据多少都不会把它挤出可视区。 */
 .asset-picker {
-  min-height: 300px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .picker-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -287,6 +296,7 @@ function onClosed() {
   width: 220px;
 }
 .picker-styles {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -299,10 +309,14 @@ function onClosed() {
   flex-shrink: 0;
 }
 .picker-grid {
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
+  align-content: start;
+  /* 行高锁内容高：容器变矮时行不压缩（否则卡片图片会被裁），改为内部滚动 */
+  grid-auto-rows: max-content;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: 12px;
-  max-height: 52vh;
   overflow-y: auto;
   padding: 2px;
 }
@@ -368,10 +382,12 @@ function onClosed() {
   justify-content: center;
   font-size: 14px;
 }
+/* 分页容器：居中紧凑，钉在网格下方（asset-picker 的 flex 保证不被挤出弹窗） */
 .picker-pager {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 .picker-count {
   font-size: 13px;

@@ -20,12 +20,7 @@
         <el-table-column prop="name" label="名称" min-width="140" />
         <el-table-column label="图标" width="90" align="center" v-if="!isPhone">
           <template #default="{ row }">
-            <el-image
-              v-if="row.icon"
-              :src="row.icon"
-              style="width: 36px; height: 36px"
-              fit="cover"
-            />
+            <ImageThumb v-if="row.icon" :src="row.icon" :width="36" :height="36" />
             <span v-else class="muted">—</span>
           </template>
         </el-table-column>
@@ -89,7 +84,7 @@
         </el-form-item>
         <el-form-item label="锁定">
           <el-switch v-model="form.isLocked" />
-          <span class="hint">锁定后禁止删除（如已确认的 7 类）</span>
+          <span class="hint">锁定后禁止删除（改名、换图标、排序不受影响）</span>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -114,6 +109,7 @@ import {
   sortCategories,
 } from '@/api/content'
 import UploadField from '@/components/UploadField.vue'
+import ImageThumb from '@/components/ImageThumb.vue'
 import { useTable } from '@/composables/useTable'
 import { useSortableRows } from '@/composables/useSortableRows'
 import { useBreakpoint } from '@/composables/useBreakpoint'

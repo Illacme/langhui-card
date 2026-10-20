@@ -6,10 +6,10 @@
         <div class="bar-right">
           <el-input
             v-model="keyword"
-            placeholder="搜索姓名/手机/职位/座机/昵称/openid"
+            placeholder="搜索姓名/手机/手机2/职位/座机/昵称/openid"
             clearable
             :prefix-icon="Search"
-            style="width: 240px"
+            style="width: 280px"
           />
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
           <el-button type="primary" :icon="Plus" @click="openCreate">新增员工</el-button>
@@ -26,7 +26,14 @@
         <el-table-column prop="staffId" label="编号" width="62" align="center" />
         <el-table-column prop="name" label="姓名" min-width="90" class-name="cell-nowrap" show-overflow-tooltip />
         <el-table-column prop="title" label="职位" width="96" class-name="cell-nowrap" show-overflow-tooltip />
-        <el-table-column prop="phone" label="手机" width="120" show-overflow-tooltip />
+        <!-- 副号直接并在主号下方（muted 小字）：联系表是「姓名/手机」两列布局，
+             再加一列会顶破列宽预算（见上方列宽核算注释），故同行双行展示 -->
+        <el-table-column label="手机" width="120">
+          <template #default="{ row }">
+            <div>{{ row.phone }}</div>
+            <div v-if="row.phone2" class="sub-phone">{{ row.phone2 }}</div>
+          </template>
+        </el-table-column>
         <el-table-column label="座机" width="132" v-if="!isPhone" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="landline-cell" :class="{ muted: !row.landline }">{{ row.landline || '—' }}</span>
@@ -45,11 +52,11 @@
         </el-table-column>
         <el-table-column label="头像" width="62" align="center">
           <template #default="{ row }">
-            <el-image
+            <ImageThumb
               v-if="row.avatar"
               :src="row.avatar"
-              style="width: 36px; height: 36px; border-radius: 4px"
-              fit="cover"
+              :width="36"
+              :height="36"
             />
             <span v-else class="muted">—</span>
           </template>
@@ -95,7 +102,7 @@
       <div v-else class="emp-cards" v-loading="loading">
         <div class="emp-card" v-for="row in rows" :key="row.staffId">
           <div class="emp-card-head">
-            <el-image v-if="row.avatar" :src="row.avatar" class="emp-avatar" fit="cover" />
+            <ImageThumb v-if="row.avatar" :src="row.avatar" :width="44" :height="44" />
             <div v-else class="emp-avatar ph">—</div>
             <div class="emp-card-id">
               <div class="emp-name">{{ row.name }} <span class="emp-staff">#{{ row.staffId }}</span></div>
@@ -106,6 +113,7 @@
             </el-tag>
           </div>
           <div class="emp-card-row"><span class="emp-k">手机</span><span class="emp-v">{{ row.phone }}</span></div>
+          <div class="emp-card-row" v-if="row.phone2"><span class="emp-k">手机号2</span><span class="emp-v">{{ row.phone2 }}</span></div>
           <div class="emp-card-row" v-if="row.landline"><span class="emp-k">座机</span><span class="emp-v">{{ row.landline }}</span></div>
           <div class="emp-card-row" v-if="row.email"><span class="emp-k">邮箱</span><span class="emp-v">{{ row.email }}</span></div>
           <div class="emp-card-actions">
@@ -158,7 +166,23 @@
           <el-input v-model="form.name" placeholder="必填" />
         </el-form-item>
         <el-form-item label="手机" prop="phone">
-          <el-input v-model="form.phone" type="tel" placeholder="必填" />
+          <div class="phone-row">
+            <el-input v-model="form.phone" type="tel" placeholder="必填，作为登录账号" />
+            <!-- 与小程序端同一套交互：默认只露一个手机号输入框（多数人只有一个号），
+                 需要第二个时点右侧「+」展开，避免一上来两栏空框让人以为都要填 -->
+            <el-button v-if="!showPhone2" class="add-phone-btn" size="small" round @click="showPhone2 = true">
+              <span class="add-plus">+</span> 备用手机号
+            </el-button>
+          </div>
+        </el-form-item>
+        <!-- 备用手机号：不设标签（用户 2026-10-20 要求），用输入框占位提示「备用手机号」。
+             label 给一个空格占位：el-form-item 无 label 时内容会顶到 x=0，与其它行的输入框错位 -->
+        <el-form-item v-if="showPhone2" label=" ">
+          <div class="phone-row">
+            <el-input v-model="form.phone2" type="tel" placeholder="备用手机号" />
+            <el-button class="del-phone-btn" size="small" round @click="removePhone2">移除</el-button>
+          </div>
+          <p class="field-tip">选填。填写后与「手机」在名片上并列展示；主号仍是登录账号</p>
         </el-form-item>
         <el-form-item label="职位">
           <el-input v-model="form.title" />
@@ -185,7 +209,13 @@
     <el-dialog v-model="previewVisible" title="名片预览" width="440px" class="resp-dialog">
       <div class="preview-card" v-if="previewRow">
         <div class="preview-head">
-          <el-image v-if="previewRow.avatar" :src="previewRow.avatar" class="preview-avatar" fit="cover" />
+          <ImageThumb
+            v-if="previewRow.avatar"
+            :src="previewRow.avatar"
+            :width="56"
+            :height="56"
+            radius="50%"
+          />
           <div class="preview-avatar ph" v-else>—</div>
           <div>
             <div class="preview-name">{{ previewRow.name }}</div>
@@ -193,7 +223,11 @@
           </div>
         </div>
         <el-descriptions :column="1" border>
-          <el-descriptions-item label="手机">{{ previewRow.phone }}</el-descriptions-item>
+          <!-- 副号与主号同格展示（跟列表列、小程序名片卡一致：不再单列「手机号 2」） -->
+          <el-descriptions-item label="手机">
+            <div>{{ previewRow.phone }}</div>
+            <div v-if="previewRow.phone2" class="sub-phone">{{ previewRow.phone2 }}</div>
+          </el-descriptions-item>
           <el-descriptions-item label="座机">{{ previewRow.landline || '—' }}</el-descriptions-item>
           <el-descriptions-item label="邮箱">{{ previewRow.email || '—' }}</el-descriptions-item>
           <el-descriptions-item label="微信昵称">
@@ -210,7 +244,7 @@
           </el-descriptions-item>
         </el-descriptions>
         <div class="preview-qr">
-          <el-image v-if="previewQr" :src="previewQr" class="qr-img" fit="contain" />
+          <ImageThumb v-if="previewQr" :src="previewQr" :width="180" :height="180" fit="contain" />
           <span v-else class="muted">小程序码暂不可用（需配置微信凭据）</span>
         </div>
         <p class="tip">扫码，或在微信小程序首页输入编号 {{ previewRow.staffId }}，可查看访客视角的实际效果。</p>
@@ -251,6 +285,7 @@ import {
 } from '@/api/employees'
 import { getWxacode } from '@/api/wechat'
 import UploadField from '@/components/UploadField.vue'
+import ImageThumb from '@/components/ImageThumb.vue'
 // 服务端分页：员工数会随运营增长，关键字/页码都交给后端（详见 composables/useServerTable）
 import { useServerTable } from '@/composables/useServerTable'
 import { useBreakpoint } from '@/composables/useBreakpoint'
@@ -271,9 +306,20 @@ const { isPhone } = useBreakpoint()
 
 const dialogVisible = ref(false)
 const editingId = ref<number | null>(null)
+// 备用手机号输入框是否展开：默认收起，由「手机」行右侧「+ 备用手机号」按钮切换；
+// 编辑回填到已有 phone2 时自动展开（见 openEdit），避免「存了值却看不到输入框」
+const showPhone2 = ref(false)
 const saving = ref(false)
 const formRef = ref<FormInstance>()
-const form = reactive({ name: '', phone: '', title: '', landline: '', email: '', avatar: '' })
+const form = reactive({
+  name: '',
+  phone: '',
+  phone2: '',
+  title: '',
+  landline: '',
+  email: '',
+  avatar: '',
+})
 const rules: FormRules = {
   name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   phone: [{ required: true, message: '请输入手机', trigger: 'blur' }],
@@ -303,6 +349,8 @@ function openEdit(row: any) {
   editingId.value = row.staffId
   form.name = row.name
   form.phone = row.phone
+  form.phone2 = row.phone2 || ''
+  showPhone2.value = !!row.phone2
   form.title = row.title
   form.landline = row.landline || ''
   form.email = row.email
@@ -311,9 +359,18 @@ function openEdit(row: any) {
   dialogVisible.value = true
 }
 
+// 「移除」备用手机号：收起输入框并清空。
+// 必须清空——否则用户会以为「没显示就是没提交」，留下暗数据被一起保存
+function removePhone2() {
+  showPhone2.value = false
+  form.phone2 = ''
+}
+
 function resetForm() {
   form.name = ''
   form.phone = ''
+  form.phone2 = ''
+  showPhone2.value = false
   form.title = ''
   form.landline = ''
   form.email = ''
@@ -434,6 +491,44 @@ onMounted(load)
 }
 .landline-cell {
   white-space: nowrap;
+}
+/* 副号：主号下方的次要小字，视觉上从属于「手机」列 */
+.sub-phone {
+  color: #a8abb2;
+  font-size: 12px;
+  line-height: 1.4;
+}
+/* 带说明文案的输入项：说明紧跟输入框，避免用户不知道第二个号是干嘛的 */
+.field-tip {
+  color: #909399;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+/* 手机号行：输入框 + 右侧「+ 备用手机号」/「移除」按钮同一行 */
+.phone-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.phone-row .el-input {
+  flex: 1;
+  min-width: 0;
+}
+.add-phone-btn {
+  flex-shrink: 0;
+  color: #1a8cff;
+  border-color: #1a8cff;
+}
+.add-plus {
+  font-size: 15px;
+  line-height: 1;
+  margin-right: 2px;
+}
+.del-phone-btn {
+  flex-shrink: 0;
+  color: #909399;
 }
 .pwd {
   font-family: monospace;

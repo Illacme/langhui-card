@@ -3,6 +3,8 @@ import http, { toPaged, type Paged } from './request'
 export interface EmployeePayload {
   name: string
   phone: string
+  // 第二个手机号（选填）：名片「手机」下方并列展示，不参与登录
+  phone2?: string
   email?: string
   title?: string
   landline?: string
@@ -10,7 +12,7 @@ export interface EmployeePayload {
 }
 
 // 员工列表（服务端分页）。
-// keyword 在服务端匹配 姓名/手机/职位/座机/昵称/openid，与后台搜索框的范围一致；
+// keyword 在服务端匹配 姓名/手机/手机2/职位/座机/昵称/openid，与后台搜索框的范围一致；
 // staffIds=1,2,3 用于按 id 精确取少数几条（名片修改申请页回显员工原值）。
 export function listEmployees(
   params: { page?: number; size?: number; keyword?: string; status?: string; staffIds?: string } = {}
