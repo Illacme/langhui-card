@@ -11,10 +11,10 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
    （历史 bug：全局 .cell 的 border-bottom 曾在联系表左列渲染出「半截灰线」） */
 .emp-card {
   background: #fff;
-  margin: 16rpx 24rpx 0;
+  margin: 16rpx 20rpx 0;
   border-radius: 20rpx;
   box-shadow: 0 6rpx 18rpx rgba(30, 90, 160, 0.08);
-  padding: 28rpx 28rpx 24rpx;
+  padding: 24rpx 20rpx 20rpx;
   box-sizing: border-box;
 }
 .emp-card .ec-head { display: flex; }
@@ -33,29 +33,57 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
   flex: 1; min-width: 0; color: #1b66df; font-size: 26rpx; font-weight: 600;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* 「查看案例」：细长条小药丸，两轮收紧（用户两次反馈公司名被挤）：
+   ① 22rpx 字 + 8rpx/22rpx 内边距 + 白底灰边 → 20rpx + 0/12rpx + 近白细描边（79px→66px）
+   ② 再收：18rpx 字 + 0/10rpx 内边距 + 固定高 28rpx（约 57px），margin-left 12→10rpx。
+   省下的行宽全给公司名（.ec-cname 是 flex:1，会自动吃掉）。
+   箭头为黑色实心小三角 ▾/▸：纯文本字形（无 emoji 变体风险，U+25B6 那种有），
+   ▾ = 滚动到首页业绩区，▸ = 跳案例页（见 pages/index/index.ts）。 */
 .emp-card .case-btn {
-  flex-shrink: 0; margin-left: 12rpx; font-size: 22rpx; color: #1a8cff;
-  background: #fff; border: 1rpx solid #d7e3ef;
-  padding: 8rpx 22rpx; border-radius: 26rpx;
+  flex-shrink: 0; margin-left: 10rpx; font-size: 18rpx; color: #1a8cff;
+  background: #f5faff; border: 1rpx solid #b3d9ff;
+  height: 28rpx; padding: 0 10rpx; border-radius: 999rpx;
+  display: flex; align-items: center; line-height: 1;
 }
+.emp-card .case-arrow { margin-left: 3rpx; font-size: 18rpx; color: #333; line-height: 1; }
 .emp-card .ec-addr { color: #5f6f80; font-size: 24rpx; margin-top: 6rpx; }
 /* 联系表：白底两列，仅上方一条通栏双色分隔线（左段约 1/3 与公司名同色蓝色 +
-   右段浅灰到右缘）；手机行下方设计稿没有任何线；邮箱行与「座机」列左对齐 */
+   右段浅灰到右缘）；手机行下方设计稿没有任何线。
+   2026-10-20 改版（用户反馈「副号不要手机2 标签、邮箱要按长短自适应」）：
+   · 左列：手机 + 第二个手机号（与第一行号码左对齐，靠一个等宽空标签占位，无文字标签）
+   · 右列：座机 + 邮箱，档位由 employee-card/index.ts 按邮箱文字像素宽判定：
+       - 短邮箱（ec-contact-short）：左右各 50%，右列内容左对齐
+       - 长邮箱（ec-contact-long）：左列让到 40%，右列 flex:0 1 auto 收缩到内容宽
+         （上限 60%）+ margin-left:auto 贴右 ⇒ 两行左缘天然对齐（座机与邮箱左对齐），
+         而邮箱行通常最宽，其右缘正好落在内容右缘（视觉上就是邮箱地址右对齐）
+   为什么不给邮箱行加 justify-content:flex-end：那样座机行（窄）左缘会和邮箱行错开，
+   破坏「座机与邮箱左对齐」；贴右应由整列 margin-left:auto 完成。 */
 .emp-card .ec-rows { margin-top: 22rpx; }
 .emp-card .ec-rows-line {
   height: 1px; width: 100%; margin-bottom: 16rpx;
   background: linear-gradient(90deg, #1b66df 0, #1b66df 34%, #e5ebf2 34%, #e5ebf2 100%);
 }
-.emp-card .ec-row { display: flex; }
-.emp-card .ec-cell { display: flex; width: 50%; padding: 8rpx 0; min-width: 0; }
-.emp-card .ec-cell.email { margin-left: 50%; }
-.emp-card .ec-cell.email .ec-val { font-size: 22rpx; }
-.emp-card .ec-label { width: 76rpx; color: #98a6b5; font-size: 24rpx; flex-shrink: 0; }
-.emp-card .ec-val { color: #333; font-size: 26rpx; word-break: break-all; }
+.emp-card .ec-contact { display: flex; align-items: flex-start; }
+.emp-card .ec-col { min-width: 0; }
+.emp-card .ec-contact-short .ec-col { flex: 0 0 50%; }
+.emp-card .ec-contact-long .ec-col { flex: 0 0 40%; }
+.emp-card .ec-contact-long .ec-col-r { flex: 0 1 auto; max-width: 60%; margin-left: auto; }
+.emp-card .ec-line { display: flex; align-items: baseline; padding: 8rpx 0; min-width: 0; }
+/* 标签定宽 56rpx=28px：装 2 个汉字（24px）+ 4px 间隙。
+   旧值 76rpx 是为「手机2」三个字符留的，现在副号无标签，收窄把宽度让给邮箱 */
+.emp-card .ec-label { width: 56rpx; color: #98a6b5; font-size: 24rpx; flex-shrink: 0; }
+.emp-card .ec-val { color: #333; font-size: 24rpx; word-break: break-all; }
+/* 邮箱比手机号小一档：长地址在 60% 列里更不容易折行（12px 逐字符字宽见 index.ts） */
+.emp-card .ec-val-email { font-size: 24rpx; }
+/* 可点击复制（手机/座机/邮箱）：hover-class 给按下一步反馈，cursor 对小程序无效但无害 */
+.emp-card .ec-tap { cursor: pointer; }
+.emp-card .ec-tap-hover { opacity: 0.55; }
 
 /* 公司简介卡片（设计稿：封面大图左上角叠白色标题，图片更高挺拔） */
 .company-video .cv-wrap { position: relative; }
 .company-video .cv { width: 100%; height: 440rpx; border-radius: 12rpx; }
+/* 视频播放形态（channel-video / video）：沿用封面同款尺寸，底色黑避免加载时闪白 */
+.company-video .cv-video { width: 100%; height: 440rpx; border-radius: 12rpx; background: #000; }
 .company-video .cv-title {
   position: absolute; top: 24rpx; left: 24rpx; z-index: 2;
   color: #fff; font-size: 32rpx; font-weight: 600;
@@ -63,27 +91,30 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 }
 .company-video .cv-ph { background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 36rpx; }
 .intro { display: block; margin-top: 20rpx; color: #666; line-height: 1.7; }
-/* 简介区公司名标题（设计稿：黑色加粗大字 + 下方浅分隔线） */
-.company-name { font-size: 36rpx; font-weight: 700; color: #222; padding-bottom: 20rpx; border-bottom: 1rpx solid #eef1f6; }
+/* 简介区公司名标题（设计稿：黑色加粗大字 + 下方左蓝右灰分段线）。
+   线由 index.wxml 的 .line-split 独立元素绘制（border 只能单色，做不出左蓝右灰），
+   padding-bottom 保留作为名称与线的间距 */
+.company-name { font-size: 36rpx; font-weight: 700; color: #222; padding-bottom: 20rpx; }
 
-/* 业绩分类网格（设计图：4 列蓝色圆角方块图标 + 双行说明文字） */
+/* 业绩分类网格（设计图：4 列，图标撑满列宽、仅留小缝隙、与标题左右对齐） */
 .cat-grid { display: flex; flex-wrap: wrap; }
-.cat-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 20rpx 0; }
-.cat-icon { width: 120rpx; height: 120rpx; }
-.cat-placeholder { width: 120rpx; height: 120rpx; border-radius: 28rpx; background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 46rpx; }
+.cat-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 12rpx 8rpx; box-sizing: border-box; }
+.cat-icon { width: 100%; height: auto; }
+.cat-placeholder { width: 100%; aspect-ratio: 1 / 1; border-radius: 28rpx; background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 46rpx; }
 .cat-name { margin-top: 12rpx; font-size: 24rpx; text-align: center; color: #333; }
 
-/* 精选项目（设计图：2 列蓝色建筑剪影卡片 + 项目名称） */
+/* 精选项目（设计图：2 列横版照片卡，等比缩放充满显示区，不放标题文字） */
 .featured { display: flex; flex-wrap: wrap; margin-top: 16rpx; }
 .feat-item { width: 50%; padding: 8rpx; box-sizing: border-box; }
-.feat-cover { width: 100%; height: 200rpx; border-radius: 12rpx; background: #eee; }
+.feat-cover { width: 100%; height: 175rpx; border-radius: 12rpx; background: #eee; }
 .feat-name { font-size: 26rpx; color: #333; margin-top: 10rpx; }
 
 /* 服务网格（设计图：2 列，蓝色圆角方块图标 + 标题） */
+/* 业务服务：一行四个（竖版卡片图，标题绘制在图内；无图时回退占位块+文字标题） */
 .svc-grid { display: flex; flex-wrap: wrap; }
-.svc-item { width: 50%; display: flex; flex-direction: column; align-items: center; padding: 20rpx 0; box-sizing: border-box; }
-.svc-icon { width: 120rpx; height: 120rpx; }
-.svc-icon-ph { width: 120rpx; height: 120rpx; border-radius: 28rpx; background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 46rpx; }
+.svc-item { width: 25%; display: flex; flex-direction: column; align-items: center; padding: 16rpx 8rpx; box-sizing: border-box; }
+.svc-icon { width: 100%; height: auto; border-radius: 16rpx; }
+.svc-icon-ph { width: 100%; aspect-ratio: 11 / 20; border-radius: 16rpx; background: linear-gradient(180deg, #1a8cff, #0e6fe0); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 46rpx; }
 .svc-title { text-align: center; font-size: 26rpx; color: #333; margin-top: 12rpx; }
 
 /* 底部操作栏 */
@@ -91,6 +122,27 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .ab-btn { flex: 1; margin: 0 12rpx; border-radius: 40rpx; font-size: 30rpx; }
 .ab-btn.call { background: #1a8cff; color: #fff; }
 .ab-btn.save { background: #fff; color: #1a8cff; border: 1rpx solid #1a8cff; }
+
+/* 项目案例列表：业绩分类横向切换条（吸顶，点选即重载列表） */
+.pcat-bar {
+  white-space: nowrap;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  border-bottom: 1rpx solid #eef1f6;
+}
+.pcat-chip {
+  display: inline-block;
+  padding: 10rpx 24rpx;
+  margin-right: 16rpx;
+  font-size: 26rpx;
+  color: #5f6f80;
+  background: #f2f5f9;
+  border-radius: 28rpx;
+}
+.pcat-chip.on { background: #eaf4ff; color: #1a8cff; font-weight: 600; }
 
 /* 列表/详情通用 */
 .list { padding: 16rpx; }
@@ -113,6 +165,22 @@ page { background: #f5f5f5; font-size: 28rpx; color: #333; }
 .form-item .label { width: 160rpx; color: #666; }
 .form-item input { flex: 1; }
 .submit-btn { margin-top: 40rpx; background: #1a8cff; color: #fff; border-radius: 40rpx; }
+
+/* 手机号行右侧「+ 备用手机号」（申请开通页 / 编辑名片页共用）：
+   默认只展示一个手机号输入框，多数人只有一个号；需要第二个时点它展开，
+   比一上来摆两个空框更不容易误解为「都要填」 */
+.add-sub {
+  flex-shrink: 0; display: flex; align-items: center; margin-left: 16rpx;
+  height: 44rpx; padding: 0 16rpx; border: 1rpx solid #1a8cff; border-radius: 999rpx;
+  color: #1a8cff; font-size: 24rpx; line-height: 1;
+}
+.add-sub-plus { font-size: 30rpx; margin-right: 4rpx; line-height: 1; }
+/* 展开后的「×」：收起并清空备用号，防止暗数据 */
+.del-sub {
+  flex-shrink: 0; margin-left: 16rpx; width: 44rpx; height: 44rpx; border-radius: 50%;
+  background: #f2f3f5; color: #909399; display: flex; align-items: center; justify-content: center;
+}
+.del-sub-x { font-size: 30rpx; line-height: 1; }
 
 /* 编辑名片「审核中」提示条（需求 B9） */
 .pending-tip { display: flex; align-items: center; padding: 20rpx 24rpx; margin-bottom: 16rpx; background: #fdf6ec; border-radius: 12rpx; }

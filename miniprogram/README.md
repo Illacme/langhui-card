@@ -17,7 +17,7 @@ miniprogram/
 ├── components/         # 7 个可复用组件（均开启 addGlobalClass）
 │   ├── employee-card / company-video / achievement-grid
 │   ├── featured-projects / service-grid / action-bar
-│   └── rich-video       # 视频号渲染控件：封装 <channel-video finder-user-name="{{channelId}}">
+│   └── rich-video       # 视频号渲染控件：有 feedId 用 <channel-video feed-id>，否则回退 finder-user-name
 ├── pages/
 │   ├── index/          # 名片首页（自定义顶栏含「我的」入口 + 员工卡 + 公司简介卡片 + 业绩 + 服务；底部 tabBar 已移除）
 │   ├── project/list/   # 项目列表（按分类）
@@ -101,9 +101,10 @@ go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖�
 > 接口约定：登录返回 `token` 在**根级**（`{code:0, token}`），`login.ts` 按 `r.token` 读取（与 PC 后台 `adminLogin` 一致）；其余资源在 `data` 下。视频号 `<channel-video>` 需真机 + 已绑定视频号的小程序 AppID 才能渲染，测试号下该块留空、`company-video` 自动回退封面/MP4；小程序码接口需配置 `WX_APPID/WX_APPSECRET` 才返回真实码，未配置时返回 `code:1`（联调预期内）。
 
 ## 技术要点
-- **视频号渲染控件 `rich-video`**：抽出的可复用组件，内部渲染 `<channel-video wx:if="{{channelId}}" finder-user-name="{{channelId}}" class="rich-video" />`，外裹 `.rich-video-wrap` 便于统一样式。详情页（`pages/project/detail`、`pages/service/detail`）在富文本分段后，遇到视频号段改用 `<rich-video channelId="{{item.content}}" />` 渲染，不再内联 `<channel-video>`，避免页面各自重复条件判断。
-- **富文本 + 视频号混排**：`utils/richtext.ts` 用鲁棒正则 `/<wx-video\s+[^>]*?channel-id="([^"]+)"[^>]*?\/?>(\s*<\/wx-video>)?/g` 拆分 `<wx-video channel-id="gh_xxx">`（兼容自闭合与成对、属性顺序无关，**成对写法时闭合标签一并消费**，不会漏进后续 html 片段），视频号段用 `rich-video` 组件、其余用 `rich-text`，保证图文/视频号位置正确（对应需求难点）。PC 富文本编辑器插入视频号时调用 `buildWxVideo(channelId)` 统一输出 `<wx-video channel-id="${channelId}"></wx-video>`，保证前后端片段规则一致。
-- **视频号 ID 语义**：后端 `videoChannelId` 存的是视频号原始 ID（gh_xxx），已映射到 `<channel-video>` 的 `finder-user-name`；若要播放「指定视频」需换成该视频的 `feed-id`（生产对接时补全）。
+- **视频号渲染控件 `rich-video`**：抽出的可复用组件，内部按优先级三分支渲染 `<channel-video>`——`feed-id`（同主体，可自动播放）→ `feed-token`（跨主体，强制不能自动播放）→ `finder-user-name`（兼容存量富文本，只展示视频号主页；历史块里只存了视频号 ID，直接丢弃会让内容整块消失）。详情页（`pages/project/detail`、`pages/service/detail`）在富文本分段后，遇到视频号段改用 `<rich-video feedId="{{item.feedId}}" channelId="{{item.channelId}}" />` 渲染，不再内联 `<channel-video>`，避免页面各自重复条件判断。
+- **富文本 + 视频号混排**：`utils/richtext.ts` 用正则 `/<wx-video\s+([^>]*?)\/?>(\s*<\/wx-video>)?/g` 整段捕获属性后再按名提取 `feed-id` / `feed-token` / `channel-id`（属性不再写死进正则，顺序无关，**成对写法时闭合标签一并消费**，不会漏进后续 html 片段），拆分 `<wx-video feed-id="…" feed-token="…" channel-id="sph_…">`；三个属性都为空的标签不拆分，留给 `rich-text` 原样渲染。视频号段用 `rich-video` 组件、其余用 `rich-text`，保证图文/视频号位置正确（对应需求难点）。PC 富文本编辑器插入视频号时调用 `buildWxVideo(feedId, channelId, feedToken)` 统一输出 `<wx-video feed-id="${feedId}" feed-token="${feedToken}" channel-id="${channelId}"></wx-video>`（缺失属性省略），保证前后端片段规则一致。
+- **视频号 ID 语义**：视频号 ID 以 **`sph` 开头**（`gh_` 是公众号 ID，早期注释写错了，勿沿用）。`<channel-video>` 的 `finder-user-name` 只用于展示视频号主页，**播放指定视频必须用 `feed-id`**：公司简介档位 `channels` 的 `feedId` 来自视频号助手 → 动态管理 → 复制 feedId，且要求视频号与小程序**同主体**（跨主体需改用 `feed-token`，且强制不能自动播放）。
+- **公司简介视频多来源**：`components/company-video` 按后端 `profile.videoSource` 选档——`channels` 渲染 `<channel-video>`（**同主体用 `feed-id`、跨主体用 `feed-token`**，`feed-id` 优先）；`upload` / `url` 渲染 `<video src=videoUrl>`；其余回封面占位。选档是**显式的**（不做隐式自动降级链），只有视频号主源 `bind:error` 且后台开了 `videoFallbackUrl` 时才回落到 `videoUrl`。跨主体必须走 `feed-token`：官方明确 `feed-id`「仅同主体时生效」，平台模式下客户视频号与我们小程序必然不同主体，代价是强制 `autoplay=false`。`tencent`（腾讯视频插件）是预留档：插件必须在 `app.json` 静态声明，统一声明会让未通过插件授权的客户小程序直接报「插件未授权」，故默认既不声明也不渲染。
 - **员工 token**：登录后存 `wx.storage('empToken')`（access，15 分钟）+ `empRefreshToken`（refresh，30 天），`request.ts` 自动注入；`code=401` 先用 refresh 令牌静默换发并重试一次，失败再清 token 引导重新登录。改密 / 被禁用会令旧令牌立即失效。（小程序走 Bearer 头鉴权；PC 管理后台则改用 httpOnly Cookie，见前端 README。）
 - **状态语义**：员工 `status=disabled` 时首页整页提示「已停用」；名片修改走「提交申请 → 超管审核通过后公开生效」。
 

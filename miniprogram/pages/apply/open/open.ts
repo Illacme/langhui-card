@@ -9,7 +9,10 @@ import { getOpenid, getWechatNickname } from '../../../utils/wechat'
 // 申请即归属该企业，由该企业的管理员审核。
 Page({
   data: {
-    form: { name: '', phone: '', title: '', landline: '', email: '', avatar: '', nickname: '' },
+    form: { name: '', phone: '', phone2: '', title: '', landline: '', email: '', avatar: '', nickname: '' },
+    // 备用手机号输入框是否展开：默认收起（多数人只有一个号），
+    // 由「手机」行右侧「+ 备用手机号」按钮切换；编辑/回填场景见 loadMe
+    showPhone2: false,
     // 申请目标企业名（GET /api/company）：让访客知道在申请加入哪家企业
     companyName: '',
     saving: false,
@@ -17,6 +20,14 @@ Page({
   },
   onLoad() {
     this.loadCompany()
+  },
+  // 「+ 备用手机号」/「×」：展开或收起第二个手机号输入框。
+  // 收起时顺手清空已填内容——否则用户会以为「没显示就是没提交」，留下暗数据
+  togglePhone2() {
+    const show = !this.data.showPhone2
+    const form = this.data.form as any
+    if (!show) form.phone2 = ''
+    this.setData({ showPhone2: show, form })
   },
   // 拉取申请目标企业名；失败（网络/企业停用）时隐藏该行，不阻断申请
   loadCompany() {

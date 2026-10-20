@@ -25,6 +25,21 @@
   <view class="form-item">
     <text class="label">手机</text>
     <input data-field="phone" value="{{form.phone}}" bindinput="onInput" placeholder="必填，将作为登录账号" />
+    <!-- 「+ 备用手机号」：默认只露一个手机号输入框（多数人只有一个号），
+         需要第二个时点这里展开，避免一上来两栏空框让人以为都要填 -->
+    <view class="add-sub" wx:if="{{!showPhone2}}" bindtap="togglePhone2">
+      <text class="add-sub-plus">+</text>
+      <text class="add-sub-text">备用手机号</text>
+    </view>
+  </view>
+  <!-- 备用手机号（选填）：点上一行右侧「+」展开；右侧「×」收起并清空，
+       防止「看不见但仍被提交」的暗数据。
+       不设文字标签（用户 2026-10-20 要求）——留一个等宽空 label 占位，
+       输入框才能与其它行左缘对齐；提示改走输入框内的 placeholder -->
+  <view class="form-item form-item-sub" wx:if="{{showPhone2}}">
+    <text class="label"></text>
+    <input data-field="phone2" value="{{form.phone2}}" bindinput="onInput" placeholder="备用手机号" />
+    <view class="del-sub" bindtap="togglePhone2"><text class="del-sub-x">×</text></view>
   </view>
   <view class="form-item">
     <text class="label">职位</text>
@@ -32,7 +47,7 @@
   </view>
   <view class="form-item">
     <text class="label">座机</text>
-    <input data-field="landline" value="{{form.landline}}" bindinput="onInput" placeholder="选填，如 0316-823950" />
+    <input data-field="landline" value="{{form.landline}}" bindinput="onInput" placeholder="选填，如 0316-8023950" />
   </view>
   <view class="form-item">
     <text class="label">邮箱</text>
@@ -40,7 +55,7 @@
   </view>
   <button class="submit-btn" loading="{{saving}}" bindtap="onSubmit">提交申请</button>
   <view class="tip">
-    提交后由超管在 PC 后台审核，通过即自动创建账号；头像与微信昵称为选填，便于管理员核实身份，头像也可登录后在「编辑名片」中修改
+    提交后由超管在 PC 后台审核，通过即自动创建账号；头像与微信昵称为选填，便于管理员核实身份，头像也可登录后在「编辑名片」中修改。手机号右侧的「+ 备用手机号」可展开第二个号码（选填）：填写后名片上与主号并列展示，主号仍作为登录账号
   </view>
 </view>
 

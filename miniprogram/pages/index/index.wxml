@@ -19,11 +19,18 @@
     <!-- 自定义顶栏（navigationStyle=custom）：按设计稿融入浅蓝渐变背景，无白色底与居中标题，
          仅保留左上角「我的」入口，固定常驻 -->
     <view class="custom-nav" style="padding-top: {{statusBarHeight}}px;">
+      <!-- 顶部滚动遮罩：随 scrollTop 渐显（见 onPageScroll），让顶栏悬浮于内容之上，
+           初始透明融入浅蓝背景，滚过「我的」图标下沿时平滑浮现 -->
+      <view class="nav-mask" style="opacity: {{navMask}}"></view>
       <view class="nav-inner">
         <view class="nav-me" bindtap="goMe">
           <view class="nav-me-avatar" wx:if="{{meAvatar}}"><image src="{{meAvatar}}" mode="aspectFill" /></view>
-          <text class="nav-me-text">{{meName || '我的'}}</text>
+          <!-- 无头像时显示默认用户图标；文字固定「我的」——不显示姓名，避免与名片卡信息重复 -->
+          <view class="nav-me-user-icon" wx:else></view>
+          <text class="nav-me-text">我的</text>
         </view>
+        <!-- 企业简称居中展示（pointer-events:none 不挡「我的」点击） -->
+        <view class="nav-title">{{company.shortName || company.fullName || '朗汇机电'}}</view>
       </view>
     </view>
     <view class="nav-spacer" style="height: {{navHeight}}px;" />
@@ -35,24 +42,41 @@
       <view class="disabled-tip">员工不存在，请检查编号</view>
     </block>
     <block wx:else>
-      <employee-card employee="{{employee}}" company="{{company}}" bind:entercase="onEnterCase" />
+      <!-- id 供自动化/调试寻址用：自定义组件内部元素跨组件选不到（>>> 也不支持），
+           有 id 才能用 page.selectComponent('#emp-card') 直接拿到组件实例 -->
+      <employee-card id="emp-card" employee="{{employee}}" company="{{company}}" case-arrow="{{caseArrow}}" bind:entercase="onEnterCase" />
       <view class="section">
-        <!-- 「公司简介」标题按设计稿叠在封面图左上角（见 company-video 组件），此处不再单列 -->
-        <company-video channelId="{{profile.videoChannelId}}" backupMp4Url="{{profile.backupMp4Url}}" cover="{{profile.cover}}" />
+        <!-- 「公司简介」标题按设计稿叠在封面图左上角（见 company-video 组件），此处不再单列。
+             视频来源由后端 videoSource 决定，组件内部自行选档 + 失败兜底 -->
+        <company-video
+          videoSource="{{profile.videoSource}}"
+          feedId="{{profile.videoFeedId}}"
+          feedToken="{{profile.videoFeedToken}}"
+          videoUrl="{{profile.videoUrl}}"
+          fallback="{{profile.videoFallbackUrl}}"
+          cover="{{profile.cover}}"
+        />
         <view class="company-name">{{company.fullName}}</view>
+        <!-- 企业名下分隔线：左蓝右灰分段线，与名片卡横线（ec-rows-line）同款 -->
+        <view class="line-split company-name-line"></view>
         <text class="intro">{{profile.introText}}</text>
       </view>
       <block wx:for="{{homeOrder}}" wx:key="*this">
         <view wx:if="{{item === 'achievement'}}" id="sec-achievement" class="section">
           <view class="sec-head">
             <view class="sec-title">经典业绩</view>
-            <view class="sec-link" bindtap="onEnterCase">案例进入</view>
+            <!-- 「更多案例」：进入全部项目案例列表（列表页带业绩分类切换），
+                 不再复用 onEnterCase——那个是滚动到本区块，在区块标题里等于滚到自己 -->
+            <view class="sec-link" bindtap="goAllCases">更多案例 <text class="sec-arr">▸</text></view>
           </view>
+          <!-- 板块标题装饰线：一小段左蓝右灰（用户 2026-10-20 要求，与企业名下同款语言） -->
+          <view class="line-split sec-title-line"></view>
           <achievement-grid categories="{{categories}}" staffId="{{staffId}}" />
           <featured-projects featured="{{featured}}" staffId="{{staffId}}" />
         </view>
         <view wx:if="{{item === 'service'}}" class="section">
           <view class="sec-title">业务服务</view>
+          <view class="line-split sec-title-line"></view>
           <service-grid services="{{services}}" staffId="{{staffId}}" wx:if="{{services.length}}" />
           <view class="empty" wx:else>暂无服务内容</view>
         </view>

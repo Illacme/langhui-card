@@ -19,10 +19,19 @@ export interface CompanyInfo {
   logo: string
 }
 
+// videoSource 五档：none（封面占位）/ channels（视频号）/ upload（云存储上传）/
+// url（外部直链）/ tencent（腾讯视频插件，预留未接线）。
+// videoUrl 由 upload、url 两档共用，并作为 channels 开启 videoFallbackUrl 时的兜底源。
 export interface CompanyProfile {
   introText: string
+  videoSource: string
   videoChannelId: string
-  backupMp4Url: string
+  // feedId（同主体，可自动播放）与 feedToken（跨主体，强制不能自动播放）二选一，feedId 优先
+  videoFeedId: string
+  videoFeedToken: string
+  videoVid: string
+  videoUrl: string
+  videoFallbackUrl: boolean
   cover: string
 }
 

@@ -11,6 +11,9 @@ Page({
     featured: [],
     services: [],
     homeOrder: ['achievement', 'service'],
+    // 「查看案例」按钮方向箭头（黑色实心小三角）：业绩区在首页 → 滚动过去（▾），被隐藏 → 跳案例页（▸）。
+    // 用 U+25BE/U+25B8 而非 U+25BC/U+25B6：后者的右向三角在部分客户端有 emoji 变体会被渲染成彩色
+    caseArrow: '▾',
     // 首页背景（商业化美化包装，可选）：bgImage 为空即保持灰底布局。
     // bgMask 为遮罩浓度 0~100，转成 0~1 的黑色蒙层透明度，压暗背景突出白卡片。
     bgImage: '',
@@ -23,9 +26,13 @@ Page({
     // 自定义顶栏（navigationStyle=custom）：状态栏高度与整体高度，用于避让刘海/状态栏
     statusBarHeight: 20,
     navHeight: 64,
-    // 左上角「我的」入口：已登录则显示头像 + 姓名，未登录显示「我的」
+    // 左上角「我的」入口：已登录显示头像，未登录显示默认用户图标；文字固定「我的」
     meAvatar: '',
-    meName: '',
+    // 顶部滚动遮罩透明度：随 scrollTop 连续渐显，滚过顶栏下沿（navHeight）时恰好为 1；
+    // 初始 0 让顶栏透明融入背景，滚动后平滑浮现（见 onPageScroll）
+    navMask: 0,
+    // 上一帧遮罩值（带 0.01 死区，避免 onPageScroll 每帧无谓 setData）
+    _lastMask: 0,
     // 访问埋点去重标记：同一 staffId 在本页面实例内只上报一次。
     // onShow 语义（首页文档 §4）是「每次显示 +1」，但从「我的」switchTab 回名片页
     // 会再次触发 onShow——不去重的话切两个 tab 来回几下访问量就虚高。
@@ -74,23 +81,37 @@ Page({
     // 左上角「我的」入口跟随登录态刷新（登录 / 退出后回名片页时即时反映）
     this.loadMeInfo()
   },
-  // 读取当前登录员工，用于在自定义顶栏的「我的」入口展示头像 + 姓名；
-  // 无 token 时显示默认「我的」。失败（令牌失效）静默回退，不弹错。
+  // 页面滚动：把 scrollTop 映射到顶部遮罩透明度，滚过顶栏下沿（navHeight）时恰好浮现。
+  // 带 0.01 死区，仅在视觉有变化时 setData，避免高频无效渲染。
+  onPageScroll(e: { scrollTop: number }) {
+    const navH = this.data.navHeight || 64
+    let o = e.scrollTop / navH
+    if (o < 0) o = 0
+    if (o > 1) o = 1
+    if (Math.abs(o - this.data._lastMask) >= 0.01) {
+      this.setData({ navMask: o })
+      this.data._lastMask = o
+    }
+  },
+  // 读取当前登录员工，用于在自定义顶栏的「我的」入口展示头像；
+  // 文字固定「我的」不显示姓名（与名片卡信息重复，用户 2026-10-20 反馈）。
+  // 无头像时显示默认用户图标（见 nav-me-user-icon），无 token 时仅图标。
+  // 失败（令牌失效）静默回退，不弹错。
   loadMeInfo() {
     const token = wx.getStorageSync('empToken')
     if (!token) {
-      this.setData({ meAvatar: '', meName: '' })
+      this.setData({ meAvatar: '' })
       return
     }
     request('GET', '/api/employee/me')
       .then((r: any) => {
         if (r && r.code === 0 && r.data) {
-          this.setData({ meAvatar: assetUrl(r.data.avatar) || '', meName: r.data.name || '我的' })
+          this.setData({ meAvatar: assetUrl(r.data.avatar) || '' })
         } else {
-          this.setData({ meAvatar: '', meName: '' })
+          this.setData({ meAvatar: '' })
         }
       })
-      .catch(() => this.setData({ meAvatar: '', meName: '' }))
+      .catch(() => this.setData({ meAvatar: '' }))
   },
   // 访问埋点：带 lastVisitStaffId 去重（见 data 注释）。
   // loadAll 成功后也会调一次——onLoad 走弹窗输编号时，onShow 早于 staffId 就绪，
@@ -155,6 +176,7 @@ Page({
       const categories = (ach.categories || []).map((c: any) => ({ ...c, icon: assetUrl(c.icon) }))
       const featured = (ach.featured || []).map((p: any) => ({ ...p, cover: assetUrl(p.cover) }))
       const services = (svc.data || []).map((s: any) => ({ ...s, icon: assetUrl(s.icon) }))
+      const order = layout.order && layout.order.length ? layout.order : ['achievement', 'service']
       this.setData({
         employee: cardData.employee,
         company: cardData.company,
@@ -162,7 +184,8 @@ Page({
         categories,
         featured,
         services,
-        homeOrder: layout.order && layout.order.length ? layout.order : ['achievement', 'service'],
+        homeOrder: order,
+        caseArrow: order.indexOf('achievement') >= 0 ? '▾' : '▸',
         // 首页背景：后端在响应根级下发（与 order 同级），缺省即不设背景
         bgImage: assetUrl(layout.bgImage || ''),
         bgMask: layout.bgMask || 0,
@@ -181,8 +204,15 @@ Page({
   reload() {
     this.loadAll()
   },
-  // 「案例进入」（首页文档 §2 名片区右上按钮）：业绩区在首页布局里 → 滚动过去（不离开名片页）；
+  // 「查看案例」（首页文档 §2 名片区右上按钮）：业绩区在首页布局里 → 滚动过去（不离开名片页）；
   // 被布局隐藏 → 跳第一个分类的项目列表；一个分类都没有 → 提示
+  // 「更多案例」：进入全部项目案例列表（categoryId=0 不过滤），列表页内有业绩分类切换
+  goAllCases() {
+    const url =
+      '/pages/project/list/list?categoryId=0' +
+      (this.data.staffId ? '&staffId=' + this.data.staffId : '')
+    wx.navigateTo({ url })
+  },
   onEnterCase() {
     const cats = this.data.categories || []
     if (!cats.length) {
@@ -194,11 +224,9 @@ Page({
       wx.pageScrollTo({ selector: '#sec-achievement', duration: 300 })
       return
     }
-    const url =
-      '/pages/project/list/list?categoryId=' +
-      cats[0].id +
-      (this.data.staffId ? '&staffId=' + this.data.staffId : '')
-    wx.navigateTo({ url })
+    // 业绩区被隐藏时才跳转：进「全部」而非第一个分类（列表页已有分类切换，
+    // 让用户自己挑比替他选第一个更合理）
+    this.goAllCases()
   },
   onShareAppMessage() {
     const c = this.data.company

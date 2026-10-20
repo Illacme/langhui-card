@@ -1,6 +1,38 @@
 <view class="company-video">
-  <!-- 设计稿：封面图左上角叠白色「公司简介」标题；无 cover 时显示同风格占位（自带标题） -->
-  <view class="cv-wrap" wx:if="{{cover}}">
+  <!-- 同主体：feed-id（视频号助手 → 动态管理复制），可自动播放 -->
+  <channel-video
+    wx:if="{{mode === 'channels'}}"
+    feed-id="{{feedId}}"
+    object-fit="cover"
+    class="cv-video"
+    bind:error="onVideoError"
+  />
+
+  <!-- 跨主体：feed-id 官方明确仅同主体生效，不同主体必须改用 feed-token。
+       代价是强制 autoplay=false（只能显示封面让用户点），故排在同主体之后。 -->
+  <channel-video
+    wx:elif="{{mode === 'channels-token'}}"
+    feed-token="{{feedToken}}"
+    object-fit="cover"
+    class="cv-video"
+    bind:error="onVideoError"
+  />
+
+  <!-- 云存储上传 / 外部直链 / 兜底：三者共用同一个 videoUrl，走标准 video 播放。
+       注意：腾讯视频档（vid）未接线——插件必须在 app.json 静态声明，未声明时渲染会直接
+       报「组件未找到」。字段已预留，部署方声明插件后在此加一个 wx:elif 分支即可。 -->
+  <video
+    wx:elif="{{mode === 'mp4'}}"
+    src="{{videoUrl}}"
+    class="cv-video"
+    object-fit="contain"
+    show-fullscreen-btn
+    enable-progress-gesture
+    binderror="onVideoError"
+  />
+
+  <!-- 无视频：封面图左上角叠白色「公司简介」标题；无封面时显示同风格占位（自带标题） -->
+  <view wx:elif="{{cover}}" class="cv-wrap">
     <image src="{{cover}}" class="cv" mode="aspectFill" />
     <view class="cv-title">公司简介</view>
   </view>

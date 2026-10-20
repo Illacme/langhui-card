@@ -14,47 +14,92 @@ describe('parseRich', () => {
     expect(segs).toEqual<RichSegment[]>([{ type: 'html', content: '<p>hello</p>' }])
   })
 
-  it('视频号块被拆成独立 video 片段，前后 html 保留', () => {
-    const segs = parseRich('<p>a</p><wx-video channel-id="gh_1"></wx-video><p>b</p>')
+  it('新格式（feed-id）被拆成独立 video 片段，前后 html 保留', () => {
+    const segs = parseRich('<p>a</p><wx-video feed-id="feed_1"></wx-video><p>b</p>')
     expect(segs).toEqual<RichSegment[]>([
       { type: 'html', content: '<p>a</p>' },
-      { type: 'video', content: 'gh_1' },
+      { type: 'video', content: 'feed_1', feedId: 'feed_1', feedToken: '', channelId: '' },
       { type: 'html', content: '<p>b</p>' },
     ])
   })
 
+  it('跨主体格式（feed-token）被拆成独立 video 片段', () => {
+    const segs = parseRich('<wx-video feed-token="tok_1"></wx-video>')
+    expect(segs).toEqual<RichSegment[]>([
+      { type: 'video', content: 'tok_1', feedId: '', feedToken: 'tok_1', channelId: '' },
+    ])
+  })
+
+  it('存量格式（只有 channel-id）仍能被解析，回退旧行为而不是整块消失', () => {
+    const segs = parseRich('<wx-video channel-id="sph_1"></wx-video>')
+    expect(segs).toEqual<RichSegment[]>([
+      { type: 'video', content: 'sph_1', feedId: '', feedToken: '', channelId: 'sph_1' },
+    ])
+  })
+
+  it('优先级 feed-id > feed-token > channel-id', () => {
+    const all = parseRich(
+      '<wx-video channel-id="sph_1" feed-token="tok_1" feed-id="feed_1"></wx-video>'
+    )
+    expect(all[0].content).toBe('feed_1')
+    // 没有 feed-id 时轮到 feed-token
+    const noFeed = parseRich('<wx-video channel-id="sph_1" feed-token="tok_1"></wx-video>')
+    expect(noFeed[0].content).toBe('tok_1')
+  })
+
   it('兼容自闭合写法且属性顺序无关', () => {
-    const segs = parseRich('<wx-video data-x="1" channel-id="gh_2"/>')
-    expect(segs).toEqual<RichSegment[]>([{ type: 'video', content: 'gh_2' }])
+    const segs = parseRich('<wx-video data-x="1" feed-id="feed_2" />')
+    expect(segs).toEqual<RichSegment[]>([
+      { type: 'video', content: 'feed_2', feedId: 'feed_2', feedToken: '', channelId: '' },
+    ])
   })
 
   it('支持多个视频号块', () => {
     const segs = parseRich(
-      'a<wx-video channel-id="gh_a"></wx-video>b<wx-video channel-id="gh_b"></wx-video>c'
+      'a<wx-video feed-id="f_a"></wx-video>b<wx-video feed-token="t_b"></wx-video>c'
     )
     expect(segs.map((s) => s.type)).toEqual(['html', 'video', 'html', 'video', 'html'])
-    expect(segs.map((s) => s.content)).toEqual(['a', 'gh_a', 'b', 'gh_b', 'c'])
+    expect(segs.map((s) => s.content)).toEqual(['a', 'f_a', 'b', 't_b', 'c'])
   })
 
-  it('不含 channel-id 的 wx-video 不拆分为 video 片段', () => {
+  it('不含任何有效属性的 wx-video 不拆分为 video 片段', () => {
     const segs = parseRich('<wx-video></wx-video>')
     expect(segs).toEqual<RichSegment[]>([{ type: 'html', content: '<wx-video></wx-video>' }])
   })
 
+  it('属性存在但值为空同样不拆分（避免切出空白 video 段割裂前后 html）', () => {
+    const segs = parseRich('<wx-video feed-id="" feed-token=""></wx-video>')
+    expect(segs).toEqual<RichSegment[]>([
+      { type: 'html', content: '<wx-video feed-id="" feed-token=""></wx-video>' },
+    ])
+  })
+
   it('连续调用互不影响（全局正则 lastIndex 状态安全）', () => {
-    const html = '<wx-video channel-id="gh_1"></wx-video>tail'
+    const html = '<wx-video feed-id="f_1"></wx-video>tail'
     expect(parseRich(html)).toEqual(parseRich(html))
     expect(parseRich(html).length).toBe(2)
   })
 })
 
 describe('buildWxVideo', () => {
-  it('生成与小程序端约定的标准标记', () => {
-    expect(buildWxVideo('gh_abc')).toBe('<wx-video channel-id="gh_abc"></wx-video>')
+  it('只传 feedId 时只输出 feed-id 属性', () => {
+    expect(buildWxVideo('f_abc')).toBe('<wx-video feed-id="f_abc"></wx-video>')
+  })
+
+  it('传了视频号 ID 时按 feed-id / channel-id 顺序输出', () => {
+    expect(buildWxVideo('f_abc', 'sph_1')).toBe(
+      '<wx-video feed-id="f_abc" channel-id="sph_1"></wx-video>'
+    )
+  })
+
+  it('跨主体：只传 feedToken 时只输出 feed-token 属性', () => {
+    expect(buildWxVideo('', '', 'tok_1')).toBe('<wx-video feed-token="tok_1"></wx-video>')
   })
 
   it('buildWxVideo 的产出可被 parseRich 还原', () => {
-    const segs = parseRich(buildWxVideo('gh_roundtrip'))
-    expect(segs).toEqual<RichSegment[]>([{ type: 'video', content: 'gh_roundtrip' }])
+    const segs = parseRich(buildWxVideo('f_roundtrip'))
+    expect(segs).toEqual<RichSegment[]>([
+      { type: 'video', content: 'f_roundtrip', feedId: 'f_roundtrip', feedToken: '', channelId: '' },
+    ])
   })
 })

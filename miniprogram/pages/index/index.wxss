@@ -14,6 +14,22 @@
   align-items: center;
   padding: 0 24rpx;
   position: relative;
+  z-index: 1;
+}
+/* 顶部滚动遮罩：随 scrollTop 渐显（opacity 绑定 navMask）。
+   顶部近白、向下渐隐到透明，让顶栏「悬浮」于内容之上；底部极淡阴影制造层次。
+   初始 opacity 0（顶栏透明融入背景），滚动后平滑浮现。 */
+.custom-nav .nav-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(100% + 80rpx);
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(247,251,255,0.92) 48%, rgba(247,251,255,0) 100%);
+  box-shadow: 0 8rpx 24rpx rgba(30,90,160,0.05);
+  transition: opacity .25s ease-out;
 }
 .custom-nav .nav-me {
   display: flex;
@@ -35,6 +51,25 @@
   width: 100%;
   height: 100%;
 }
+.custom-nav .nav-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+  pointer-events: none;
+}
+.custom-nav .nav-me-user-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  margin-right: 10rpx;
+  background: url("data:image/png;base64,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") no-repeat center / 100% 100%;
+}
+/* 图标单独出现（未登录无姓名）时去掉右侧留白 */
+.custom-nav .nav-me-user-icon:last-child { margin-right: 0; }
 .custom-nav .nav-me-text {
   font-size: 26rpx;
   color: #1a8cff;
@@ -45,26 +80,39 @@
 .page {
   position: relative;
   min-height: 100vh;
+  /* 底部避让：action-bar 为 fixed bottom（见 app.wxss .action-bar），滚到底时
+     最后一个 section 会被它盖住。实测其总高≈177rpx（按钮75 + padding32 + 安全区~70），
+     固定部分（按钮+padding）≈107rpx 写死，安全区用 env() 随设备；+16rpx 呼吸感，
+     既不被遮挡也不留大片空白（用户 2026-10-20 反馈 260rpx 留太多） */
+  padding-bottom: calc(123rpx + env(safe-area-inset-bottom));
   background: linear-gradient(180deg, #d5e7fa 0%, #e7f1fc 24%, #f4f7fb 52%, #f4f7fb 100%);
 }
 .page-bg { position: fixed; left: 0; right: 0; top: 0; bottom: 0; width: 100%; height: 100%; z-index: -1; }
 .page-bg-mask { position: fixed; left: 0; right: 0; top: 0; bottom: 0; background: #000; z-index: -1; }
 
-/* 内容板块（设计稿：白色圆角卡片浮于浅蓝背景，仅作用于首页，不影响「我的」页） */
+/* 内容板块（设计稿：白色圆角卡片浮于浅蓝背景，仅作用于首页，不影响「我的」页）。
+   两侧边距与 .emp-card 对齐收紧（20rpx 外距 + 24rpx 内距）：
+   用户要求「内容区两边距减少一点，多腾出名片内容空间」，全线统一避免卡片左右错位。 */
 .page .section {
   background: #fff;
   border-radius: 20rpx;
-  margin: 20rpx 24rpx 0;
-  padding: 28rpx;
+  margin: 20rpx 20rpx 0;
+  padding: 24rpx;
   box-shadow: 0 6rpx 18rpx rgba(30, 90, 160, 0.06);
   box-sizing: border-box;
 }
-.page .section .sec-title { margin-bottom: 20rpx; }
+/* 板块标题统一与下方装饰线紧贴：间距只由 .sec-title-line 的 margin-top 控制，
+   标题自身 margin-bottom 置 0（否则与线的 margin-top 叠加，线离标题偏远——
+   用户 2026-10-20 反馈「横线距离太远」） */
+.page .section .sec-title { margin-bottom: 0; }
 
-/* 「经典业绩」标题行：左侧标题 + 右侧「案例进入」小字链接（同名片按钮行为） */
+/* 「经典业绩」标题行：左侧标题 + 右侧「更多案例」小字链接（进入全部项目案例列表页） */
 .sec-head { display: flex; align-items: center; justify-content: space-between; }
 .sec-head .sec-title { margin-bottom: 0; }
 .sec-link { font-size: 24rpx; color: #8aa5c0; }
+/* 更多案例右侧箭头：与名片卡「查看案例▸」用同一套实心小三角，改掉原来较粗的 → 字符；
+   font-weight 略加让三角更清晰，左距给文字一点呼吸（用户 2026-10-20 反馈箭头需换） */
+.sec-arr { margin-left: 4rpx; font-weight: 700; }
 
 /* 简介区：视频封面下的公司名大标题（设计稿黑色加粗） */
 .company-name { font-size: 34rpx; font-weight: 700; color: #222; margin-top: 24rpx; }
@@ -73,3 +121,16 @@
 .has-bg .custom-nav { background: rgba(255,255,255,.94); }
 .has-bg .section { background: rgba(255,255,255,.95); border-radius: 16rpx; margin: 20rpx 24rpx; padding: 28rpx; box-shadow: 0 6rpx 20rpx rgba(0,0,0,.10); }
 .has-bg .nav-spacer + .section, .has-bg .section:first-of-type { margin-top: 20rpx; }
+
+/* 左蓝右灰分段线（2026-10-20 用户要求：与名片卡 ec-rows-line 同款视觉语言）。
+   border 只能单色，所以用独立 view + linear-gradient 硬切：左 34% 品牌蓝、右 66% 浅灰。
+   企业名下那条为通栏；板块标题（经典业绩/业务服务）下为短装饰线。 */
+.line-split {
+  height: 2rpx;
+  background: linear-gradient(90deg, #1b66df 0, #1b66df 34%, #e5ebf2 34%, #e5ebf2 100%);
+}
+/* 企业名下：通栏，紧贴名称（间距由 .company-name 的 padding-bottom 提供） */
+.company-name-line { margin: 0; }
+/* 板块标题下：一小段，左对齐卡片内容左缘；上间距 6rpx 紧贴标题（文字行高 leading
+   之外仅 3px），下间距 20rpx 与内容区分隔 */
+.sec-title-line { width: 220rpx; margin: 6rpx 0 20rpx; }

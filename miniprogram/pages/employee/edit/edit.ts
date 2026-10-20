@@ -2,7 +2,10 @@ import { request, apiBaseUrl, assetUrl } from '../../../utils/request'
 
 Page({
   data: {
-    form: { avatar: '', name: '', title: '', phone: '', landline: '', email: '' },
+    form: { avatar: '', name: '', title: '', phone: '', phone2: '', landline: '', email: '' },
+    // 备用手机号输入框是否展开：回填到已有 phone2 时自动展开（见 loadMe），
+    // 之后由「手机」行右侧「+ 备用手机号」按钮切换
+    showPhone2: false,
     loading: true,
     // 有待审修改申请时为 true：页面展示「审核中」标签（需求 B9）。
     // 审核期对外仍显示旧信息——后端仅在超管 approve 时写回。
@@ -18,10 +21,24 @@ Page({
       return
     }
     if (r.data) {
-      this.setData({ form: r.data, loading: false, pendingModify: !!r.pendingModify })
+      this.setData({
+        form: r.data,
+        loading: false,
+        pendingModify: !!r.pendingModify,
+        // 已有备用号就展开，避免「存了值却看不到输入框」的困惑
+        showPhone2: !!(r.data as any).phone2,
+      })
     } else {
       this.setData({ loading: false })
     }
+  },
+  // 「+ 备用手机号」/「×」：展开或收起第二个手机号输入框。
+  // 收起时顺手清空已填内容——否则用户会以为「没显示就是没提交」，留下暗数据
+  togglePhone2() {
+    const show = !this.data.showPhone2
+    const form = this.data.form as any
+    if (!show) form.phone2 = ''
+    this.setData({ showPhone2: show, form })
   },
   onInput(e: any) {
     const field = e.currentTarget.dataset.field

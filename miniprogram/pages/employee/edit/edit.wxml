@@ -19,12 +19,25 @@
     <input data-field="title" value="{{form.title}}" bindinput="onInput" />
   </view>
   <view class="form-item">
-    <text class="label">座机</text>
-    <input data-field="landline" value="{{form.landline}}" bindinput="onInput" placeholder="选填，如 021-88888888" />
-  </view>
-  <view class="form-item">
     <text class="label">手机</text>
     <input data-field="phone" value="{{form.phone}}" bindinput="onInput" />
+    <!-- 与申请开通页同一套交互：默认一个手机号，点右侧「+」展开备用号 -->
+    <view class="add-sub" wx:if="{{!showPhone2}}" bindtap="togglePhone2">
+      <text class="add-sub-plus">+</text>
+      <text class="add-sub-text">备用手机号</text>
+    </view>
+  </view>
+  <!-- 备用手机号（选填）：回填时若已有值则自动展开（见 loadMe）；「×」收起并清空。
+       与申请开通页一致：不设文字标签，留等宽空 label 占位保持输入框左缘对齐，
+       提示走输入框内的 placeholder -->
+  <view class="form-item form-item-sub" wx:if="{{showPhone2}}">
+    <text class="label"></text>
+    <input data-field="phone2" value="{{form.phone2}}" bindinput="onInput" placeholder="备用手机号" />
+    <view class="del-sub" bindtap="togglePhone2"><text class="del-sub-x">×</text></view>
+  </view>
+  <view class="form-item">
+    <text class="label">座机</text>
+    <input data-field="landline" value="{{form.landline}}" bindinput="onInput" placeholder="选填，如 021-88888888" />
   </view>
   <view class="form-item">
     <text class="label">邮箱</text>
