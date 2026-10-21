@@ -75,6 +75,13 @@ wait_cmd() {            # wait_cmd <timeout_sec> "<shell command>"
 # ---------- 容器计数：只用 docker ps（所有 compose 版本都支持），不依赖 ps --services ----------
 running_names() { docker ps --format '{{.Names}}' 2>/dev/null; }
 has_ct() { running_names | grep -qx "$1"; }
+port_owner() {   # 打印占用某 TCP 监听端口的进程一行（取不到则为空）
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"$1" -sTCP:LISTEN 2>/dev/null | tail -n +2 | head -1
+  elif command -v ss >/dev/null 2>&1; then
+    ss -ltnp "sport = :$1" 2>/dev/null | tail -n +2 | head -1
+  fi
+}
 
 # ---------- compose 探测：不按名字猜版本，直接测能力（是否支持 --profile） ----------
 # 坑：独立二进制 docker-compose 也可能是新版（支持 profiles），
@@ -140,13 +147,23 @@ run_diag() {
   else
     echo "  ❌ 未检测到可用 compose（既无 'docker compose' 也无 'docker-compose'）"
   fi
-  echo "── Docker 引擎（关键：没有它真机验证跑不了）──"
-  if [ -d "/Applications/Docker.app" ] || [ -d "/Applications/Docker Desktop.app" ]; then
-    if docker info >/dev/null 2>&1; then echo "  ✅ Docker Desktop 已安装且守护进程在跑"
-    else echo "  ⚠️  Docker Desktop 已安装但未启动：请打开 Docker Desktop 等鲸鱼图标稳定后再跑"; fi
+  echo "── Docker 引擎 ──"
+  if docker info >/dev/null 2>&1; then
+    if command -v colima >/dev/null 2>&1; then
+      echo "  ✅ 守护进程可达（colima 提供）"
+    elif [ -d "/Applications/Docker.app" ] || [ -d "/Applications/Docker Desktop.app" ]; then
+      echo "  ✅ 守护进程可达（Docker Desktop 提供）"
+    else
+      echo "  ✅ 守护进程可达"
+    fi
   else
-    echo "  ❌ 未安装 Docker Desktop（macOS 需要它提供 daemon）"
-    echo "     安装：brew install --cask docker，或官网下载；装完启动后再跑本脚本"
+    if command -v colima >/dev/null 2>&1; then
+      echo "  ❌ 守护进程不可达；检测到 colima，启动它： colima start"
+    elif [ -d "/Applications/Docker.app" ] || [ -d "/Applications/Docker Desktop.app" ]; then
+      echo "  ⚠️  Docker Desktop 已安装但未启动：打开它，等菜单栏鲸鱼图标稳定"
+    else
+      echo "  ❌ 无 Docker 引擎。macOS：brew install colima && colima start（或 brew install --cask docker）；Linux：启动 dockerd"
+    fi
   fi
   echo "── 容器 ──"
   if docker info >/dev/null 2>&1; then
@@ -206,14 +223,38 @@ if [ "${DO_LIVE}" = "1" ]; then
   info "环境自检"
   LIVE_OK=1
   command -v docker >/dev/null 2>&1 || { bad "未找到 docker CLI（compose 需要它，本脚本的容器断言也依赖它）"; LIVE_OK=0; }
-  if [ "${LIVE_OK}" = "1" ] && ! docker info >/dev/null 2>&1; then
-    bad "Docker 守护进程不可达（docker info 失败）— macOS 请启动 Docker Desktop，Linux 请启动 dockerd"; LIVE_OK=0
-  fi
   if [ "${LIVE_OK}" = "1" ] && ! detect_compose; then
     bad "未检测到可用 compose（缺 'docker compose' 与 'docker-compose'）"; LIVE_OK=0
   fi
   if [ "${LIVE_OK}" = "1" ] && [ "${COMPOSE_HAS_PROFILE}" != "1" ]; then
     bad "${COMPOSE_BIN} 不支持 --profile：双形态（--profile mysql）无法验证，需 Compose v2"; LIVE_OK=0
+  fi
+  # 端口占用预检：compose 要绑 8080(frontend) 与 8090(backend)，被占则容器必然起不来
+  if [ "${LIVE_OK}" = "1" ]; then
+    CLASH=0
+    for p in "${FPORT}" "${BPORT}"; do
+      owner=$(port_owner "$p")
+      if [ -n "$owner" ]; then
+        bad "端口 $p 被占用：$owner"
+        CLASH=1
+      fi
+    done
+    if [ "${CLASH}" = "1" ]; then
+      echo "  → compose 需绑定 ${FPORT}(frontend) 与 ${BPORT}(backend)；被占则 up 必然失败"
+      echo "  → 腾出命令： lsof -nP -iTCP:${FPORT} -sTCP:LISTEN -t | xargs kill"
+      LIVE_OK=0
+    fi
+  fi
+  # 守护进程不可达时的提示要按实际安装方式给（colima / Docker Desktop / Linux）
+  if [ "${LIVE_OK}" = "1" ] && ! docker info >/dev/null 2>&1; then
+    if command -v colima >/dev/null 2>&1; then
+      bad "Docker 守护进程不可达 — 检测到 colima，请先执行： colima start"
+    elif [ -d "/Applications/Docker.app" ] || [ -d "/Applications/Docker Desktop.app" ]; then
+      bad "Docker 守护进程不可达 — 请打开 Docker Desktop，等鲸鱼图标稳定"
+    else
+      bad "Docker 守护进程不可达 — macOS 装 colima 或 Docker Desktop，Linux 启动 dockerd"
+    fi
+    LIVE_OK=0
   fi
   if [ "${LIVE_OK}" != "1" ]; then
     echo "  （真机验证已跳过；环境就绪后重跑本脚本，或先跑 --diag 看环境）"
@@ -284,6 +325,8 @@ if [ "${DO_LIVE}" = "1" ]; then
   ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
 
   info "形态2b：MySQL opt-in 带口令启动"
+  owner3306=$(port_owner 3306)
+  [ -n "$owner3306" ] && bad "端口 3306 被占用：$owner3306（mysql 容器无法绑定，MySQL 形态会失败）"
   export MYSQL_ROOT_PASSWORD="Vp$(openssl rand -hex 8 2>/dev/null || date +%s%N)"
   if ! ${COMPOSE_BIN} up -d --build --profile mysql >/tmp/compose_mysql.log 2>&1; then
     bad "带口令启动 mysql 形态失败"; sed 's/^/    /' /tmp/compose_mysql.log; dump_diag
