@@ -99,7 +99,7 @@ type Item struct {
 var registry = []def{
 	{Key: "brand_name", Group: "general", Type: "string", Value: "微传名片",
 		Name: "品牌名称",
-		Desc: "后台侧边栏 / 页标题品牌名（未设置回落此值）"},
+		Desc: "后台侧边栏 / 登录页 / 页标题品牌名（未设置回落此值）"},
 	{Key: "miniprogram_base_url", Group: "miniprogram", Type: "string",
 		Name:     "小程序接口基址",
 		Validate: httpURLOrEmpty(),
@@ -128,16 +128,18 @@ var registry = []def{
 	// 太长等于把对象存储写成公开读，故留界面可调，但代码内有下限兜底。
 	{Key: "presign_put_ttl_minutes", Group: "upload", Type: "int", Value: "15",
 		Name: "上传链接有效期",
-		Desc: "直传预签名 PUT 链接有效期（分钟），最短 1 分钟"},
+		// 兜底语义写准：填 0 / 负数不是夹到 1 分钟，而是回落 registry 的缺省值
+		// （见 signTTL）。写「最短 1 分钟」会让人以为 0 会被当成 1，与实际不符。
+		Desc: "直传预签名 PUT 链接有效期（分钟）；填 0 或负数会回落默认值 15 分钟"},
 	{Key: "sign_get_ttl_minutes", Group: "upload", Type: "int", Value: "30",
 		Name: "私有桶下载链接有效期",
-		Desc: "私有桶限时签名 GET 链接有效期（分钟），最短 1 分钟"},
+		Desc: "私有桶限时签名 GET 链接有效期（分钟）；填 0 或负数会回落默认值 30 分钟"},
 	{Key: "wxacode_ttl_hours", Group: "wechat", Type: "int", Value: "720",
 		Name: "小程序码缓存时长",
-		Desc: "小程序码缓存有效期（小时）"},
+		Desc: "小程序码缓存有效期（小时）；未设置或填 0 会回落部署默认值（默认 720 小时 / 30 天）"},
 	{Key: "wxacode_sign_ttl_minutes", Group: "wechat", Type: "int", Value: "60",
 		Name: "小程序码签名链接有效期",
-		Desc: "私有桶下小程序码签名链接有效期（分钟），最短 1 分钟"},
+		Desc: "私有桶下小程序码签名链接有效期（分钟）；填 0 或负数会回落默认值 60 分钟"},
 	{Key: "wx_appid", Group: "wechat", Type: "string", EnvVar: "WX_APPID",
 		Name: "小程序 AppID",
 		Desc: "小程序 AppID（小程序码与微信登录用）；留空回退环境变量 WX_APPID"},
@@ -150,16 +152,16 @@ var registry = []def{
 	// 界面填 0 / 负数时回落缺省，避免管理员把自己锁在系统外（改错可自愈）。
 	{Key: "access_token_ttl_minutes", Group: "auth", Type: "int", Value: "15",
 		Name: "登录凭证有效期",
-		Desc: "access 令牌有效期（分钟），最短 1 分钟；改后新签发的令牌立即按新值，已签发的不追溯"},
+		Desc: "access 令牌有效期（分钟）；填 0 或负数会回落默认值 15 分钟。改后新签发的令牌立即按新值，已签发的不追溯"},
 	{Key: "refresh_token_ttl_days", Group: "auth", Type: "int", Value: "30",
 		Name: "免登录保持时长",
-		Desc: "refresh 令牌有效期（天），最短 1 天；决定多久要重新登录一次"},
+		Desc: "refresh 令牌有效期（天）；填 0 或负数会回落默认值 30 天。决定多久要重新登录一次"},
 	{Key: "login_rate_limit_per_min", Group: "auth", Type: "int", Value: "10",
 		Name: "登录尝试频率限制",
-		Desc: "每 IP 每分钟允许的登录尝试次数（防爆破），最小 1"},
+		Desc: "每 IP 每分钟允许的登录尝试次数（防爆破）；填 0 或负数会回落默认值 10，不会把防爆破关掉"},
 	{Key: "refresh_rate_limit_per_min", Group: "auth", Type: "int", Value: "60",
 		Name: "凭证刷新频率限制",
-		Desc: "每 IP 每分钟允许的令牌刷新次数（刷新比登录频繁，配额更宽松），最小 1"},
+		Desc: "每 IP 每分钟允许的令牌刷新次数（刷新比登录频繁，配额更宽松）；填 0 或负数会回落默认值 60"},
 
 	// ---- 文件存储与 CDN（改后需重启：客户端在启动时构造）----
 	// 凭据写错最坏结果是「上传失败」，改回来重启即可自愈，不会把自己锁在系统外，
@@ -210,7 +212,10 @@ var registry = []def{
 	// 这三项改错会把「改回来的入口」一起弄丢（连不上库 / 登不进后台），故界面只展示。
 	{Key: "db_dsn", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "DB_DSN",
 		Name: "数据库连接串",
-		Desc: "数据库连接串（敏感，只读）。配置本身存在库里，改错就连不上库、再也读不出配置，因此只能改环境变量 DB_DSN 后重启"},
+		// 措辞必须说清「不落库」：只读项只在界面显示环境变量的当前实际值，
+		// 库里根本没有这一行（seedDefaults 跳过、Set 直接拒绝）。写成「配置存在库里」
+		// 会被读成「连接串存在库里」，与本项只读不落库的实现正好相反。
+		Desc: "数据库连接串（敏感，只读，不落库；此处显示的是当前 DB_DSN 环境变量的实际值）。其余系统配置都存在数据库里，连接串一旦改错，重启后连不上库，连「改回来」的入口都会一起消失——因此不能在此修改，只能到部署环境改环境变量 DB_DSN 后重启"},
 	{Key: "jwt_key", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "JWT_KEY",
 		Name: "登录签名密钥",
 		Desc: "JWT 签名密钥（敏感，只读）。改错会让所有已登录会话立即失效且无法回退，只能改环境变量 JWT_KEY 后重启"},
