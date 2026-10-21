@@ -11,23 +11,26 @@
 #           → 额外起 mysql，MYSQL_ROOT_PASSWORD 必须给出（否则 compose 报错）
 #
 # 用法：
-#   ./verify_compose_dual_mode.sh --static            # 仅静态检查 compose 文件（无需 Docker）
-#   ./verify_compose_dual_mode.sh                     # 静态 + 真机双形态端到端
-#   ./verify_compose_dual_mode.sh --no-install        # 不真正安装（只验证容器/端口/健康）
-#   ./verify_compose_dual_mode.sh --keep              # 结束后保留容器（不 teardown）
+#   ./verify_compose_dual_mode.sh --diag         # 只做环境诊断（docker/守护进程/compose 版本），不改状态
+#   ./verify_compose_dual_mode.sh --static       # 仅静态检查 compose 文件（无需 Docker）
+#   ./verify_compose_dual_mode.sh                # 静态 + 真机双形态端到端
+#   ./verify_compose_dual_mode.sh --no-install   # 不真正安装（只验证容器/端口/健康）
+#   ./verify_compose_dual_mode.sh --keep         # 结束后保留容器（不 teardown）
 #
-# 依赖：docker (compose v2)、curl、python3（仅静态检查用）
+# 依赖：docker + compose v2（profiles 需要 v2）、curl、python3（仅静态检查用）
+#
+# 已规避的坑（首版在部分环境误报）：
+#   - 不用 `compose ps --services`（部分 compose 版本不支持 --services）；改用 docker ps 按容器名判定
+#   - `up` 失败时打印 compose 日志 + 容器日志，不把失败原因藏进重定向文件
+#   - 先自检守护进程/compose 版本；Compose v1 不支持 profiles，直接明确中止而非给出假失败
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
 # 切到仓库根目录（脚本位于 scripts/，compose 文件在根）
 cd "$(cd "$(dirname "$0")" && pwd)/.." || exit 1
 
-# ---------- 配置 ----------
-COMPOSE_BIN="docker compose"
 BPORT=8090          # 后端直连调试端口（绕过 nginx）
 FPORT=8080          # 前端入口（nginx 反代 /api → backend:8080）
-MYSQL_SVC=mysql
 SQLITE_DSN="sqlite:///data/weichuan.db"
 MYSQL_DSN="root:\${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/weichuan"
 
@@ -35,13 +38,15 @@ MYSQL_DSN="root:\${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/weichuan"
 DO_STATIC=1
 DO_LIVE=1
 DO_INSTALL=1
+DO_DIAG=0
 KEEP=0
 for a in "$@"; do
   case "$a" in
     --static)     DO_LIVE=0 ;;
     --no-install) DO_INSTALL=0 ;;
+    --diag)       DO_DIAG=1; DO_LIVE=0 ;;
     --keep)       KEEP=1 ;;
-    -h|--help)    sed -n '2,18p' "$0"; exit 0 ;;
+    -h|--help)    sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "未知参数: $a" >&2; exit 2 ;;
   esac
 done
@@ -67,6 +72,63 @@ wait_cmd() {            # wait_cmd <timeout_sec> "<shell command>"
   return 0
 }
 
+# ---------- 容器计数：只用 docker ps（所有 compose 版本都支持），不依赖 ps --services ----------
+running_names() { docker ps --format '{{.Names}}' 2>/dev/null; }
+has_ct() { running_names | grep -qx "$1"; }
+
+# ---------- compose 探测：区分 v2(docker compose) 与 v1(docker-compose) ----------
+COMPOSE_BIN=""
+COMPOSE_V1=0
+detect_compose() {
+  if docker compose version >/dev/null 2>&1; then
+    COMPOSE_BIN="docker compose"; COMPOSE_V1=0; return 0
+  fi
+  if command -v docker-compose >/dev/null 2>&1 && docker-compose version >/dev/null 2>&1; then
+    COMPOSE_BIN="docker-compose"; COMPOSE_V1=1; return 0
+  fi
+  return 1
+}
+
+# ---------- 诊断 ----------
+run_diag() {
+  info "环境诊断"
+  echo "── docker ──"
+  if command -v docker >/dev/null 2>&1; then
+    echo "  可执行文件: $(command -v docker)"
+    docker version --format '{{.Server.Version}}' 2>/dev/null | sed 's/^/  Server 版本: /' \
+      || echo "  Server 版本: (取不到，可能守护进程未运行)"
+  else
+    echo "  ❌ 未找到 docker"
+  fi
+  echo "── 守护进程 ──"
+  if docker info >/dev/null 2>&1; then
+    docker info --format '{{.ServerVersion}}' 2>/dev/null | sed 's/^/  ✅ 守护进程可达，Server 版本: /'
+  else
+    echo "  ❌ 守护进程不可达（docker info 失败）：无 Docker daemon 或未启动 Docker Desktop"
+  fi
+  echo "── compose ──"
+  if detect_compose; then
+    echo "  ✅ $COMPOSE_BIN 可用：$($COMPOSE_BIN version 2>&1 | head -1)"
+    [ "$COMPOSE_V1" = "1" ] && echo "  ⚠️  Compose v1：不支持 profiles，无法验证双形态，需升级到 Compose v2"
+  else
+    echo "  ❌ 未检测到可用 compose（既无 'docker compose' 也无 'docker-compose'）"
+  fi
+  echo "── 容器 ──"
+  if docker info >/dev/null 2>&1; then
+    docker ps -a --format '{{.Names}}\t{{.Status}}' 2>&1 | sed 's/^/  /'
+    [ "$(docker ps -aq 2>/dev/null | wc -l)" = "0" ] && echo "  (无容器)"
+  fi
+  echo "── 端口占用（8080/8090/3306 是否被别的服务占用）──"
+  if command -v lsof >/dev/null 2>&1; then
+    for p in "$FPORT" "$BPORT" 3306; do
+      r=$(lsof -nP -iTCP:"$p" -sTCP:LISTEN 2>/dev/null | tail -n +2)
+      [ -n "$r" ] && echo "$r" | sed "s/^/  端口 $p: /" || echo "  端口 $p: 空闲"
+    done
+  else
+    echo "  (无 lsof，跳过)"
+  fi
+}
+
 # ---------- 静态检查（无需 Docker） ----------
 static_check() {
   info "静态检查 docker-compose.yml"
@@ -88,12 +150,41 @@ PY
   [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 }
 
-# ---------- 主流程 ----------
+# ---------- 失败时倾倒现场 ----------
+dump_diag() {
+  echo "  —— 现场诊断 ——"
+  echo "  docker ps -a:"
+  docker ps -a --format '{{.Names}}\t{{.Status}}' 2>&1 | sed 's/^/    /'
+  for c in weichuan-backend weichuan-frontend weichuan-mysql; do
+    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -qx "$c"; then
+      echo "  docker logs $c (tail 25):"
+      docker logs --tail 25 "$c" 2>&1 | sed 's/^/    /'
+    fi
+  done
+}
+
+# ─────────────────────────── 主流程 ───────────────────────────
+[ "$DO_DIAG" = "1" ] && { run_diag; exit 0; }
 [ "$DO_STATIC" = "1" ] && static_check
 
 if [ "$DO_LIVE" = "1" ]; then
-  if ! command -v docker >/dev/null 2>&1; then
-    bad "未找到 docker，无法做真机验证（本地仅做静态检查即可）"; DO_LIVE=0
+  info "环境自检"
+  LIVE_OK=1
+  command -v docker >/dev/null 2>&1 || { bad "未找到 docker"; LIVE_OK=0; }
+  if [ "$LIVE_OK" = "1" ] && ! docker info >/dev/null 2>&1; then
+    bad "Docker 守护进程不可达（docker info 失败）— 请启动 Docker Desktop / daemon 后再跑"; LIVE_OK=0
+  fi
+  if [ "$LIVE_OK" = "1" ] && ! detect_compose; then
+    bad "未检测到可用 compose（缺 'docker compose' 与 'docker-compose'）"; LIVE_OK=0
+  fi
+  if [ "$LIVE_OK" = "1" ] && [ "$COMPOSE_V1" = "1" ]; then
+    bad "Compose v1 不支持 profiles，双形态（--profile mysql）无法验证，请升级到 Compose v2"; LIVE_OK=0
+  fi
+  if [ "$LIVE_OK" != "1" ]; then
+    echo "  （真机验证已跳过；环境就绪后重跑本脚本，或先跑 --diag 看环境）"
+    DO_LIVE=0
+  else
+    ok "环境自检通过（$COMPOSE_BIN）"
   fi
 fi
 
@@ -101,14 +192,20 @@ if [ "$DO_LIVE" = "1" ]; then
   info "清理任何残留容器/卷"
   $COMPOSE_BIN down -v >/dev/null 2>&1 || true
 
-  # ===== 形态 1：默认（SQLite 零依赖）=====
-  info "形态1：默认（SQLite 零依赖）— docker compose up -d --build"
-  $COMPOSE_BIN up -d --build >/tmp/compose_default.log 2>&1
-  wait_cmd 90 "docker ps --filter name=weichuan-backend --format '{{.Names}}' | grep -q weichuan-backend"
-  running=$($COMPOSE_BIN ps --services --filter status=running)
-  cnt=$(printf '%s\n' "$running" | grep -c .)
-  [ "$cnt" = "2" ] && ok "默认形态起 2 个服务 (backend+frontend)" || bad "默认形态运行服务数=$cnt (期望 2)"
-  printf '%s\n' "$running" | grep -qx "$MYSQL_SVC" && bad "mysql 不应在默认形态启动" || ok "mysql 未启动（符合零依赖）"
+  info "形态1：默认（SQLite 零依赖）— $COMPOSE_BIN up -d --build"
+  if ! $COMPOSE_BIN up -d --build >/tmp/compose_default.log 2>&1; then
+    bad "$COMPOSE_BIN up -d --build 失败"
+    sed 's/^/    /' /tmp/compose_default.log
+    dump_diag
+    DO_LIVE=0
+  fi
+fi
+
+if [ "$DO_LIVE" = "1" ]; then
+  wait_cmd 90 "docker ps --format '{{.Names}}' | grep -qx weichuan-backend"
+  has_ct weichuan-backend && ok "backend 容器运行中" || { bad "backend 未运行"; dump_diag; }
+  has_ct weichuan-frontend && ok "frontend 容器运行中" || bad "frontend 未运行"
+  has_ct weichuan-mysql && bad "mysql 不应在默认形态启动" || ok "mysql 未启动（符合零依赖）"
 
   wait_cmd 60 "curl -s --max-time 5 http://localhost:$BPORT/api/setup/status >/dev/null"
   cfg=$(status_configured)
@@ -116,14 +213,16 @@ if [ "$DO_LIVE" = "1" ]; then
   hc=$(http_code "http://localhost:$BPORT/healthz")
   [ "$hc" = "503" ] && ok "/healthz 未配置模式返回 503" || bad "/healthz=$hc (期望 503)"
   fp=$(http_code "http://localhost:$FPORT/")
-  [ "$fp" = "200" ] && ok "前端 8080 返回 200（安装页可用）" || bad "前端首页=$fp"
+  if [ "$fp" = "200" ]; then ok "前端 8080 返回 200（安装页可用）"; else
+    bad "前端首页=$fp（非 200 通常是 8080 被别的服务占用或前端没起来）"; dump_diag
+  fi
 
   if [ "$DO_INSTALL" = "1" ]; then
     info "  安装（SQLite）"
     body="{\"DSN\":\"$SQLITE_DSN\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
     ic=$(curl -s -o /tmp/install.res -w '%{http_code}' --max-time 30 -X POST \
           -H 'Content-Type: application/json' -d "$body" "http://localhost:$BPORT/api/setup/install")
-    [ "$ic" = "200" ] && ok "POST /api/setup/install 返回 200" || bad "install=$ic $(cat /tmp/install.res)"
+    [ "$ic" = "200" ] && ok "POST /api/setup/install 返回 200" || bad "install=$ic $(cat /tmp/install.res 2>/dev/null)"
     ready=0
     for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
     [ "$ready" = "1" ] && ok "安装完成，status.configured=true（backend 已自重启）" || bad "安装后未见 configured=true"
@@ -137,42 +236,50 @@ if [ "$DO_LIVE" = "1" ]; then
 
   info "形态2a：MySQL opt-in 缺口令必须报错"
   unset MYSQL_ROOT_PASSWORD
-  $COMPOSE_BIN up -d --build --profile mysql >/tmp/compose_mysql_nopw.log 2>&1
-  if [ $? -ne 0 ] && grep -q "MYSQL_ROOT_PASSWORD" /tmp/compose_mysql_nopw.log; then
-    ok "缺 MYSQL_ROOT_PASSWORD 时 compose 报错并提示 --profile mysql"
+  if $COMPOSE_BIN up -d --build --profile mysql >/tmp/compose_mysql_nopw.log 2>&1; then
+    bad "缺 MYSQL_ROOT_PASSWORD 时 compose 竟然成功（应报错）"
   else
-    bad "缺口令时 compose 未如预期报错（见 /tmp/compose_mysql_nopw.log）"
+    if grep -q "MYSQL_ROOT_PASSWORD" /tmp/compose_mysql_nopw.log; then
+      ok "缺 MYSQL_ROOT_PASSWORD 时 compose 报错并提示 --profile mysql"
+    else
+      bad "compose 报错但未提及 MYSQL_ROOT_PASSWORD（见 /tmp/compose_mysql_nopw.log）"
+      sed 's/^/    /' /tmp/compose_mysql_nopw.log
+    fi
   fi
   $COMPOSE_BIN down -v >/dev/null 2>&1 || true
 
   info "形态2b：MySQL opt-in 带口令启动"
   export MYSQL_ROOT_PASSWORD="Vp$(openssl rand -hex 8 2>/dev/null || date +%s%N)"
-  $COMPOSE_BIN up -d --build --profile mysql >/tmp/compose_mysql.log 2>&1
-  wait_cmd 90 'c=$($COMPOSE_BIN ps --services --filter status=running | grep -c .); [ "$c" = "3" ]'
-  cnt=$($COMPOSE_BIN ps --services --filter status=running | grep -c .)
-  [ "$cnt" = "3" ] && ok "三容器运行 (backend+frontend+mysql)" || bad "运行服务数=$cnt (期望 3)"
-  wait_cmd 90 "docker exec weichuan-mysql mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD --silent >/dev/null 2>&1"
-  [ $? -eq 0 ] && ok "mysql 健康检查通过" || bad "mysql 未就绪"
-  wait_cmd 60 "curl -s --max-time 5 http://localhost:$BPORT/healthz >/dev/null"
+  if ! $COMPOSE_BIN up -d --build --profile mysql >/tmp/compose_mysql.log 2>&1; then
+    bad "带口令启动 mysql 形态失败"; sed 's/^/    /' /tmp/compose_mysql.log; dump_diag
+  else
+    wait_cmd 90 "docker ps --format '{{.Names}}' | grep -qx weichuan-mysql"
+    n=0
+    for c in weichuan-backend weichuan-frontend weichuan-mysql; do has_ct "$c" && n=$((n+1)); done
+    if [ "$n" = "3" ]; then ok "三容器运行 (backend+frontend+mysql)"; else bad "运行容器数=$n (期望 3)"; dump_diag; fi
+    wait_cmd 90 "docker exec weichuan-mysql mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD --silent >/dev/null 2>&1"
+    if [ $? -eq 0 ]; then ok "mysql 健康检查通过"; else bad "mysql 未就绪"; dump_diag; fi
+    wait_cmd 60 "curl -s --max-time 5 http://localhost:$BPORT/healthz >/dev/null"
 
-  if [ "$DO_INSTALL" = "1" ]; then
-    info "  安装（MySQL）"
-    body="{\"DSN\":\"$MYSQL_DSN\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
-    ic=$(curl -s -o /tmp/install2.res -w '%{http_code}' --max-time 30 -X POST \
-          -H 'Content-Type: application/json' -d "$body" "http://localhost:$BPORT/api/setup/install")
-    [ "$ic" = "200" ] && ok "MySQL 形态安装返回 200" || bad "install=$ic $(cat /tmp/install2.res)"
-    ready=0
-    for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
-    [ "$ready" = "1" ] && ok "MySQL 形态安装完成，status.configured=true" || bad "MySQL 形态未见 configured=true"
-    tbls=$(docker exec weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "use weichuan; show tables;" 2>/dev/null | wc -l)
-    [ "${tbls:-0}" -gt 1 ] && ok "weichuan 库已建表（表数=$tbls）" || bad "MySQL 建表异常"
+    if [ "$DO_INSTALL" = "1" ]; then
+      info "  安装（MySQL）"
+      body="{\"DSN\":\"$MYSQL_DSN\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
+      ic=$(curl -s -o /tmp/install2.res -w '%{http_code}' --max-time 30 -X POST \
+            -H 'Content-Type: application/json' -d "$body" "http://localhost:$BPORT/api/setup/install")
+      [ "$ic" = "200" ] && ok "MySQL 形态安装返回 200" || bad "install=$ic $(cat /tmp/install2.res 2>/dev/null)"
+      ready=0
+      for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
+      [ "$ready" = "1" ] && ok "MySQL 形态安装完成，status.configured=true" || bad "MySQL 形态未见 configured=true"
+      tbls=$(docker exec weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "use weichuan; show tables;" 2>/dev/null | wc -l)
+      [ "${tbls:-0}" -gt 1 ] && ok "weichuan 库已建表（表数=$tbls）" || bad "MySQL 建表异常"
+    fi
   fi
 
   if [ "$KEEP" = "0" ]; then
     info "清理：teardown（含卷）"
     $COMPOSE_BIN down -v >/dev/null 2>&1 && ok "已 teardown" || bad "teardown 失败"
   else
-    info "保留容器（--keep）；手动清理： docker compose down -v"
+    info "保留容器（--keep）；手动清理： $COMPOSE_BIN down -v"
   fi
 fi
 
