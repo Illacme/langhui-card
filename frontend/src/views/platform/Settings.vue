@@ -96,15 +96,15 @@
       <!-- 顶部工具条吸顶：搜索 + 模块锚点导航。滚动时始终可见，
            既保留搜索，又随时给出「当前在哪个模块 / 一键跳到某模块」的入口，
            长列表翻找不再靠肉眼扫标题 -->
-      <div ref="toolbarRef" class="toolbar">
+      <div ref="toolbarRef" class="toolbar" :class="{ pinned }">
         <div class="filter-bar">
+          <span v-if="keyword.trim()" class="filter-count">匹配 {{ matchCount }} / {{ items.length }} 项</span>
           <el-input
             v-model="keyword"
             clearable
             placeholder="搜索配置项：中文名 / key / 环境变量（如「存储」「minio」「JWT_KEY」）"
             class="filter-input"
           />
-          <span v-if="keyword.trim()" class="filter-count">匹配 {{ matchCount }} / {{ items.length }} 项</span>
         </div>
         <div v-if="!keyword.trim() || matchCount > 0" class="module-nav">
           <button
@@ -369,6 +369,8 @@ const toolbarRef = ref<HTMLElement | null>(null)
 // 工具条实时高度：搜索行 + 模块锚点行，窄屏锚点换行会变高，故用 ResizeObserver 动态量
 const toolbarH = ref(112)
 const activeKey = ref('')
+// 是否已吸顶（用于吸顶时加强阴影，让工具条「浮起来」；未吸顶时保持扁平）
+const pinned = ref(false)
 let scrollEl: HTMLElement | null = null
 let ro: ResizeObserver | null = null
 let scrollHandler: (() => void) | null = null
@@ -391,6 +393,11 @@ function attachToolbarObserver() {
 function computeActive() {
   if (!scrollEl) return
   const base = scrollEl.getBoundingClientRect().top
+  // 吸顶判定：工具条贴到滚动口顶部（等于容器 rect.top）即视为吸住。
+  // 不做「滚过多少像素」的硬编码阈值——窄屏工具条换行时自然位置会变，比阈值可靠。
+  if (toolbarRef.value) {
+    pinned.value = toolbarRef.value.getBoundingClientRect().top <= base + 1
+  }
   const line = base + toolbarH.value + 6
   let cur = filteredGroups.value[0]?.key || ''
   for (const g of filteredGroups.value) {
@@ -861,9 +868,16 @@ onMounted(load)
   z-index: 6;
   background: #fff;
   border-bottom: 1px solid #ebeef5;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  /* 未吸顶时保持扁平（与卡片同一平面），吸住后才浮起——避免页面顶部凭空多一道阴影 */
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
   padding: 12px 0 4px;
   margin-bottom: 14px;
+}
+/* 吸顶态：更强的投影 + 更实的分隔线，明确「这一层浮在内容之上」 */
+.toolbar.pinned {
+  border-bottom-color: #d4d7de;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
 }
 /* 模块锚点导航：横向排开所有模块，超出可横滑；当前模块高亮 */
 .module-nav {
@@ -998,15 +1012,24 @@ onMounted(load)
   color: #909399;
   line-height: 1.6;
 }
-/* 搜索过滤 */
+/* 搜索过滤：搜索框靠右（模块胶囊行才是主行，左对齐占满整行，避免被挤压成横向滚动）。
+   margin-left:auto 把输入框推到右侧，匹配数紧随其后。 */
 .filter-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 .filter-input {
   max-width: 460px;
+  margin-left: auto;
+}
+/* 窄屏：搜索框独占一行铺满，否则 460px 上限 + 靠右会挤得只剩一小截 */
+@media (max-width: 767px) {
+  .filter-input {
+    max-width: none;
+    width: 100%;
+  }
 }
 .filter-count {
   font-size: 12px;
