@@ -7,8 +7,9 @@
 # 两种部署形态（见 docker-compose.yml 顶部注释）：
 #   形态 1  零依赖起步（默认）：docker compose up -d --build
 #           → 只起 backend + frontend，不起 mysql，选 SQLite，无需任何数据库口令
-#   形态 2  生产 MySQL：        docker compose up -d --build --profile mysql
-#           → 额外起 mysql，MYSQL_ROOT_PASSWORD 必须给出（否则 compose 报错）
+#   形态 2  生产 MySQL：        docker compose --profile mysql up -d --build
+#           → 额外起 mysql；MYSQL_ROOT_PASSWORD 必须给出，否则 mysql 容器
+#             启动即报错退出（日志有明确提示），不影响 backend/frontend
 #
 # 用法：
 #   ./verify_compose_dual_mode.sh --diag         # 只做环境诊断（docker/守护进程/compose 版本），不改状态
@@ -23,6 +24,11 @@
 #   - 不用 `compose ps --services`（部分 compose 版本不支持 --services）；改用 docker ps 按容器名判定
 #   - `up` 失败时打印 compose 日志 + 容器日志，不把失败原因藏进重定向文件
 #   - 先自检守护进程/compose 版本；Compose v1 不支持 profiles，直接明确中止而非给出假失败
+#   - `--profile` 是顶层标志：必须 `compose --profile mysql up -d`，写在 up 之后报 unknown flag
+#   - compose 对「未被 profile 激活的服务」也做变量插值，故 mysql 口令校验放在容器内
+#     （entrypoint），不用 ${VAR:?}——否则默认（SQLite）形态的 up 会被未激活的 mysql 服务炸掉
+#   - 中文（非 ASCII）目录名下 compose 会推出空项目名、报 "project name must not be empty"，
+#     compose 文件已写死顶层 name: weichuan 规避
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -193,10 +199,13 @@ def chk(cond, msg):
     global ok
     print(("  ✅ " if cond else "  ❌ ")+msg); ok = ok and cond
 chk("profiles: [mysql]" in s, "mysql 服务带 profiles: [mysql]（默认不起）")
-chk("MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?" in s, "MYSQL_ROOT_PASSWORD 用 :?（缺省即报错）")
+chk("MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}" in s, "MYSQL_ROOT_PASSWORD 用 :- （避免 :? 全局插值炸掉默认形态）")
+chk("MYSQL_ROOT_PASSWORD 未设置" in s, "mysql 入口有缺口令提示（容器内 entrypoint 校验）")
+chk('MYSQL_ROOT_HOST: "%"' in s, "MYSQL_ROOT_HOST 显式为 %（backend 容器以 root 跨主机连接的前提）")
 chk("depends_on:" not in s or "depends_on:\n      - mysql" not in s, "backend 不 depends_on mysql")
 chk("container_name: weichuan-" in s, "容器名前缀为 weichuan-（标识符已统一）")
 chk("DB_DSN: ${DB_DSN:-}" in s, "DB_DSN 用 :- （留空进入安装向导）")
+chk("name: weichuan" in s, "顶层 name: weichuan（中文目录名下 compose 也能用）")
 sys.exit(0 if ok else 1)
 PY
   [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
@@ -266,7 +275,7 @@ fi
 
 if [ "${DO_LIVE}" = "1" ]; then
   info "清理任何残留容器/卷"
-  ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
+  ${COMPOSE_BIN} --profile mysql down -v >/dev/null 2>&1 || true
 
   info "形态1：默认（SQLite 零依赖）— ${COMPOSE_BIN} up -d --build"
   if ! ${COMPOSE_BIN} up -d --build >/tmp/compose_default.log 2>&1; then
@@ -308,27 +317,43 @@ if [ "${DO_LIVE}" = "1" ]; then
 
   # ===== 切到形态 2：MySQL opt-in =====
   info "清理默认形态容器/卷"
-  ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
+  ${COMPOSE_BIN} --profile mysql down -v >/dev/null 2>&1 || true
 
-  info "形态2a：MySQL opt-in 缺口令必须报错"
+  info "形态2a：MySQL opt-in 缺口令 → mysql 容器启动即报错退出"
   unset MYSQL_ROOT_PASSWORD
-  if ${COMPOSE_BIN} up -d --build --profile mysql >/tmp/compose_mysql_nopw.log 2>&1; then
-    bad "缺 MYSQL_ROOT_PASSWORD 时 compose 竟然成功（应报错）"
+  # --profile 是顶层标志，必须放在 up 之前（写在 up 之后会报 unknown flag: --profile）
+  if ! ${COMPOSE_BIN} --profile mysql up -d --build >/tmp/compose_mysql_nopw.log 2>&1; then
+    bad "缺口令时 compose up 失败（设计上应成功起 backend/frontend，只让 mysql 报错退出）"
+    sed 's/^/    /' /tmp/compose_mysql_nopw.log
+    dump_diag
   else
-    if grep -q "MYSQL_ROOT_PASSWORD" /tmp/compose_mysql_nopw.log; then
-      ok "缺 MYSQL_ROOT_PASSWORD 时 compose 报错并提示 --profile mysql"
+    # mysql 带 restart: unless-stopped，entrypoint 校验失败会反复重启 → 状态 restarting/exited
+    bad_state=""
+    for i in $(seq 1 15); do
+      st=$(docker inspect -f '{{.State.Status}}' weichuan-mysql 2>/dev/null || echo missing)
+      if [ "$st" = "restarting" ] || [ "$st" = "exited" ]; then bad_state="$st"; break; fi
+      sleep 2
+    done
+    if [ -n "$bad_state" ]; then
+      if docker logs weichuan-mysql 2>&1 | grep -q "MYSQL_ROOT_PASSWORD 未设置"; then
+        ok "缺口令时 mysql 容器 $bad_state，日志含明确提示"
+      else
+        bad "mysql $bad_state 但日志未见缺口令提示："
+        docker logs weichuan-mysql 2>&1 | sed 's/^/    /'
+      fi
     else
-      bad "compose 报错但未提及 MYSQL_ROOT_PASSWORD（见 /tmp/compose_mysql_nopw.log）"
-      sed 's/^/    /' /tmp/compose_mysql_nopw.log
+      bad "缺口令时 mysql 未报错退出（状态: $(docker inspect -f '{{.State.Status}}' weichuan-mysql 2>/dev/null || echo missing)）"
+      dump_diag
     fi
+    # backend/frontend 属默认 profile，此时仍在运行；一次 down -v 全清（含 mysql）
+    ${COMPOSE_BIN} --profile mysql down -v >/dev/null 2>&1 || true
   fi
-  ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
 
   info "形态2b：MySQL opt-in 带口令启动"
   owner3306=$(port_owner 3306)
   [ -n "$owner3306" ] && bad "端口 3306 被占用：$owner3306（mysql 容器无法绑定，MySQL 形态会失败）"
   export MYSQL_ROOT_PASSWORD="Vp$(openssl rand -hex 8 2>/dev/null || date +%s%N)"
-  if ! ${COMPOSE_BIN} up -d --build --profile mysql >/tmp/compose_mysql.log 2>&1; then
+  if ! ${COMPOSE_BIN} --profile mysql up -d --build >/tmp/compose_mysql.log 2>&1; then
     bad "带口令启动 mysql 形态失败"; sed 's/^/    /' /tmp/compose_mysql.log; dump_diag
   else
     wait_cmd 90 "docker ps --format '{{.Names}}' | grep -qx weichuan-mysql"
@@ -355,9 +380,9 @@ if [ "${DO_LIVE}" = "1" ]; then
 
   if [ "${KEEP}" = "0" ]; then
     info "清理：teardown（含卷）"
-    ${COMPOSE_BIN} down -v >/dev/null 2>&1 && ok "已 teardown" || bad "teardown 失败"
+    ${COMPOSE_BIN} --profile mysql down -v >/dev/null 2>&1 && ok "已 teardown" || bad "teardown 失败"
   else
-    info "保留容器（--keep）；手动清理： ${COMPOSE_BIN} down -v"
+    info "保留容器（--keep）；手动清理： ${COMPOSE_BIN} --profile mysql down -v"
   fi
 fi
 

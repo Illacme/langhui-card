@@ -6,8 +6,9 @@
 #      → 只起 backend + frontend，浏览器开 http://localhost:8080 进安装向导，
 #        选 SQLite 即可，不需要任何数据库口令、也不必起 MySQL 容器。
 #   2) 生产用 MySQL：
-#        docker compose up -d --build --profile mysql
+#        docker compose --profile mysql up -d --build
 #      → 额外起 mysql 容器，安装向导自动预填连接信息，选 MySQL 即可。
+#      （注意 --profile 是顶层标志，必须放在 up 之前）
 #
 # 密码等敏感变量通过 .env 注入（见 .env.example）。
 # 注意：DB_DSN 中的主机名是 mysql 服务名（仅 --profile mysql 时存在），
@@ -15,25 +16,48 @@
 #
 # 首次部署推荐「什么都不填」直接起：DB_DSN / JWT_KEY / ADMIN_PASS 都留空，
 # 浏览器打开 http://localhost:8080 会进安装向导，填完自动建库建表、写回配置并重启。
-# MYSQL_ROOT_PASSWORD 只有用 MySQL（--profile mysql）时才需要给。
+# MYSQL_ROOT_PASSWORD 只有用 MySQL 形态（--profile mysql）时才需要给；
+# 缺省时该形态下 mysql 容器会启动即报错退出（日志有明确提示），默认 SQLite 形态不受影响。
+
+# 顶层 name：不依赖目录名推导项目名。若项目放在中文（或其他非 ASCII）目录下，
+# compose 默认会把目录名 sanitize 成空项目名而直接报 "project name must not be empty"。
+name: weichuan
 
 services:
   mysql:
     # profiles: 默认 docker compose up 不起 mysql（零依赖起步、选 SQLite 不需要它）；
-    # 仅 `docker compose up --profile mysql` 才启动。这样「任选数据库」在编排层也成立，
-    # SQLite 用户不必被迫配置 MySQL 口令、也不起一个用不到的数据库容器。
+    # 仅 `docker compose --profile mysql up` 才启动（--profile 是顶层标志，不能写在 up 之后）。
+    # 这样「任选数据库」在编排层也成立，SQLite 用户不必被迫配 MySQL 口令、也不起用不到的容器。
     profiles: [mysql]
     image: mysql:8.0
     container_name: weichuan-mysql
     restart: unless-stopped
     environment:
-      # 必填（仅 --profile mysql 生效）：不设则 compose 直接报错，
-      # 而不是悄悄带着编排里的示例口令起库
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置：请 cp .env.example .env 后改成强随机值，并加 --profile mysql 启用 MySQL}
+      # 注意：不能用 ${MYSQL_ROOT_PASSWORD:?...}！compose 会对「未被 profile 激活的服务」
+      # 也做变量插值，缺省即让默认形态（SQLite 零依赖）的 up 直接失败——那正是要避免的。
+      # 故这里用 :- 留空，改由下方 entrypoint 在容器启动时校验，缺口令则打印明确错误并退出
+      # （docker compose ps 会看到 mysql 处于 Restarting / Exited，logs 里有提示）。
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-}
+      # 显式声明 root@'%'：官方镜像 entrypoint 的缺省值虽是 %（file_env 'MYSQL_ROOT_HOST' '%'），
+      # 但属未文档化的镜像行为；安装向导的 MySQL 形态正是让 backend 容器以 root 走
+      # tcp(mysql:3306) 连接，显式写死可防镜像将来改缺省时「装到一半连不上」。
+      # （3306 已发布到宿主机，勿再对公网开放；更严的做法是收窄为 backend 所在网段。）
+      MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: weichuan
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_general_ci
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
+    # 口令校验放在容器内：先检查再交给官方 entrypoint 初始化 mysqld
+    # （$$ 是 compose 的转义写法：容器内实际执行时就是 $MYSQL_ROOT_PASSWORD。
+    #   注意 docker-compose config 的输出会把 $ 全部显示成 $$——那是为了输出可回喂的
+    #   显示层处理，不是没转义；可用 config --no-interpolate 看文件原文对照。）
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$MYSQL_ROOT_PASSWORD" ]; then
+          echo "[微传名片] MYSQL_ROOT_PASSWORD 未设置：cp .env.example .env 后改成强随机值，并用 docker compose --profile mysql up 启动" >&2
+          exit 1
+        fi
+        exec /usr/local/bin/docker-entrypoint.sh mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     volumes:
       - mysql_data:/var/lib/mysql
       # 首次启动自动执行建表（0001_init → 0005_revoked_sessions 按序全部应用）

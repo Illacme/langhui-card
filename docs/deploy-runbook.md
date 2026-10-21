@@ -174,7 +174,7 @@ openssl rand -base64 12   # → ADMIN_PASS（或自定义强口令）
 ```
 
 > 走 **§2.1 安装向导**的话：`JWT_KEY` 与初始超管口令由向导现场随机生成并写进配置文件，这两行可以跳过；  
-> `MYSQL_ROOT_PASSWORD` 只有 **MySQL 形态**（`docker compose up --profile mysql`）才必须自己给，  
+> `MYSQL_ROOT_PASSWORD` 只有 **MySQL 形态**（`docker compose --profile mysql up`）才必须自己给，  
 > 默认的 SQLite 形态连这个都不用填。
 
 编辑 `.env`：`COOKIE_SECURE=true`（HTTPS 生产必须，见第 5 节）是唯一无条件必改项；  
@@ -183,10 +183,10 @@ openssl rand -base64 12   # → ADMIN_PASS（或自定义强口令）
 
 > **三处「忘了改就出事」的项，已由代码强制把关**（不是靠人记住）：
 >
-> 1. `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 里是**必填变量**（`${VAR:?提示}` 语法），  
->    但只在你显式启用 MySQL 形态（`docker compose up --profile mysql`）时才校验——  
->    未设置则 `docker compose up` 直接报错、不会带默认值悄悄启动；  
->    默认 SQLite 形态不起 mysql，完全不碰这个变量；  
+> 1. `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 里是**必填变量**（仅 MySQL 形态），  
+>    只在你显式启用 MySQL 形态（`docker compose --profile mysql up`）时才校验——  
+>    未设置则 mysql 容器启动即报错退出（日志有明确提示）、不会带默认值悄悄启动，  
+>    backend/frontend 属默认形态照常运行；默认 SQLite 形态不起 mysql，完全不碰这个变量；  
 >    `DB_DSN` / `JWT_KEY` / `ADMIN_PASS` 则刻意放宽为**可选**——留空即进入安装向导，  
 >    由向导现场生成强随机值并写进 `/app/data/runtime.env`（见 §2.1），  
 >    这样「忘记生成密钥」这件事从根上不存在；
@@ -220,8 +220,9 @@ openssl rand -base64 12   # → ADMIN_PASS（或自定义强口令）
 docker compose up -d --build
 docker compose ps        # backend / frontend 两服务；没有 mysql 是正常的
 
-# 形态二：生产 MySQL——额外起 mysql 容器（MYSQL_ROOT_PASSWORD 必填，见第 1 节）
-docker compose up -d --build --profile mysql
+# 形态二：生产 MySQL——额外起 mysql 容器（MYSQL_ROOT_PASSWORD 必填，见第 1 节；
+# --profile 是顶层标志，必须放在 up 之前）
+docker compose --profile mysql up -d --build
 docker compose ps        # mysql / backend / frontend 三服务均 healthy
 ```
 

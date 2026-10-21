@@ -44,11 +44,13 @@ cp .env.example .env
 # 进安装向导选 SQLite 即可，JWT_KEY / ADMIN_PASS / MYSQL_ROOT_PASSWORD 全部不用给
 docker compose up -d --build
 
-# 形态二：生产 MySQL——加 --profile mysql 额外起 mysql 容器（MYSQL_ROOT_PASSWORD 必填）
-docker compose up -d --build --profile mysql
+# 形态二：生产 MySQL——加 --profile mysql 额外起 mysql 容器（MYSQL_ROOT_PASSWORD 必填；
+# --profile 是顶层标志，必须放在 up 之前）
+docker compose --profile mysql up -d --build
 ```
-> `docker-compose.yml` 里只有 `MYSQL_ROOT_PASSWORD` 是**必填**变量（`${VAR:?提示}`），且只在
-> `--profile mysql` 形态校验：未设置则 compose 直接报错，不会带默认值悄悄启动；
+> `docker-compose.yml` 里只有 `MYSQL_ROOT_PASSWORD` 是**必填**变量，且只在
+> `--profile mysql` 形态校验：未设置则 mysql 容器启动即报错退出（日志有明确提示），
+> 不会带默认值悄悄启动；默认 SQLite 形态连 mysql 都不起，完全不受影响；
 > `JWT_KEY` / `ADMIN_PASS` 刻意放宽为**可选**——留空即进入安装向导，由向导现场生成强随机值
 > 并写进 `/app/data/runtime.env`（详见 `docs/deploy-runbook.md` §2.1）。
 > 后端 `cmd/server` 也会拒绝用缺省密钥 / 缺省口令启动（`InsecureGates`）。
