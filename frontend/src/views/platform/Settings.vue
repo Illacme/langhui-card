@@ -44,7 +44,7 @@
       type="info"
       :closable="false"
       show-icon
-      title="在此维护产品运行参数。常规项保存后即时生效；标注「需重启」的项要重启服务后才生效；标注「只读」的项只能改环境变量后重启。"
+      title="在此维护产品运行参数。常规项保存后即时生效；标注「需重启」的项要重启服务后才生效；标注「只读」的项只能改环境变量或配置文件（默认 data/runtime.env）后重启。"
       description="敏感项（密钥 / 连接串）不会回传真实值，界面只显示「已配置」；输入框留空表示不修改，填新值即覆盖。带范围 / 格式约束的项（上传上限、接口基址、存储驱动、锁定租户）保存时会校验，非法值直接拒绝并说明原因——与其让你保存后排查半天，不如当场拦住。"
       style="margin-bottom: 14px"
     />
@@ -55,14 +55,16 @@
          全就绪时只留一句「已全部就绪」，不再占用注意力。
          清单内仍分两类，避免误导：
          - 本页可配置：能点「去配置」直接跳到对应行改；
-         - 部署环境变量：只读项，界面改不了，直接给出要设的环境变量（可复制）+ 重启提示。
+         - 部署环境配置（环境变量 / 配置文件）：只读项，界面改不了，直接给出要设的
+           写法（可复制）+ 重启提示。注意多数部署是安装向导装的，DB_DSN / JWT_KEY
+           落在配置文件 data/runtime.env 里而不是环境变量，只能改环境变量的说法会指错路。
            （旧版只读项也跳「查看」，落到一个改不了的灰行，等于给了一条死路） -->
     <template v-if="!keyword.trim() && !loading && checks.length">
       <div class="ready-bar" :class="{ ok: readyCount === checks.length }">
         <span class="ready-bar-title">上线就绪检查</span>
         <span class="ready-bar-count">{{ readyCount }} / {{ checks.length }} 项就绪</span>
         <span v-if="readyCount < checks.length" class="ready-bar-pending">
-          还有 {{ checks.length - readyCount }} 项待处理<template v-if="uiPending">：本页可配 {{ uiPending }} 项</template><template v-if="envPending">、环境变量 {{ envPending }} 项</template>
+          还有 {{ checks.length - readyCount }} 项待处理<template v-if="uiPending">：本页可配 {{ uiPending }} 项</template><template v-if="envPending">、环境变量 / 配置文件 {{ envPending }} 项</template>
         </span>
         <span v-else class="ready-bar-done">上线必配项已全部就绪</span>
         <el-button size="small" text type="primary" class="ready-bar-toggle" @click="toggleReady">
@@ -90,7 +92,7 @@
 
       <template v-if="envChecks.length">
         <div class="ready-section-title">
-          部署环境变量
+          环境变量 / 配置文件
           <span class="ready-section-count">{{ envReadyCount }} / {{ envChecks.length }}</span>
         </div>
         <div v-for="c in envChecks" :key="c.label" class="ready-row">
@@ -101,7 +103,7 @@
             <div v-if="!c.ok && c.envSample" class="ready-env">
               <code class="ready-env-code">{{ c.envSample }}</code>
               <el-button size="small" text type="primary" @click="copyEnv(c)">复制</el-button>
-              <span class="ready-env-tip">改环境变量后重启生效</span>
+              <span class="ready-env-tip">设为环境变量，或写进配置文件 data/runtime.env，重启后生效</span>
             </div>
           </div>
         </div>
@@ -112,7 +114,7 @@
         <span v-if="readyCount < checks.length">
           还有 {{ checks.length - readyCount }} 项上线前要处理：本页可配 {{ uiPending }} 项（点「去配置」直接改）<template
             v-if="envPending"
-          >，部署环境变量 {{ envPending }} 项（需在服务器 / 容器设置后重启）</template>。
+          >，环境变量 / 配置文件 {{ envPending }} 项（需在服务器 / 容器的环境变量或 data/runtime.env 里设置后重启）</template>。
         </span>
         <span v-else>上线必配项已全部就绪。</span>
         <el-button v-if="uiPending > 0" size="small" type="primary" text @click="openWizard">
@@ -192,7 +194,7 @@
         <p class="wizard-final-line">
           当前上线就绪 <b>{{ readyCount }} / {{ checks.length }}</b> 项。
           <template v-if="readyCount < checks.length">
-            未就绪的多是只读项（数据库连接串 / 签名密钥 / Cookie HTTPS），只能到部署环境改环境变量后重启——界面不开放，是为了防止把「改回来的入口」一起弄丢。
+            未就绪的多是只读项（数据库连接串 / 签名密钥 / Cookie HTTPS），只能到部署环境改环境变量或配置文件（默认 data/runtime.env）后重启——界面不开放，是为了防止把「改回来的入口」一起弄丢。
           </template>
           <template v-else>必配项已全部就绪。</template>
         </p>
@@ -249,7 +251,7 @@ const GROUP_BLURBS: Record<string, string> = {
   auth: '后台登录凭证能用多久、防爆破的尝试次数。',
   storage:
     '图片 / 视频 / 小程序码存哪、怎么访问。⚠️ 本组任一项改动都需重启服务；更换存储方式前请确认历史文件仍可访问。',
-  security: '数据库连接、签名密钥等关键项，界面只展示，必须到部署环境改环境变量后重启——改错会把自己锁在系统外。',
+  security: '数据库连接、签名密钥等关键项，界面只展示，必须到部署环境改环境变量或配置文件（默认 data/runtime.env）后重启——改错会把自己锁在系统外。',
   feature: '运营期功能开关，按需开启。',
 }
 
@@ -339,7 +341,8 @@ const checks = computed<ReadyCheck[]>(() => {
 const readyCount = computed(() => checks.value.filter((c) => c.ok).length)
 // 分两类呈现：只读项顶着「待配置」却在这一页改不了，会让人以为能点开解决
 // （旧版「查看」跳到一个改不了的灰行，等于死路）。拆开后「本页可配置」可点，
-// 「部署环境变量」明确要改环境变量并重启。
+// 「环境变量 / 配置文件」明确要在部署环境改这两处之一并重启（多数部署是安装向导
+// 装的，实际落在 data/runtime.env，只提环境变量会让人找不到地方改）。
 const uiChecks = computed(() => checks.value.filter((c) => !c.readOnly))
 const envChecks = computed(() => checks.value.filter((c) => c.readOnly))
 const uiReadyCount = computed(() => uiChecks.value.filter((c) => c.ok).length)
@@ -628,7 +631,7 @@ const WIZARD_STEPS: WizardStep[] = [
   {
     key: 'final',
     title: '安全确认',
-    blurb: '最后核对一遍：哪些改了要重启、哪些只能改环境变量。确认无误再保存。',
+    blurb: '最后核对一遍：哪些改了要重启、哪些只能改环境变量或配置文件。确认无误再保存。',
     keys: [],
   },
 ]
@@ -1079,7 +1082,7 @@ onMounted(load)
   font-weight: 400;
   color: #909399;
 }
-/* 只读项：给出要设的环境变量（可复制），不再跳到一个改不了的灰行 */
+/* 只读项：给出要设的写法（可复制，环境变量与配置文件同格式），不再跳到改不了的灰行 */
 .ready-env {
   display: flex;
   align-items: center;

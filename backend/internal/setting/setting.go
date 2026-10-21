@@ -212,19 +212,18 @@ var registry = []def{
 	// 这三项改错会把「改回来的入口」一起弄丢（连不上库 / 登不进后台），故界面只展示。
 	{Key: "db_dsn", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "DB_DSN",
 		Name: "数据库连接串",
-		// 措辞必须说清「不落库」：只读项只在界面显示环境变量的当前实际值，
-		// 库里根本没有这一行（seedDefaults 跳过、Set 直接拒绝）。写成「配置存在库里」
-		// 会被读成「连接串存在库里」，与本项只读不落库的实现正好相反。
-		Desc: "数据库连接串（敏感，只读，不落库；此处显示的是当前 DB_DSN 环境变量的实际值）。其余系统配置都存在数据库里，连接串一旦改错，重启后连不上库，连「改回来」的入口都会一起消失——因此不能在此修改，只能到部署环境改环境变量 DB_DSN 后重启"},
+		// 改法要写两条：环境变量**或**配置文件。多数部署走安装向导，DB_DSN 就
+		// 落在 data/runtime.env 里而没有同名环境变量，只提环境变量等于指错路。
+		Desc: "数据库连接串（敏感，只读，不落库；此处显示的是当前实际生效值）。其余系统配置都存在数据库里，连接串一旦改错，重启后连不上库，连「改回来」的入口都会一起消失——因此不能在此修改，只能改环境变量 DB_DSN 或配置文件（默认 data/runtime.env）后重启"},
 	{Key: "jwt_key", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "JWT_KEY",
 		Name: "登录签名密钥",
-		Desc: "JWT 签名密钥（敏感，只读）。改错会让所有已登录会话立即失效且无法回退，只能改环境变量 JWT_KEY 后重启"},
+		Desc: "JWT 签名密钥（敏感，只读，不落库）。改错会让所有已登录会话立即失效且无法回退，只能改环境变量 JWT_KEY 或配置文件（默认 data/runtime.env）后重启"},
 	{Key: "cookie_secure", Group: "security", Type: "bool", Restart: true, ReadOnly: true, EnvVar: "COOKIE_SECURE",
 		Name: "登录 Cookie 强制 HTTPS",
-		Desc: "鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true）。改错会导致 http 环境登录不上，只能改环境变量 COOKIE_SECURE 后重启"},
+		Desc: "鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true）。改错会导致 http 环境登录不上，只能改环境变量 COOKIE_SECURE 或配置文件（默认 data/runtime.env）后重启"},
 	{Key: "cookie_domain", Group: "security", Type: "string", Restart: true, ReadOnly: true, EnvVar: "COOKIE_DOMAIN",
 		Name: "登录 Cookie 作用域",
-		Desc: "鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）"},
+		Desc: "鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）。只能改环境变量 COOKIE_DOMAIN 或配置文件（默认 data/runtime.env）后重启"},
 
 	// 缺省空串 = 「未设置」，读取时回退环境变量 METRICS_ENABLED；
 	// 一旦在界面显式设为 true/false 就以界面为准（避免升级后让既有部署的开关行为突变）。
@@ -414,7 +413,10 @@ func (s *Store) Set(key, value string) error {
 		return fmt.Errorf("未知设置项: %s", key)
 	}
 	if d.ReadOnly {
-		return fmt.Errorf("%s 为只读项，只能通过环境变量 %s 修改后重启", key, d.EnvVar)
+		// 措辞不能只说「环境变量」：优先级是 环境变量 > 配置文件 > 内置缺省，
+	// 而安装向导正是把 DB_DSN / JWT_KEY / COOKIE_* 写进配置文件（data/runtime.env）。
+	// 走向导装的部署根本没有环境变量，说「只能改环境变量」会让人找不到东西改。
+	return fmt.Errorf("%s 为只读项，只能改环境变量 %s 或配置文件（默认 data/runtime.env）后重启", key, d.EnvVar)
 	}
 	if d.Secret && value == Mask {
 		return fmt.Errorf("%s 不能提交掩码值；留空表示回退环境变量", key)

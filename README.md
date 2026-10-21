@@ -80,7 +80,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | --- | --- | --- |
 | 即时生效 | 保存即写入内存缓存，无需重启 | 下表「常规」全部 |
 | 需重启 | 客户端在启动时构造，重启后才生效 | `storage_*`、`cdn_*`、`upload_dir`、`upload_base_url` |
-| 只读 | 界面只**掩码展示当前值**并提示改法，改它要动环境变量后重启 | `db_dsn`、`jwt_key`、`cookie_secure`、`cookie_domain` |
+| 只读 | 界面只**掩码展示当前值**并提示改法，改它要动环境变量**或配置文件**后重启 | `db_dsn`、`jwt_key`、`cookie_secure`、`cookie_domain` |
 
 | 分组 | 配置项 | 说明 |
 | --- | --- | --- |
@@ -102,7 +102,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 文件存储与 CDN | `storage_use_ssl` / `storage_public` | MinIO 走 HTTPS / 是否公开桶（私有桶走限时签名） |
 | 文件存储与 CDN | `upload_dir` / `upload_base_url` | 本地存储目录 / 上传文件公开访问基址 |
 | 文件存储与 CDN | `cdn_enabled` / `cdn_access_key_id` / `cdn_access_key_secret` / `cdn_endpoint` | CDN 缓存刷新（覆盖写后使边缘缓存失效） |
-| 安全与基础设施 | `db_dsn` / `jwt_key` / `cookie_secure` / `cookie_domain` | **只读**，仅掩码展示当前值，修改走环境变量后重启 |
+| 安全与基础设施 | `db_dsn` / `jwt_key` / `cookie_secure` / `cookie_domain` | **只读**，仅掩码展示当前值，修改走环境变量**或配置文件**（默认 `data/runtime.env`）后重启 |
 | 功能开关 | `metrics_enabled` | 是否开放 `/metrics`（Prometheus 指标）；留空则跟随 `METRICS_ENABLED` |
 | 功能开关 | `independent_lock` | 独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员） |
 

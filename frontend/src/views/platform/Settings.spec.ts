@@ -413,7 +413,7 @@ describe('Settings 系统设置', () => {
     expect(w.find('.ready-card').exists()).toBe(true)
   })
 
-  it('上线就绪面板：按「本页可配置 / 部署环境变量」分组；只读项给环境变量示例而非死路入口', async () => {
+  it('上线就绪面板：按「本页可配置 / 环境变量 / 配置文件」分组；只读项给可复制写法而非死路入口', async () => {
     const { w } = await setup()
     // 夹具已配置 jwt_key / db_dsn / storage_driver → 3/7；
     // cookie_secure=false、wx_appid 未配、upload_base_url 夹具缺省、miniprogram_base_url 未配
@@ -430,7 +430,7 @@ describe('Settings 系统设置', () => {
     // 分两组呈现：本页可配 4 项（1 就绪） / 部署环境变量 3 项（2 就绪）
     expect(w.findAll('.ready-section-title')).toHaveLength(2)
     expect(w.text()).toContain('本页可配置')
-    expect(w.text()).toContain('部署环境变量')
+    expect(w.text()).toContain('环境变量 / 配置文件')
 
     // 已就绪项：显示「已就绪」且无按钮
     const jwtRow = readyRows.find((r: any) => r.text().includes('登录签名密钥'))!
@@ -449,7 +449,9 @@ describe('Settings 系统设置', () => {
     // 改为直接给出可复制的环境变量示例 + 重启提示
     const cookieRow = readyRows.find((r: any) => r.text().includes('登录 Cookie 强制 HTTPS'))!
     expect(cookieRow.text()).toContain('COOKIE_SECURE=true')
-    expect(cookieRow.text()).toContain('改环境变量后重启生效')
+    // 改法要同时给出环境变量与配置文件两条路（多数部署是安装向导装的，值落在
+    // data/runtime.env 而非环境变量），只提环境变量会让人找不到地方改
+    expect(cookieRow.text()).toContain('设为环境变量，或写进配置文件 data/runtime.env，重启后生效')
     const cookieBtns = cookieRow.findAll('button.el-button')
     expect(cookieBtns).toHaveLength(1)
     expect(cookieBtns[0].text()).toBe('复制')
