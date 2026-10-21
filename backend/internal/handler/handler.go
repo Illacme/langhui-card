@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"langhui/internal/model"
-	"langhui/internal/repository"
+	"weichuan/internal/model"
+	"weichuan/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

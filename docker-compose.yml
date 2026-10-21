@@ -24,13 +24,13 @@ services:
     # SQLite 用户不必被迫配置 MySQL 口令、也不起一个用不到的数据库容器。
     profiles: [mysql]
     image: mysql:8.0
-    container_name: langhui-mysql
+    container_name: weichuan-mysql
     restart: unless-stopped
     environment:
       # 必填（仅 --profile mysql 生效）：不设则 compose 直接报错，
       # 而不是悄悄带着编排里的示例口令起库
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置：请 cp .env.example .env 后改成强随机值，并加 --profile mysql 启用 MySQL}
-      MYSQL_DATABASE: langhui
+      MYSQL_DATABASE: weichuan
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_general_ci
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
@@ -52,7 +52,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: langhui-backend
+    container_name: weichuan-backend
     restart: unless-stopped
     # 不依赖 mysql：安装模式下 backend 根本不连库，连不连得上由安装向导在「装」的那一步决定；
     # MySQL 模式下装完自重启时 mysql 早已 healthy。硬绑 service_healthy 反而会在
@@ -108,7 +108,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: langhui-frontend
+    container_name: weichuan-frontend
     restart: unless-stopped
     # 只等 backend 容器起来（nginx 需要能解析 upstream 主机名），不等 healthy：
     # 首次部署时 backend 处于安装模式、/healthz 报 503，等 healthy 会永远等不到，

@@ -3,7 +3,7 @@ package config
 import (
 	"strings"
 
-	"langhui/internal/setting"
+	"weichuan/internal/setting"
 )
 
 // str 取界面设置值；**空串一律视同「未设置」**，保留环境变量值。

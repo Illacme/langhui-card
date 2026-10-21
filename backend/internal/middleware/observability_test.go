@@ -95,15 +95,15 @@ func TestMetricsCountersAndFormat(t *testing.T) {
 	require.Equal(t, "text/plain; version=0.0.4", w.Header().Get("Content-Type"))
 
 	body := w.Body.String()
-	require.Contains(t, body, `langhui_http_requests_total{method="GET",status="2xx"} 3`)
-	require.Contains(t, body, `langhui_http_requests_total{method="GET",status="4xx"} 1`)
-	require.Contains(t, body, "langhui_uptime_seconds ")
-	require.Contains(t, body, "# TYPE langhui_http_requests_total counter")
+	require.Contains(t, body, `weichuan_http_requests_total{method="GET",status="2xx"} 3`)
+	require.Contains(t, body, `weichuan_http_requests_total{method="GET",status="4xx"} 1`)
+	require.Contains(t, body, "weichuan_uptime_seconds ")
+	require.Contains(t, body, "# TYPE weichuan_http_requests_total counter")
 
 	// /metrics 自身这次请求也会被计数（4xx 不变，2xx +1 → 4）
 	w2 := httptest.NewRecorder()
 	r.ServeHTTP(w2, httptest.NewRequest("GET", "/metrics", nil))
-	require.Contains(t, w2.Body.String(), `langhui_http_requests_total{method="GET",status="2xx"} 4`)
+	require.Contains(t, w2.Body.String(), `weichuan_http_requests_total{method="GET",status="2xx"} 4`)
 }
 
 func TestAccessLogOutput(t *testing.T) {

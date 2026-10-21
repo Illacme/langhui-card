@@ -3,23 +3,23 @@
 # MySQL 逻辑备份脚本（mysqldump → gzip → 按保留份数轮转）。
 #
 # 用法：
-#   scripts/backup.sh                      # 用默认配置（容器名 langhui-mysql）
-#   DB_CONTAINER=my-mysql DB_USER=root DB_PASSWORD=secret DB_NAME=langhui scripts/backup.sh
+#   scripts/backup.sh                      # 用默认配置（容器名 weichuan-mysql）
+#   DB_CONTAINER=my-mysql DB_USER=root DB_PASSWORD=secret DB_NAME=weichuan scripts/backup.sh
 #   BACKUP_DIR=/data/backups KEEP_DAYS=14 scripts/backup.sh
 #
 # 依赖：mysqldump 在容器内（默认通过 docker exec 执行，不依赖宿主机装 MySQL 客户端）。
 # 建议：加入 crontab，如每天凌晨 3 点全量备份——
-#   0 3 * * * cd /path/to/repo && scripts/backup.sh >> /var/log/langhui-backup.log 2>&1
+#   0 3 * * * cd /path/to/repo && scripts/backup.sh >> /var/log/weichuan-backup.log 2>&1
 #
 # 注意：逻辑备份不含二进制日志，恢复点 = 备份时刻；需要 PITR（时间点恢复）
 # 须另行开启 binlog 并定期备份 binlog 文件。
 # ─────────────────────────────────────────────────────────────
 set -euo pipefail
 
-DB_CONTAINER="${DB_CONTAINER:-langhui-mysql}"
+DB_CONTAINER="${DB_CONTAINER:-weichuan-mysql}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-root}"
-DB_NAME="${DB_NAME:-langhui}"
+DB_NAME="${DB_NAME:-weichuan}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 KEEP_DAYS="${KEEP_DAYS:-7}"
 

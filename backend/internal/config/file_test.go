@@ -13,7 +13,7 @@ func TestParseFileRules(t *testing.T) {
 	path := filepath.Join(dir, "runtime.env")
 	content := "# 注释行\n" +
 		"\n" +
-		"DB_DSN=root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4\n" +
+		"DB_DSN=root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4\n" +
 		"  SPACED  =  value-with-spaces  \n" +
 		"QUOTED=\"  keep inner spaces  \"\n" +
 		"SINGLE='single'\n" +
@@ -26,7 +26,7 @@ func TestParseFileRules(t *testing.T) {
 	}
 	vals := parseFile(path)
 	want := map[string]string{
-		"DB_DSN": "root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4",
+		"DB_DSN": "root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4",
 		"SPACED": "value-with-spaces",
 		"QUOTED": "  keep inner spaces  ",
 		"SINGLE": "single",
@@ -157,7 +157,7 @@ func TestLoadReadsConfigFile(t *testing.T) {
 	t.Setenv("JWT_KEY", "")
 	t.Setenv("ADMIN_PASS", "")
 	if err := WriteFileValues(cfgPath, map[string]string{
-		"DB_DSN":        "sqlite:///data/langhui.db",
+		"DB_DSN":        "sqlite:///data/weichuan.db",
 		"JWT_KEY":       "0123456789abcdef0123456789abcdef",
 		"ADMIN_PASS":    "installer-pass",
 		"COOKIE_SECURE": "true",
@@ -165,7 +165,7 @@ func TestLoadReadsConfigFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg := Load()
-	if cfg.DBDSN != "sqlite:///data/langhui.db" {
+	if cfg.DBDSN != "sqlite:///data/weichuan.db" {
 		t.Fatalf("DBDSN 应来自配置文件，实际 %q", cfg.DBDSN)
 	}
 	if cfg.JWTKey != "0123456789abcdef0123456789abcdef" {

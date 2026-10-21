@@ -3,9 +3,9 @@ package handler
 import (
 	"log"
 
-	"langhui/internal/auth"
-	"langhui/internal/config"
-	"langhui/internal/model"
+	"weichuan/internal/auth"
+	"weichuan/internal/config"
+	"weichuan/internal/model"
 
 	"gorm.io/gorm"
 )

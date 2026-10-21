@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"langhui/internal/config"
-	"langhui/internal/storage"
+	"weichuan/internal/config"
+	"weichuan/internal/storage"
 
 	"github.com/stretchr/testify/require"
 )

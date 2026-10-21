@@ -36,7 +36,7 @@ func newTestOssUploader(t *testing.T, srv *httptest.Server) *OssUploader {
 	t.Helper()
 	client, err := oss.New(strings.TrimPrefix(srv.URL, "http://"), "ak", "sk", oss.ForcePathStyle(true))
 	require.NoError(t, err)
-	b, err := client.Bucket("langhui")
+	b, err := client.Bucket("weichuan")
 	require.NoError(t, err)
 	return &OssUploader{
 		Client:   client,
@@ -59,9 +59,9 @@ func TestOssSave(t *testing.T) {
 
 	require.Equal(t, 1, fake.hits, "Save 应真正发起一次 PUT")
 	require.Equal(t, "PUT", fake.gotMethod)
-	require.True(t, strings.HasPrefix(fake.gotPath, "/langhui/"), "对象路径应为 /<bucket>/<name>，实际 %s", fake.gotPath)
+	require.True(t, strings.HasPrefix(fake.gotPath, "/weichuan/"), "对象路径应为 /<bucket>/<name>，实际 %s", fake.gotPath)
 	require.True(t, strings.HasSuffix(fake.gotPath, ".png"))
-	require.Equal(t, "http://cdn.example.com"+strings.TrimPrefix(fake.gotPath, "/langhui"), url)
+	require.Equal(t, "http://cdn.example.com"+strings.TrimPrefix(fake.gotPath, "/weichuan"), url)
 }
 
 func TestOssSaveRejectsBadExtBeforeHTTP(t *testing.T) {
@@ -85,7 +85,7 @@ func TestOssSaveBytes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, fake.hits)
 	require.Equal(t, "PUT", fake.gotMethod)
-	require.Equal(t, "/langhui/wxacode/1.jpg", fake.gotPath)
+	require.Equal(t, "/weichuan/wxacode/1.jpg", fake.gotPath)
 	require.Equal(t, "http://cdn.example.com/wxacode/1.jpg", url)
 }
 
@@ -114,7 +114,7 @@ func TestOssPresignAndSign(t *testing.T) {
 
 func TestNewOssUploaderInvalidConfig(t *testing.T) {
 	// 空 endpoint / 空 bucket 应在构造期即报错（SDK 对空 endpoint 不校验，会拖到上传才失败）
-	_, err := NewOssUploader("", "ak", "sk", "langhui", "http://cdn.example.com", 10<<20, DefaultAllowExt)
+	_, err := NewOssUploader("", "ak", "sk", "weichuan", "http://cdn.example.com", 10<<20, DefaultAllowExt)
 	require.Error(t, err)
 	_, err = NewOssUploader("oss-cn-hangzhou.aliyuncs.com", "ak", "sk", "", "http://cdn.example.com", 10<<20, DefaultAllowExt)
 	require.Error(t, err)

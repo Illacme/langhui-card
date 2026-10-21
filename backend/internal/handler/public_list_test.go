@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"langhui/internal/model"
-	"langhui/internal/repository"
+	"weichuan/internal/model"
+	"weichuan/internal/repository"
 
 	"github.com/glebarez/sqlite"
 	"github.com/gin-gonic/gin"
@@ -32,7 +32,7 @@ func setupPublicEngine(t *testing.T) (*gin.Engine, *gorm.DB) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
-	tmpDB, err := os.CreateTemp("", "langhui-public-*.db")
+	tmpDB, err := os.CreateTemp("", "weichuan-public-*.db")
 	require.NoError(t, err)
 	dbPath := tmpDB.Name()
 	require.NoError(t, tmpDB.Close())

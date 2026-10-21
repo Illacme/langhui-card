@@ -148,7 +148,7 @@ func WriteFileValues(path string, kv map[string]string) error {
 	sort.Strings(keys) // 稳定顺序：便于 diff、审阅与排障
 
 	var b strings.Builder
-	b.WriteString("# langhui 运行配置。优先级：环境变量 > 本文件 > 内置缺省值。\n")
+	b.WriteString("# weichuan 运行配置。优先级：环境变量 > 本文件 > 内置缺省值。\n")
 	b.WriteString("# 由安装向导 / 运维维护；含敏感值，权限 0600，请勿提交进版本库。\n")
 	for _, k := range keys {
 		b.WriteString(k + "=" + quoteValue(merged[k]) + "\n")

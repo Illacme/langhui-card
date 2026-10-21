@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"strings"
 
-	"langhui/internal/audit"
-	"langhui/internal/config"
-	"langhui/internal/middleware"
-	"langhui/internal/setting"
+	"weichuan/internal/audit"
+	"weichuan/internal/config"
+	"weichuan/internal/middleware"
+	"weichuan/internal/setting"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

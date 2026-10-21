@@ -13,11 +13,11 @@ import (
 
 	"gorm.io/gorm"
 
-	"langhui/internal/config"
-	"langhui/internal/dbopen"
-	"langhui/internal/handler"
-	"langhui/internal/model"
-	"langhui/internal/setting"
+	"weichuan/internal/config"
+	"weichuan/internal/dbopen"
+	"weichuan/internal/handler"
+	"weichuan/internal/model"
+	"weichuan/internal/setting"
 )
 
 // 完整安装向导（第二步）：在「未配置模式」下提供表单页 + 测试连接 + 一键安装。

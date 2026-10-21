@@ -56,18 +56,18 @@ function status(over: Partial<SetupStatus> = {}): SetupStatus {
   return {
     configured: false,
     missing: [],
-    envText: 'DB_DSN=sqlite:///data/langhui.db\nJWT_KEY=generated',
+    envText: 'DB_DSN=sqlite:///data/weichuan.db\nJWT_KEY=generated',
     hint: '',
     installable: true,
     engines: ['mysql', 'sqlite'],
-    sqlitePath: './data/langhui.db',
+    sqlitePath: './data/weichuan.db',
     configFile: './data/runtime.env',
     adminUser: 'admin',
     mysqlHint: {
       host: 'mysql',
       port: '3306',
       user: 'root',
-      database: 'langhui',
+      database: 'weichuan',
       note: '检测到编排环境',
     },
     ...over,
@@ -142,7 +142,7 @@ describe('SetupInstaller', () => {
     vi.mocked(runInstall).mockResolvedValue({
       ok: true,
       driver: 'mysql',
-      dsn: 'root:******@tcp(mysql:3306)/langhui',
+      dsn: 'root:******@tcp(mysql:3306)/weichuan',
       configFile: './data/runtime.env',
       restarted: false,
       message: '',
@@ -162,7 +162,7 @@ describe('SetupInstaller', () => {
     const payload = vi.mocked(runInstall).mock.calls[0][0]
     expect(payload.engine).toBe('mysql')
     expect(payload.dbHost).toBe('mysql')
-    expect(payload.dbName).toBe('langhui')
+    expect(payload.dbName).toBe('weichuan')
     expect(payload.adminPass).toBe('installer-pass-123')
 
     // 进入进度区；restarted=false（Windows / 托管环境）要给人工重启提示
@@ -188,7 +188,7 @@ describe('SetupInstaller', () => {
   it('测试连接成功展示 driver 与备注', async () => {
     vi.mocked(testConnection).mockResolvedValue({
       driver: 'mysql',
-      dsn: 'root:******@tcp(mysql:3306)/langhui',
+      dsn: 'root:******@tcp(mysql:3306)/weichuan',
       willCreate: true,
       note: '数据库不存在，安装时将自动创建',
     })
@@ -204,6 +204,6 @@ describe('SetupInstaller', () => {
   it('默认展示可复制的兜底配置文本', () => {
     const w = mountInstaller()
     expect(w.text()).toContain('手动配置（不使用安装向导）')
-    expect(w.text()).toContain('DB_DSN=sqlite:///data/langhui.db')
+    expect(w.text()).toContain('DB_DSN=sqlite:///data/weichuan.db')
   })
 })

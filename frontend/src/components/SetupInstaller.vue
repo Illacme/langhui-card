@@ -169,7 +169,7 @@ const failed = ref(0)
 const form = reactive({
   dbHost: '127.0.0.1',
   dbPort: '3306',
-  dbName: 'langhui',
+  dbName: 'weichuan',
   dbUser: 'root',
   dbPassword: '',
   createDatabase: true,

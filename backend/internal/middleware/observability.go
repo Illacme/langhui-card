@@ -139,22 +139,22 @@ func (m *Metrics) Handler() gin.HandlerFunc {
 		}
 		sort.Strings(keys)
 		var b strings.Builder
-		b.WriteString("# HELP langhui_http_requests_total HTTP requests total, grouped by method and status class\n")
-		b.WriteString("# TYPE langhui_http_requests_total counter\n")
+		b.WriteString("# HELP weichuan_http_requests_total HTTP requests total, grouped by method and status class\n")
+		b.WriteString("# TYPE weichuan_http_requests_total counter\n")
 		for _, k := range keys {
 			method, class, _ := strings.Cut(k, "|")
-			fmt.Fprintf(&b, "langhui_http_requests_total{method=%q,status=%q} %d\n", method, class, m.counters[k])
+			fmt.Fprintf(&b, "weichuan_http_requests_total{method=%q,status=%q} %d\n", method, class, m.counters[k])
 		}
 		total := m.total.Load()
 		uptime := int64(time.Since(m.started).Seconds())
 		m.mu.Unlock()
 
-		b.WriteString("# HELP langhui_http_requests_received_total All received HTTP requests\n")
-		b.WriteString("# TYPE langhui_http_requests_received_total counter\n")
-		fmt.Fprintf(&b, "langhui_http_requests_received_total %d\n", total)
-		b.WriteString("# HELP langhui_uptime_seconds Process uptime in seconds\n")
-		b.WriteString("# TYPE langhui_uptime_seconds gauge\n")
-		fmt.Fprintf(&b, "langhui_uptime_seconds %d\n", uptime)
+		b.WriteString("# HELP weichuan_http_requests_received_total All received HTTP requests\n")
+		b.WriteString("# TYPE weichuan_http_requests_received_total counter\n")
+		fmt.Fprintf(&b, "weichuan_http_requests_received_total %d\n", total)
+		b.WriteString("# HELP weichuan_uptime_seconds Process uptime in seconds\n")
+		b.WriteString("# TYPE weichuan_uptime_seconds gauge\n")
+		fmt.Fprintf(&b, "weichuan_uptime_seconds %d\n", uptime)
 
 		c.Data(http.StatusOK, "text/plain; version=0.0.4", []byte(b.String()))
 	}

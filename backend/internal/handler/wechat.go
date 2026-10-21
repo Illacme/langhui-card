@@ -8,10 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"langhui/internal/config"
-	"langhui/internal/setting"
-	"langhui/internal/storage"
-	"langhui/internal/wechat"
+	"weichuan/internal/config"
+	"weichuan/internal/setting"
+	"weichuan/internal/storage"
+	"weichuan/internal/wechat"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"langhui/internal/model"
+	"weichuan/internal/model"
 
 	"gorm.io/gorm"
 )

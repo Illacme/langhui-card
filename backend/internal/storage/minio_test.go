@@ -57,7 +57,7 @@ func newTestMinioUploader(t *testing.T, srv *httptest.Server) *MinioUploader {
 	require.NoError(t, err)
 	return &MinioUploader{
 		Client:   client,
-		Bucket:   "langhui",
+		Bucket:   "weichuan",
 		BaseURL:  "http://cdn.example.com",
 		MaxBytes: 10 << 20,
 		AllowExt: DefaultAllowExt,
@@ -76,9 +76,9 @@ func TestMinioSave(t *testing.T) {
 
 	require.Equal(t, 1, fake.hits, "Save 应真正发起一次 PUT")
 	require.Equal(t, "PUT", fake.gotMethod)
-	require.True(t, strings.HasPrefix(fake.gotPath, "/langhui/"), "对象路径应为 /<bucket>/<name>，实际 %s", fake.gotPath)
+	require.True(t, strings.HasPrefix(fake.gotPath, "/weichuan/"), "对象路径应为 /<bucket>/<name>，实际 %s", fake.gotPath)
 	require.True(t, strings.HasSuffix(fake.gotPath, ".png"))
-	require.Equal(t, "http://cdn.example.com"+strings.TrimPrefix(fake.gotPath, "/langhui"), url, "返回 BaseURL + 对象名")
+	require.Equal(t, "http://cdn.example.com"+strings.TrimPrefix(fake.gotPath, "/weichuan"), url, "返回 BaseURL + 对象名")
 }
 
 func TestMinioSaveRejectsBadExtBeforeHTTP(t *testing.T) {
@@ -102,7 +102,7 @@ func TestMinioSaveBytes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 1, fake.hits)
 	require.Equal(t, "PUT", fake.gotMethod)
-	require.Equal(t, "/langhui/wxacode/1.jpg", fake.gotPath, "relPath 应原样作为对象名")
+	require.Equal(t, "/weichuan/wxacode/1.jpg", fake.gotPath, "relPath 应原样作为对象名")
 	// bytes.Reader 场景 minio-go 走 aws-chunked 流式签名，body 带 chunk 帧，
 	// 故断言「包含原始内容」而非全等。
 	require.Contains(t, string(fake.gotBody), "jpgbytes")
@@ -133,6 +133,6 @@ func TestMinioPresignAndSign(t *testing.T) {
 
 func TestNewMinioUploaderInvalidEndpoint(t *testing.T) {
 	// 空 endpoint 应在构造期即报错（minio.New 对空 endpoint 返回错误）
-	_, err := NewMinioUploader("", "ak", "sk", "langhui", "http://cdn.example.com", false, 10<<20, DefaultAllowExt)
+	_, err := NewMinioUploader("", "ak", "sk", "weichuan", "http://cdn.example.com", false, 10<<20, DefaultAllowExt)
 	require.Error(t, err)
 }

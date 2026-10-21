@@ -57,10 +57,10 @@ backend/
 
 | 写法 | 驱动 | 说明 |
 |---|---|---|
-| `root:pw@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true` | MySQL | 生产标准路径，表结构由 `migrations/*.sql` 建立 |
-| `sqlite:///var/lib/langhui/langhui.db` | SQLite | 免装数据库；启动时按模型 `AutoMigrate` 建表，自动补 WAL / busy_timeout / foreign_keys |
-| `file:/var/lib/langhui/langhui.db` | SQLite | 同上，URI 写法 |
-| `/var/lib/langhui/langhui.db` | SQLite | 裸路径兜底（仅认 `.db` / `.sqlite` / `.sqlite3` 结尾） |
+| `root:pw@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true` | MySQL | 生产标准路径，表结构由 `migrations/*.sql` 建立 |
+| `sqlite:///var/lib/weichuan/weichuan.db` | SQLite | 免装数据库；启动时按模型 `AutoMigrate` 建表，自动补 WAL / busy_timeout / foreign_keys |
+| `file:/var/lib/weichuan/weichuan.db` | SQLite | 同上，URI 写法 |
+| `/var/lib/weichuan/weichuan.db` | SQLite | 裸路径兜底（仅认 `.db` / `.sqlite` / `.sqlite3` 结尾） |
 
 > 用 MySQL 时先建库并导入迁移；用 SQLite 时**不要**执行 `migrations/*.sql`
 > （那些是 MySQL 方言，`ENGINE=InnoDB` / `AUTO_INCREMENT` / 反引号 SQLite 都不认）。
@@ -69,12 +69,12 @@ backend/
 
 ```bash
 # 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单 / 多租户 company_id）——仅 MySQL 需要
-for f in migrations/000*.sql; do mysql -u root -p langhui < "$f"; done
+for f in migrations/000*.sql; do mysql -u root -p weichuan < "$f"; done
 
 # 2. 配置环境变量（JWT_KEY 必填，用于 token 签名）
-export DB_DSN="root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true"
+export DB_DSN="root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true"
 # 或走 SQLite（免装数据库，表由服务启动时自动建）：
-# export DB_DSN="sqlite:///var/lib/langhui/langhui.db"
+# export DB_DSN="sqlite:///var/lib/weichuan/weichuan.db"
 export PORT=8080
 export JWT_KEY="change-me-to-a-long-random-string"
 # 文件上传（可选，有默认值）
@@ -86,13 +86,13 @@ export STORAGE_DRIVER="local"
 export MINIO_ENDPOINT="play.min.io"
 export MINIO_ACCESS_KEY="your-access-key"
 export MINIO_SECRET_KEY="your-secret-key"
-export MINIO_BUCKET="langhui"
+export MINIO_BUCKET="weichuan"
 export MINIO_USE_SSL="true"
 # —— 阿里云 OSS（STORAGE_DRIVER=oss）——
 export OSS_ENDPOINT="oss-cn-hangzhou.aliyuncs.com"
 export OSS_ACCESS_KEY_ID="your-access-key-id"
 export OSS_ACCESS_KEY_SECRET="your-secret"
-export OSS_BUCKET="langhui"
+export OSS_BUCKET="weichuan"
 # 注：MINIO/OSS 模式下 UPLOAD_BASE_URL 改为对象存储的公开访问基址（如 https://cdn.xxx 或 bucket 公网域名）
 # 存储可见性：true=公开桶（默认）；false=私有桶，需配合限时签名访问（STORAGE_PUBLIC=false）
 export STORAGE_PUBLIC="true"
@@ -137,8 +137,8 @@ go run ./cmd/server
 
 ## 容器运行
 ```bash
-docker build -t langhui-backend ./backend
-docker run -e DB_DSN="$DB_DSN" -e JWT_KEY="$JWT_KEY" -e UPLOAD_DIR="./uploads" -e UPLOAD_BASE_URL="$UPLOAD_BASE_URL" -e STORAGE_DRIVER="$STORAGE_DRIVER" -e MINIO_ENDPOINT="$MINIO_ENDPOINT" -e MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" -e MINIO_SECRET_KEY="$MINIO_SECRET_KEY" -e MINIO_BUCKET="$MINIO_BUCKET" -e MINIO_USE_SSL="$MINIO_USE_SSL" -e OSS_ENDPOINT="$OSS_ENDPOINT" -e OSS_ACCESS_KEY_ID="$OSS_ACCESS_KEY_ID" -e OSS_ACCESS_KEY_SECRET="$OSS_ACCESS_KEY_SECRET" -e OSS_BUCKET="$OSS_BUCKET" -e WX_APPID="$WX_APPID" -e WX_APPSECRET="$WX_APPSECRET" -e WXACODE_TTL_HOURS="$WXACODE_TTL_HOURS" -e ADMIN_USER="$ADMIN_USER" -e ADMIN_PASS="$ADMIN_PASS" -p 8080:8080 langhui-backend
+docker build -t weichuan-backend ./backend
+docker run -e DB_DSN="$DB_DSN" -e JWT_KEY="$JWT_KEY" -e UPLOAD_DIR="./uploads" -e UPLOAD_BASE_URL="$UPLOAD_BASE_URL" -e STORAGE_DRIVER="$STORAGE_DRIVER" -e MINIO_ENDPOINT="$MINIO_ENDPOINT" -e MINIO_ACCESS_KEY="$MINIO_ACCESS_KEY" -e MINIO_SECRET_KEY="$MINIO_SECRET_KEY" -e MINIO_BUCKET="$MINIO_BUCKET" -e MINIO_USE_SSL="$MINIO_USE_SSL" -e OSS_ENDPOINT="$OSS_ENDPOINT" -e OSS_ACCESS_KEY_ID="$OSS_ACCESS_KEY_ID" -e OSS_ACCESS_KEY_SECRET="$OSS_ACCESS_KEY_SECRET" -e OSS_BUCKET="$OSS_BUCKET" -e WX_APPID="$WX_APPID" -e WX_APPSECRET="$WX_APPSECRET" -e WXACODE_TTL_HOURS="$WXACODE_TTL_HOURS" -e ADMIN_USER="$ADMIN_USER" -e ADMIN_PASS="$ADMIN_PASS" -p 8080:8080 weichuan-backend
 ```
 
 ## 本地联调（SQLite devserver，免 MySQL）
@@ -146,7 +146,7 @@ docker run -e DB_DSN="$DB_DSN" -e JWT_KEY="$JWT_KEY" -e UPLOAD_DIR="./uploads" -
 ```bash
 go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ```
-演示账号：超管 `admin/admin123456`；员工手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）。生产部署走 `cmd/server`（MySQL + docker-compose；小体量也可用 SQLite 单机，见「本地运行」的 DSN 表与 `docs/deploy-runbook.md` 路径 D）。
+演示账号：超管 `admin/admin123456`；员工手机 `13832603521` / 密码 `weichuan123`（高立新，业务经理，staffId=1）。生产部署走 `cmd/server`（MySQL + docker-compose；小体量也可用 SQLite 单机，见「本地运行」的 DSN 表与 `docs/deploy-runbook.md` 路径 D）。
 
 两个联调注意点：
 - **真机 / 局域网上传**：上传基址默认 `http://127.0.0.1:<port>/uploads`（同机测试可直接用）；手机取不到图时设 `DEV_UPLOAD_BASE_URL=http://<本机IP>:8080/uploads` 再启动（启动日志 `upload base url:` 显示生效值）。
@@ -363,7 +363,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   cd backend
   go test ./internal/handler/ -v
   # 生产契约校验（需可用 MySQL）：
-  TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true' \
+  TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/weichuan_test?charset=utf8mb4&parseTime=true' \
     go test ./internal/handler/ -run TestAPIFlowMySQL -v
   ```
 - 鉴权约定：中间件返回的是 **HTTP 200 + `{code:401|403}`**（非 HTTP 状态），测试统一断言 `body["code"]`。
@@ -388,7 +388,7 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
   - `backend-mysql`（**可选**）：仅当仓库配置了变量 `TEST_MYSQL_DSN` 时才运行，
     先跑「连接 + 建表」再跑完整 parity，用于校验生产 MySQL 契约。
     配置路径：仓库 Settings → Secrets and variables → Actions → Variables 新增 `TEST_MYSQL_DSN`
-    （例：`root:pwd@tcp(host:3306)/langhui_test?charset=utf8mb4&parseTime=true`）。
+    （例：`root:pwd@tcp(host:3306)/weichuan_test?charset=utf8mb4&parseTime=true`）。
   - `frontend`：`npm ci` + `npm run build` + `npm run test`（Vitest，含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
   - `frontend-typecheck`（**阻塞门禁**）：`vue-tsc --noEmit`。历史 4 个 `@wangeditor/*` 类型错误已通过 tsconfig `paths` 指向真实 d.ts + 精准断言修复，当前 0 错误。
 
@@ -406,31 +406,31 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 `docker-compose.yml` 已为 backend 配置 `healthcheck`（每 15s 探 `/healthz`，连续 5 次失败标记不健康；安装模式下 `/healthz` 如实返回 503，此时会再看一眼 `/api/setup/status`，`configured=false` 按健康放行——否则首次部署装到一半就被反复重启）。frontend 只 `depends_on: backend`（**不等 healthy**：安装模式下 backend 的 `/healthz` 就是 503，而安装页正是由本前端提供的，等 healthy 会永远等不到）；backend 也**不依赖** mysql 的 healthy（连不连库由安装向导在「装」的那一步决定，硬绑会让纯 SQLite 部署永远起不来）。
 
 ### 2. 访问日志落盘（告警 R2 的前置条件，极易踩坑）
-`middleware.AccessLog` 使用 Go 标准 `log` 包，输出到 **stderr**（每行含方法/路径/状态/耗时/IP；5xx 以 `[ACCESS-5XX]` 前缀标出）。`scripts/alert_check.sh` 的 **R2 规则读取日志文件**（`LOG_FILE`，默认 `/var/log/langhui/access.log`）扫描新增 `[ACCESS-5XX]` 行。
+`middleware.AccessLog` 使用 Go 标准 `log` 包，输出到 **stderr**（每行含方法/路径/状态/耗时/IP；5xx 以 `[ACCESS-5XX]` 前缀标出）。`scripts/alert_check.sh` 的 **R2 规则读取日志文件**（`LOG_FILE`，默认 `/var/log/weichuan/access.log`）扫描新增 `[ACCESS-5XX]` 行。
 
 ⚠️ **必须把后端 stderr 重定向到该文件，否则 R2 永远扫不到 5xx**（这是"明明有 5xx 却没告警"的最常见根因）。两种落地方式：
 
 - 方式 A — 进程管理器（systemd / supervisor）重定向（推荐裸机部署）：
   ```ini
-  # /etc/systemd/system/langhui-backend.service 片段
+  # /etc/systemd/system/weichuan-backend.service 片段
   [Service]
-  ExecStart=/opt/langhui/backend -port 8080
-  StandardOutput=append:/var/log/langhui/access.log
-  StandardError=append:/var/log/langhui/access.log
+  ExecStart=/opt/weichuan/backend -port 8080
+  StandardOutput=append:/var/log/weichuan/access.log
+  StandardError=append:/var/log/weichuan/access.log
   ```
 - 方式 B — 直接重定向（裸跑）：
   ```bash
-  cd backend && go run ./cmd/server >> /var/log/langhui/access.log 2>&1 &
+  cd backend && go run ./cmd/server >> /var/log/weichuan/access.log 2>&1 &
   ```
-- Docker 部署：`docker logs langhui-backend` 即可查看；若要在宿主机用 `alert_check.sh` 读文件，可挂卷 + `2>` 重定向，或改用 Docker `json-file` logging driver 配合外部采集（filebeat 等）。**告警脚本假设的是裸机/文件场景**，纯 docker 场景建议改用 `docker logs` 轮询或接入标准监控栈。
+- Docker 部署：`docker logs weichuan-backend` 即可查看；若要在宿主机用 `alert_check.sh` 读文件，可挂卷 + `2>` 重定向，或改用 Docker `json-file` logging driver 配合外部采集（filebeat 等）。**告警脚本假设的是裸机/文件场景**，纯 docker 场景建议改用 `docker logs` 轮询或接入标准监控栈。
 
 ### 3. 数据库备份（MySQL）
 `scripts/backup.sh` 做 MySQL 逻辑备份（`docker exec mysqldump --single-transaction --quick` → gzip → 按 `KEEP_DAYS` 轮转）。
 ```bash
 # 每天 03:00 全量备份（crontab）
-0 3 * * * cd /path/to/repo && scripts/backup.sh >> /var/log/langhui-backup.log 2>&1
+0 3 * * * cd /path/to/repo && scripts/backup.sh >> /var/log/weichuan-backup.log 2>&1
 ```
-环境变量：`DB_CONTAINER`(默认 langhui-mysql) / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `BACKUP_DIR`(默认 ./backups) / `KEEP_DAYS`(默认 7)。逻辑备份不含 binlog，需 PITR 时另行开启 binlog 并定期备份。
+环境变量：`DB_CONTAINER`(默认 weichuan-mysql) / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `BACKUP_DIR`(默认 ./backups) / `KEEP_DAYS`(默认 7)。逻辑备份不含 binlog，需 PITR 时另行开启 binlog 并定期备份。
 
 > 开发态 `cmd/devserver` 用 SQLite 临时库（每次启动全新、自动 seed），本就无需备份；生产走 `cmd/server`，用本脚本。若生产用的是 SQLite 单机（路径 D），备份改用 `VACUUM INTO` 取在线一致性快照，不要用 `cp`。
 
@@ -451,7 +451,7 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 ### 6. 日志轮转
 裸机部署建议配 `logrotate`（访问日志 + 备份日志）：
 ```
-/var/log/langhui/*.log { daily missingok rotate 14 compress delaycompress }
+/var/log/weichuan/*.log { daily missingok rotate 14 compress delaycompress }
 ```
 
 ## 待补全（下一步，均为可选增强）

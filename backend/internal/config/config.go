@@ -52,7 +52,7 @@ type Config struct {
 func Load() Config {
 	ttlHours := atoi(getEnv("WXACODE_TTL_HOURS", "720"), 720) // 默认 30 天
 	return Config{
-		DBDSN:              getEnv("DB_DSN", "root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true"),
+		DBDSN:              getEnv("DB_DSN", "root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true"),
 		Port:               getEnv("PORT", "8080"),
 		JWTKey:             getEnv("JWT_KEY", DefaultJWTKey),
 		UploadDir:          getEnv("UPLOAD_DIR", "./uploads"),

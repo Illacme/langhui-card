@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"langhui/internal/config"
-	"langhui/internal/middleware"
-	"langhui/internal/setting"
-	"langhui/internal/storage"
+	"weichuan/internal/config"
+	"weichuan/internal/middleware"
+	"weichuan/internal/setting"
+	"weichuan/internal/storage"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

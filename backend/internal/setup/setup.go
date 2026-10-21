@@ -32,7 +32,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"langhui/internal/config"
+	"weichuan/internal/config"
 )
 
 // required 首次启动必须具备的配置项。
@@ -101,7 +101,7 @@ func StatusPayload() Status {
 			"优先级：环境变量 > " + cfgFile + " > 内置缺省值。",
 		Installable: Unconfigured(),
 		Engines:     []string{"mysql", "sqlite"},
-		SQLitePath:  filepath.Join(filepath.Dir(cfgFile), "langhui.db"),
+		SQLitePath:  filepath.Join(filepath.Dir(cfgFile), "weichuan.db"),
 		ConfigFile:  cfgFile,
 		AdminUser:   "admin",
 		MySQLHint:   composeMySQLHint(),
@@ -118,7 +118,7 @@ func composeMySQLHint() *MySQLHint {
 		Host:     "mysql",
 		Port:     "3306",
 		User:     "root",
-		Database: "langhui",
+		Database: "weichuan",
 		Note: "检测到编排环境（MYSQL_ROOT_PASSWORD 已设置），已按 docker-compose 内置 MySQL 预填；" +
 			"密码请填 .env 里的 MYSQL_ROOT_PASSWORD。",
 	}
@@ -128,14 +128,14 @@ func composeMySQLHint() *MySQLHint {
 // 绝不能给「已知默认值」，那等于把公开文档里的凭据写进客户配置。
 func EnvText() string {
 	var b strings.Builder
-	b.WriteString("# langhui 初始配置（由安装引导生成）\n")
+	b.WriteString("# weichuan 初始配置（由安装引导生成）\n")
 	b.WriteString("# 方式一（推荐）：打开 /setup 使用安装向导，它会把这些值写进 " +
 		config.ConfigFilePath() + " 并自动重启。\n")
 	b.WriteString("# 方式二：把下面内容写进 .env（与 docker-compose.yml 同级）后重启；" +
 		"环境变量优先级高于配置文件。\n\n")
 	if config.Resolved("DB_DSN") == "" {
-		b.WriteString("DB_DSN=root:请改成数据库密码@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true\n")
-		b.WriteString("# 单机想免 MySQL：把上面一行换成 DB_DSN=sqlite:///data/langhui.db\n\n")
+		b.WriteString("DB_DSN=root:请改成数据库密码@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true\n")
+		b.WriteString("# 单机想免 MySQL：把上面一行换成 DB_DSN=sqlite:///data/weichuan.db\n\n")
 	}
 	if config.Resolved("JWT_KEY") == "" {
 		b.WriteString("JWT_KEY=" + secret(32) + "\n\n")
@@ -152,7 +152,7 @@ func EnvText() string {
 func suggest(env string) string {
 	switch env {
 	case "DB_DSN":
-		return "root:请改成数据库密码@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true"
+		return "root:请改成数据库密码@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true"
 	case "JWT_KEY":
 		return secret(32)
 	case "ADMIN_PASS":
@@ -410,7 +410,7 @@ const pageTpl = `<!doctype html>
       <div id="mysql-fields" class="grid">
         <label>主机<input id="f-dbHost" type="text" value="127.0.0.1" autocomplete="off"></label>
         <label>端口<input id="f-dbPort" type="text" value="3306" inputmode="numeric" autocomplete="off"></label>
-        <label>库名<input id="f-dbName" type="text" value="langhui" autocomplete="off"></label>
+        <label>库名<input id="f-dbName" type="text" value="weichuan" autocomplete="off"></label>
         <label>用户名<input id="f-dbUser" type="text" value="root" autocomplete="off"></label>
         <label>密码<input id="f-dbPassword" type="password" autocomplete="new-password"></label>
         <div></div>
@@ -718,7 +718,7 @@ const pageTpl = `<!doctype html>
         $('f-dbHost').value = d.mysqlHint.host || '127.0.0.1';
         $('f-dbPort').value = d.mysqlHint.port || '3306';
         $('f-dbUser').value = d.mysqlHint.user || 'root';
-        $('f-dbName').value = d.mysqlHint.database || 'langhui';
+        $('f-dbName').value = d.mysqlHint.database || 'weichuan';
         var tip = $('compose-tip');
         tip.hidden = false;
         tip.textContent = d.mysqlHint.note || '';

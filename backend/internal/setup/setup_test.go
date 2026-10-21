@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"langhui/internal/config"
+	"weichuan/internal/config"
 )
 
 func TestMain(m *testing.M) {
@@ -37,7 +37,7 @@ func TestUnconfiguredOnlyWhenDBDSNNotProvided(t *testing.T) {
 	}{
 		{"未设置", "", true},
 		{"只有空白", "   ", true},
-		{"已设置", "root:root@tcp(127.0.0.1:3306)/langhui", false},
+		{"已设置", "root:root@tcp(127.0.0.1:3306)/weichuan", false},
 		{"设置了但明显是错的", "not-a-dsn", false},
 	}
 	for _, c := range cases {
@@ -70,7 +70,7 @@ func TestUnconfiguredFalseWhenConfigFileHasDBDSN(t *testing.T) {
 	if !Unconfigured() {
 		t.Fatal("环境变量和文件都没有 DB_DSN 时应判定为未配置")
 	}
-	if err := config.WriteFileValues(cfgPath, map[string]string{"DB_DSN": "sqlite:///data/langhui.db"}); err != nil {
+	if err := config.WriteFileValues(cfgPath, map[string]string{"DB_DSN": "sqlite:///data/weichuan.db"}); err != nil {
 		t.Fatal(err)
 	}
 	if Unconfigured() {
@@ -131,7 +131,7 @@ func TestStatusPayloadInstallerFields(t *testing.T) {
 	if st.SQLitePath == "" || st.ConfigFile == "" || st.AdminUser == "" {
 		t.Fatalf("安装向导预填信息不全：%+v", st)
 	}
-	if filepath.Base(st.SQLitePath) != "langhui.db" {
+	if filepath.Base(st.SQLitePath) != "weichuan.db" {
 		t.Fatalf("SQLite 建议路径应落在配置目录旁，实际 %q", st.SQLitePath)
 	}
 	if st.MySQLHint == nil || st.MySQLHint.Host != "mysql" || st.MySQLHint.Port != "3306" {
@@ -251,7 +251,7 @@ func TestSetupModeRoutes(t *testing.T) {
 // 而不是一屏裸 404，更不是又把安装页挂回来（重放漏洞）。
 func TestNormalModeSetupIsAliasOnly(t *testing.T) {
 	noConfigFile(t)
-	t.Setenv("DB_DSN", "root@tcp(127.0.0.1:3306)/langhui")
+	t.Setenv("DB_DSN", "root@tcp(127.0.0.1:3306)/weichuan")
 	r := gin.New()
 	RegisterStatus(r)
 	RegisterSetupAlias(r)

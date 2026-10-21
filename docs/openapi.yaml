@@ -147,7 +147,7 @@ paths:
                         example: admin
                       sqlitePath:
                         type: string
-                        example: ./data/langhui.db
+                        example: ./data/weichuan.db
                       envText:
                         type: string
                       missing:
@@ -2828,14 +2828,14 @@ components:
           description: 仅上行，响应与日志不回显
         dbName:
           type: string
-          example: langhui
+          example: weichuan
           description: 仅字母数字下划线（服务端白名单校验，防注入）
         createDatabase:
           type: boolean
           description: 仅 MySQL：库不存在时 CREATE DATABASE IF NOT EXISTS
         sqlitePath:
           type: string
-          example: ./data/langhui.db
+          example: ./data/weichuan.db
         adminUser:
           type: string
           example: admin

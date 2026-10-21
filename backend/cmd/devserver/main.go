@@ -25,13 +25,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"langhui/internal/auth"
-	"langhui/internal/config"
-	"langhui/internal/handler"
-	"langhui/internal/middleware"
-	"langhui/internal/model"
-	"langhui/internal/setting"
-	"langhui/internal/storage"
+	"weichuan/internal/auth"
+	"weichuan/internal/config"
+	"weichuan/internal/handler"
+	"weichuan/internal/middleware"
+	"weichuan/internal/model"
+	"weichuan/internal/setting"
+	"weichuan/internal/storage"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -58,7 +58,7 @@ func main() {
 	}
 
 	// 临时 SQLite 文件库（比内存库更稳，避免共享缓存连接断开后数据丢失）
-	tmpDB, err := os.CreateTemp("", "langhui-dev-*.db")
+	tmpDB, err := os.CreateTemp("", "weichuan-dev-*.db")
 	if err != nil {
 		log.Fatalf("create temp db: %v", err)
 	}
@@ -101,7 +101,7 @@ func main() {
 	// 与生产一致：系统设置覆盖环境变量（界面留空则保留环境变量）。
 	// 放在下面几个「开发态强制覆盖」之前，保证 devserver 仍然是本地磁盘 + 临时目录。
 	cfg.OverlayFromSettings()
-	cfg.UploadDir = mustDir(filepath.Join(os.TempDir(), "langhui-dev-uploads"))
+	cfg.UploadDir = mustDir(filepath.Join(os.TempDir(), "weichuan-dev-uploads"))
 	cfg.UploadBaseURL = uploadBaseURL(port)
 	cfg.StorageDriver = "local"
 	cfg.StoragePublic = true
@@ -152,7 +152,7 @@ func main() {
 	handler.RegisterSettings(r, db, cfg) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
-	log.Printf("演示账号：平台超管 %s/%s；员工手机 13832603521 / 密码 langhui123（高立新，业务经理）", cfg.AdminUser, cfg.AdminPass)
+	log.Printf("演示账号：平台超管 %s/%s；员工手机 13832603521 / 密码 weichuan123（高立新，业务经理）", cfg.AdminUser, cfg.AdminPass)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}
@@ -280,7 +280,7 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 	var cnt int64
 	db.Model(&model.Employee{}).Where("phone = ?", "13832603521").Count(&cnt)
 	if cnt == 0 {
-		hash, _ := auth.HashPassword("langhui123")
+		hash, _ := auth.HashPassword("weichuan123")
 		emp := model.Employee{
 			CompanyID: 1,
 			// Phone2（第二个手机号，选填）默认不播种：演示名片只展示主号，需副号时编辑填写

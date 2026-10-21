@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"langhui/internal/model"
+	"weichuan/internal/model"
 )
 
 // TestIsSQLiteDSN 钉死路由判据：判错比不判更糟——把生产 MySQL 读成空 SQLite 库，
@@ -16,15 +16,15 @@ func TestIsSQLiteDSN(t *testing.T) {
 		dsn  string
 		want bool
 	}{
-		{"默认 MySQL DSN", "root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true", false},
-		{"compose 里的 MySQL DSN", "root:pw@tcp(mysql:3306)/langhui?charset=utf8mb4&parseTime=true", false},
-		{"sqlite:// 前缀", "sqlite:///data/langhui.db", true},
-		{"sqlite: 前缀", "sqlite:/data/langhui.db", true},
-		{"file: URI", "file:/data/langhui.db", true},
-		{"裸路径 .db", "/data/langhui.db", true},
-		{"裸路径带查询串", "/data/langhui.db?_pragma=busy_timeout(1000)", true},
-		{".sqlite3 结尾", "/data/langhui.sqlite3", true},
-		{"扩展名不在白名单的裸路径不算 SQLite", "/data/langhui", false},
+		{"默认 MySQL DSN", "root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true", false},
+		{"compose 里的 MySQL DSN", "root:pw@tcp(mysql:3306)/weichuan?charset=utf8mb4&parseTime=true", false},
+		{"sqlite:// 前缀", "sqlite:///data/weichuan.db", true},
+		{"sqlite: 前缀", "sqlite:/data/weichuan.db", true},
+		{"file: URI", "file:/data/weichuan.db", true},
+		{"裸路径 .db", "/data/weichuan.db", true},
+		{"裸路径带查询串", "/data/weichuan.db?_pragma=busy_timeout(1000)", true},
+		{".sqlite3 结尾", "/data/weichuan.sqlite3", true},
+		{"扩展名不在白名单的裸路径不算 SQLite", "/data/weichuan", false},
 		{"空串", "", false},
 		{"空白串", "   ", false},
 	}
@@ -39,9 +39,9 @@ func TestIsSQLiteDSN(t *testing.T) {
 // WAL + busy_timeout 是 SQLite 上生产可用的底线：缺了会出现「并发读被写挡住」
 // 与「并发写直接报 database is locked」。
 func TestNormalizeSQLiteDSN(t *testing.T) {
-	got := NormalizeSQLiteDSN("sqlite:///data/langhui.db")
+	got := NormalizeSQLiteDSN("sqlite:///data/weichuan.db")
 	for _, want := range []string{
-		"/data/langhui.db",
+		"/data/weichuan.db",
 		"_pragma=journal_mode(WAL)",
 		"_pragma=busy_timeout(5000)",
 		"_pragma=foreign_keys(1)",
@@ -55,7 +55,7 @@ func TestNormalizeSQLiteDSN(t *testing.T) {
 	}
 
 	// 用户指定的 busy_timeout 优先，其余两项仍要补
-	got = NormalizeSQLiteDSN("sqlite:/data/langhui.db?_pragma=busy_timeout(1000)")
+	got = NormalizeSQLiteDSN("sqlite:/data/weichuan.db?_pragma=busy_timeout(1000)")
 	if !strings.Contains(got, "busy_timeout(1000)") {
 		t.Errorf("应保留用户值，实际：%s", got)
 	}
@@ -67,7 +67,7 @@ func TestNormalizeSQLiteDSN(t *testing.T) {
 	}
 
 	// 已有查询串时用 & 连接，不能出现两个 ?
-	got = NormalizeSQLiteDSN("file:/data/langhui.db?mode=rwc")
+	got = NormalizeSQLiteDSN("file:/data/weichuan.db?mode=rwc")
 	if n := strings.Count(got, "?"); n != 1 {
 		t.Errorf("查询串分隔符拼接错误（? 出现 %d 次）：%s", n, got)
 	}
@@ -77,7 +77,7 @@ func TestNormalizeSQLiteDSN(t *testing.T) {
 // 这是「生产上 SQLite」这条路径唯一能自动化验证的环节——驱动选错、
 // pragma 没吃进去，都在这里暴露，而不是等到线上报 database is locked。
 func TestOpenSQLite(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "langhui.db")
+	p := filepath.Join(t.TempDir(), "weichuan.db")
 	db, driver, err := Open("sqlite://" + p)
 	if err != nil {
 		t.Fatalf("open: %v", err)
@@ -116,7 +116,7 @@ func TestOpenSQLite(t *testing.T) {
 
 // TestOpenFileURI 保证 file: URI 写法同样可用（文档里给了这种写法）。
 func TestOpenFileURI(t *testing.T) {
-	p := filepath.Join(t.TempDir(), "langhui.db")
+	p := filepath.Join(t.TempDir(), "weichuan.db")
 	db, driver, err := Open("file:" + p)
 	if err != nil {
 		t.Fatalf("open file: URI: %v", err)

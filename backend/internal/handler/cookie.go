@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"langhui/internal/config"
+	"weichuan/internal/config"
 
 	"github.com/gin-gonic/gin"
 )

@@ -4,15 +4,15 @@ import (
 	"log"
 	"os"
 
-	"langhui/internal/config"
-	"langhui/internal/dbopen"
-	"langhui/internal/handler"
-	"langhui/internal/middleware"
-	"langhui/internal/model"
-	"langhui/internal/repository"
-	"langhui/internal/setting"
-	"langhui/internal/setup"
-	"langhui/internal/storage"
+	"weichuan/internal/config"
+	"weichuan/internal/dbopen"
+	"weichuan/internal/handler"
+	"weichuan/internal/middleware"
+	"weichuan/internal/model"
+	"weichuan/internal/repository"
+	"weichuan/internal/setting"
+	"weichuan/internal/setup"
+	"weichuan/internal/storage"
 )
 
 func main() {

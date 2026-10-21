@@ -10,9 +10,9 @@ import (
 	"strings"
 	"testing"
 
-	"langhui/internal/config"
-	"langhui/internal/dbopen"
-	"langhui/internal/model"
+	"weichuan/internal/config"
+	"weichuan/internal/dbopen"
+	"weichuan/internal/model"
 )
 
 // resetInstallState 清掉进程内一次性锁：每个安装用例都应是「全新进程」视角。
@@ -31,7 +31,7 @@ func sqliteEnv(t *testing.T) (cfgPath, dbPath string) {
 	t.Helper()
 	dir := t.TempDir()
 	cfgPath = filepath.Join(dir, "data", "runtime.env")
-	dbPath = filepath.Join(dir, "data", "langhui.db")
+	dbPath = filepath.Join(dir, "data", "weichuan.db")
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0o750); err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestInstallSQLiteEndToEnd(t *testing.T) {
 func TestInstallRefusesWhenAlreadyConfigured(t *testing.T) {
 	resetInstallState(t)
 	noConfigFile(t)
-	t.Setenv("DB_DSN", "root:root@tcp(127.0.0.1:3306)/langhui")
+	t.Setenv("DB_DSN", "root:root@tcp(127.0.0.1:3306)/weichuan")
 	_, err := Install(InstallReq{
 		Engine: "sqlite", SQLitePath: filepath.Join(t.TempDir(), "x.db"),
 		AdminPass: "installer-pass-123", AdminPass2: "installer-pass-123",
@@ -204,7 +204,7 @@ func TestInstallValidationErrors(t *testing.T) {
 		},
 		{
 			"端口非法",
-			InstallReq{Engine: "mysql", DBHost: "h", DBPort: "abc", DBUser: "u", DBName: "langhui", AdminPass: "installer-pass-123", AdminPass2: "installer-pass-123"},
+			InstallReq{Engine: "mysql", DBHost: "h", DBPort: "abc", DBUser: "u", DBName: "weichuan", AdminPass: "installer-pass-123", AdminPass2: "installer-pass-123"},
 			"端口",
 		},
 		{
@@ -262,7 +262,7 @@ func TestInstallValidationErrors(t *testing.T) {
 // DSN 组装：端口缺省、库名白名单、sqlite 建目录。
 func TestComposeDSN(t *testing.T) {
 	dsn, driver, err := composeDSN(InstallReq{
-		Engine: "mysql", DBHost: "db.internal", DBUser: "u", DBPassword: "p@ss/w:rd", DBName: "langhui",
+		Engine: "mysql", DBHost: "db.internal", DBUser: "u", DBPassword: "p@ss/w:rd", DBName: "weichuan",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -270,23 +270,23 @@ func TestComposeDSN(t *testing.T) {
 	if driver != dbopen.DriverMySQL {
 		t.Fatalf("driver=%q", driver)
 	}
-	want := "u:p@ss/w:rd@tcp(db.internal:3306)/langhui?charset=utf8mb4&parseTime=true"
+	want := "u:p@ss/w:rd@tcp(db.internal:3306)/weichuan?charset=utf8mb4&parseTime=true"
 	if dsn != want {
 		t.Fatalf("DSN 组装错误：\n got %q\nwant %q", dsn, want)
 	}
 
 	// 空 engine 按 mysql 兜底
-	if _, driver, _ = composeDSN(InstallReq{DBHost: "h", DBUser: "u", DBName: "langhui"}); driver != dbopen.DriverMySQL {
+	if _, driver, _ = composeDSN(InstallReq{DBHost: "h", DBUser: "u", DBName: "weichuan"}); driver != dbopen.DriverMySQL {
 		t.Fatalf("空 engine 应按 mysql 处理，实际 %q", driver)
 	}
 
 	// sqlite：路径落盘目录不存在时应自动创建
 	dir := filepath.Join(t.TempDir(), "nested", "deep")
-	dsn, driver, err = composeDSN(InstallReq{Engine: "sqlite", SQLitePath: filepath.Join(dir, "langhui.db")})
+	dsn, driver, err = composeDSN(InstallReq{Engine: "sqlite", SQLitePath: filepath.Join(dir, "weichuan.db")})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if driver != dbopen.DriverSQLite || dsn != "sqlite://"+filepath.Join(dir, "langhui.db") {
+	if driver != dbopen.DriverSQLite || dsn != "sqlite://"+filepath.Join(dir, "weichuan.db") {
 		t.Fatalf("sqlite DSN 异常：%q %q", dsn, driver)
 	}
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
@@ -306,9 +306,9 @@ func TestMysqlServerDSN(t *testing.T) {
 	}{
 		{
 			"常规",
-			"root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true",
+			"root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true",
 			"root:root@tcp(127.0.0.1:3306)/?charset=utf8mb4&parseTime=true",
-			"langhui", false,
+			"weichuan", false,
 		},
 		{
 			"密码含@和/",
@@ -344,7 +344,7 @@ func TestMaskDSN(t *testing.T) {
 	if got := maskDSN("root:s3cret@tcp(h:3306)/db?x=1"); got != "root:******@tcp(h:3306)/db?x=1" {
 		t.Fatalf("MySQL DSN 密码应被掩码：%q", got)
 	}
-	if got := maskDSN("sqlite:///data/langhui.db"); got != "sqlite:///data/langhui.db" {
+	if got := maskDSN("sqlite:///data/weichuan.db"); got != "sqlite:///data/weichuan.db" {
 		t.Fatalf("SQLite 无凭据不应改动：%q", got)
 	}
 	if got := maskDSN("garbage"); got != "garbage" {
@@ -356,7 +356,7 @@ func TestMaskDSN(t *testing.T) {
 func TestTestConnectionSQLite(t *testing.T) {
 	resetInstallState(t)
 	sqliteEnv(t)
-	dbPath := filepath.Join(t.TempDir(), "langhui.db")
+	dbPath := filepath.Join(t.TempDir(), "weichuan.db")
 	res, err := TestConnection(InstallReq{Engine: "sqlite", SQLitePath: dbPath})
 	if err != nil {
 		t.Fatalf("SQLite 连接测试应通过：%v", err)
@@ -441,7 +441,7 @@ func TestTestEndpointRejectsBadRequest(t *testing.T) {
 func TestInstallMySQLEndToEnd(t *testing.T) {
 	base := os.Getenv("TEST_MYSQL_DSN")
 	if base == "" {
-		t.Skip("set TEST_MYSQL_DSN (e.g. root:root@tcp(127.0.0.1:3306)/langhui?charset=utf8mb4&parseTime=true) to run MySQL install path")
+		t.Skip("set TEST_MYSQL_DSN (e.g. root:root@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true) to run MySQL install path")
 	}
 	resetInstallState(t)
 	cfgPath, _ := sqliteEnv(t)

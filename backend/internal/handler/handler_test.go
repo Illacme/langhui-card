@@ -16,7 +16,7 @@
 // 运行：
 //
 //	cd backend && go test ./internal/handler/ -v
-//	TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true' go test ./internal/handler/ -run TestAPIFlowMySQL -v
+//	TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3306)/weichuan_test?charset=utf8mb4&parseTime=true' go test ./internal/handler/ -run TestAPIFlowMySQL -v
 package handler
 
 import (
@@ -35,10 +35,10 @@ import (
 	"testing"
 	"time"
 
-	"langhui/internal/config"
-	"langhui/internal/model"
-	"langhui/internal/setting"
-	"langhui/internal/storage"
+	"weichuan/internal/config"
+	"weichuan/internal/model"
+	"weichuan/internal/setting"
+	"weichuan/internal/storage"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -148,7 +148,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 func setupSQLiteEngine(t *testing.T) *gin.Engine {
 	t.Helper()
 
-	tmpDB, err := os.CreateTemp("", "langhui-test-*.db")
+	tmpDB, err := os.CreateTemp("", "weichuan-test-*.db")
 	require.NoError(t, err)
 	dbPath := tmpDB.Name()
 	require.NoError(t, tmpDB.Close())
@@ -160,7 +160,7 @@ func setupSQLiteEngine(t *testing.T) *gin.Engine {
 	// 1 号租户（朗汇）：公开接口缺省落点；存量行为不随多租户改造而变
 	require.NoError(t, db.Create(&model.Company{ID: 1, Name: "廊坊市朗汇机电设备有限公司", ShortName: "朗汇机电", Status: "enabled"}).Error)
 
-	uploadDir, err := os.MkdirTemp("", "langhui-upload-")
+	uploadDir, err := os.MkdirTemp("", "weichuan-upload-")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(uploadDir) })
 
@@ -723,13 +723,13 @@ func TestCompanyProfileVideoSource(t *testing.T) {
 func TestAPIFlowMySQL(t *testing.T) {
 	dsn := os.Getenv("TEST_MYSQL_DSN")
 	if dsn == "" {
-		t.Skip("set TEST_MYSQL_DSN (e.g. root:root@tcp(127.0.0.1:3306)/langhui_test?charset=utf8mb4&parseTime=true) to run MySQL parity")
+		t.Skip("set TEST_MYSQL_DSN (e.g. root:root@tcp(127.0.0.1:3306)/weichuan_test?charset=utf8mb4&parseTime=true) to run MySQL parity")
 	}
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
 	applyMigrations(t, db)
 
-	uploadDir, err := os.MkdirTemp("", "langhui-upload-")
+	uploadDir, err := os.MkdirTemp("", "weichuan-upload-")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(uploadDir) })
 
@@ -842,7 +842,7 @@ func (f *fakeRefresher) Refresh([]string) error {
 
 // TestStorageEnhanceSuccess 验证存储增强在对象存储驱动可用时的成功分支。
 func TestStorageEnhanceSuccess(t *testing.T) {
-	uploadDir, err := os.MkdirTemp("", "langhui-upload-")
+	uploadDir, err := os.MkdirTemp("", "weichuan-upload-")
 	require.NoError(t, err)
 	t.Cleanup(func() { os.RemoveAll(uploadDir) })
 
@@ -1049,7 +1049,7 @@ func TestSingleDeviceRevocation(t *testing.T) {
 
 // newSeedDB 建一个 SQLite 库并 seed 超管，供成功路径测试装配路由。
 func newSeedDB(t *testing.T) *gorm.DB {
-	tmpDB, err := os.CreateTemp("", "langhui-test-*.db")
+	tmpDB, err := os.CreateTemp("", "weichuan-test-*.db")
 	require.NoError(t, err)
 	dbPath := tmpDB.Name()
 	require.NoError(t, tmpDB.Close())
@@ -1116,8 +1116,8 @@ func TestMultiTenantIsolation(t *testing.T) {
 	// 平台超管在朗汇（缺省目标租户）建一个分类
 	_, body = plat.doWithCookie("POST", "/api/admin/categories", map[string]interface{}{"name": "朗汇分类A"})
 	require.EqualValues(t, 0, body["code"])
-	langhuiCatID := int64(body["data"].(map[string]interface{})["id"].(float64))
-	require.NotZero(t, langhuiCatID)
+	weichuanCatID := int64(body["data"].(map[string]interface{})["id"].(float64))
+	require.NotZero(t, weichuanCatID)
 
 	// ===== 2. 开通企业 2（一并建企业管理员；简称种子公司信息 + 侧边栏品牌名） =====
 	_, body = plat.doWithCookie("POST", "/api/admin/companies", map[string]interface{}{
@@ -1210,7 +1210,7 @@ func TestMultiTenantIsolation(t *testing.T) {
 
 	// ===== 5. 越权修改防护 =====
 	// 企业管理员改不到朗汇的分类
-	_, body = comp2.doWithCookie("PUT", "/api/admin/categories/"+fmt.Sprint(langhuiCatID), map[string]interface{}{"name": "被篡改"})
+	_, body = comp2.doWithCookie("PUT", "/api/admin/categories/"+fmt.Sprint(weichuanCatID), map[string]interface{}{"name": "被篡改"})
 	require.EqualValues(t, 1, body["code"])
 	_, body = plat.doWithCookie("GET", "/api/admin/categories", nil)
 	cats = body["data"].([]interface{})
@@ -1221,12 +1221,12 @@ func TestMultiTenantIsolation(t *testing.T) {
 		"name": "朗汇员工", "phone": "13900000001", "title": "工程师",
 	})
 	require.EqualValues(t, 0, body["code"])
-	langhuiStaff := int64(body["staffId"].(float64))
+	weichuanStaff := int64(body["staffId"].(float64))
 
 	_, body = comp2.doWithCookie("GET", "/api/admin/employees", nil)
 	require.Len(t, body["data"].([]interface{}), 0, "企业管理员不应看到别家员工")
 
-	_, body = comp2.doWithCookie("POST", "/api/admin/employees/"+fmt.Sprint(langhuiStaff)+"/disable", nil)
+	_, body = comp2.doWithCookie("POST", "/api/admin/employees/"+fmt.Sprint(weichuanStaff)+"/disable", nil)
 	require.EqualValues(t, 0, body["code"]) // 接口不报错，但按租户条件为空操作
 	_, body = plat.doWithCookie("GET", "/api/admin/employees", nil)
 	emps := body["data"].([]interface{})

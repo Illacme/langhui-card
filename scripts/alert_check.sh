@@ -13,16 +13,16 @@
 #   scripts/alert_check.sh
 #   ALERT_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx \
 #     HEALTH_URL=http://127.0.0.1:8080/healthz \
-#     LOG_FILE=/var/log/langhui/access.log \
+#     LOG_FILE=/var/log/weichuan/access.log \
 #     BACKUP_DIR=./backups scripts/alert_check.sh
 #
 # 配置（环境变量，均有默认值）：
 #   HEALTH_URL       默认 http://127.0.0.1:8080/healthz
 #   LOG_FILE         后端访问日志文件（AccessLog 的 stderr 收集处），
-#                    默认 /var/log/langhui/access.log
+#                    默认 /var/log/weichuan/access.log
 #   BACKUP_DIR       备份目录（与 backup.sh 的 BACKUP_DIR 一致），默认 ./backups
 #   BACKUP_MAX_HOURS 最新备份允许的最大年龄（小时），默认 26（日备 + 2h 余量）
-#   STATE_DIR        状态目录（日志偏移量 / 告警冷却时间戳），默认 /var/tmp/langhui-alert
+#   STATE_DIR        状态目录（日志偏移量 / 告警冷却时间戳），默认 /var/tmp/weichuan-alert
 #   ALERT_WEBHOOK    机器人 webhook（企业微信 / 钉钉，msgtype=text 同格式；
 #                    飞书格式不同需自行调整 -d 负载）；未配置时告警打到 stderr
 #   ALERT_COOLDOWN   同一规则两次告警的最小间隔（秒），默认 1800（防轰炸）
@@ -33,10 +33,10 @@
 set -uo pipefail
 
 HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8080/healthz}"
-LOG_FILE="${LOG_FILE:-/var/log/langhui/access.log}"
+LOG_FILE="${LOG_FILE:-/var/log/weichuan/access.log}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 BACKUP_MAX_HOURS="${BACKUP_MAX_HOURS:-26}"
-STATE_DIR="${STATE_DIR:-/var/tmp/langhui-alert}"
+STATE_DIR="${STATE_DIR:-/var/tmp/weichuan-alert}"
 ALERT_WEBHOOK="${ALERT_WEBHOOK:-}"
 ALERT_COOLDOWN="${ALERT_COOLDOWN:-1800}"
 
@@ -60,7 +60,7 @@ send_alert() {
 
   # 日志行可能含引号 / 反斜杠 / 换行，转义后截断再进 JSON
   safe="$(printf '%s' "$msg" | tr -d '\r\n' | sed 's/\\/\\\\/g; s/"/\\"/g' | cut -c1-300)"
-  text="[langhui-alert] $rule: $safe ($(date '+%F %T'))"
+  text="[weichuan-alert] $rule: $safe ($(date '+%F %T'))"
   if [ -n "$ALERT_WEBHOOK" ]; then
     if ! curl -fsS -m 10 -X POST "$ALERT_WEBHOOK" \
         -H 'Content-Type: application/json' \
@@ -118,7 +118,7 @@ check_backup() {
     return 0
   fi
   local latest m age_h
-  latest="$(ls -t "$BACKUP_DIR"/langhui-*.sql.gz 2>/dev/null | head -1)"
+  latest="$(ls -t "$BACKUP_DIR"/weichuan-*.sql.gz 2>/dev/null | head -1)"
   if [ -z "$latest" ]; then
     # 从未备份，或备份停跑且旧文件已轮转——两种情况都意味着"当前没有可用备份"
     send_alert backup "备份目录 $BACKUP_DIR 中没有备份文件（从未备份，或备份停跑且旧文件已轮转）" 21600

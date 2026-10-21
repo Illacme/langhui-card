@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"langhui/internal/auth"
-	"langhui/internal/config"
-	"langhui/internal/setting"
+	"weichuan/internal/auth"
+	"weichuan/internal/config"
+	"weichuan/internal/setting"
 
 	"github.com/stretchr/testify/require"
 )

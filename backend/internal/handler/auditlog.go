@@ -3,8 +3,8 @@ package handler
 import (
 	"strconv"
 
-	"langhui/internal/middleware"
-	"langhui/internal/model"
+	"weichuan/internal/middleware"
+	"weichuan/internal/model"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

@@ -6,8 +6,8 @@ import (
 	"errors"
 	"time"
 
-	"langhui/internal/config"
-	"langhui/internal/setting"
+	"weichuan/internal/config"
+	"weichuan/internal/setting"
 
 	"github.com/golang-jwt/jwt/v5"
 )

@@ -3,7 +3,7 @@ package repository
 import (
 	"time"
 
-	"langhui/internal/model"
+	"weichuan/internal/model"
 
 	"gorm.io/gorm"
 )

@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"langhui/internal/middleware"
-	"langhui/internal/storage"
+	"weichuan/internal/middleware"
+	"weichuan/internal/storage"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

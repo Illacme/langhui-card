@@ -90,12 +90,12 @@ miniprogram/
 cd backend
 go run ./cmd/devserver          # 监听 :8080（可用 PORT 环境变量覆盖）
 ```
-内置演示数据：平台超管 `admin / admin123456`；演示员工 手机 `13832603521` / 密码 `langhui123`（高立新，业务经理，staffId=1）；公司信息、7 个业绩分类、多个项目案例、4 个业务服务、首页布局。
+内置演示数据：平台超管 `admin / admin123456`；演示员工 手机 `13832603521` / 密码 `weichuan123`（高立新，业务经理，staffId=1）；公司信息、7 个业绩分类、多个项目案例、4 个业务服务、首页布局。
 小程序侧联调步骤：
 1. 微信开发者工具导入 `miniprogram/`（测试号 appid，`urlCheck:false` 已开）。
 2. 把 `utils/config.ts` 的 `DEFAULT_BASE_URL` 改成开发机地址：模拟器用 `http://127.0.0.1:8080`，真机用电脑局域网 IP（同网段、关防火墙）。
 3. 首页直接打开会弹「输入员工编号」，输入 `1` 进入演示员工名片；或经 PC 后台生成的分享链接 / 小程序码进入（scene=`staffId=1`）。
-4. 员工登录页用 `13832603521 / langhui123` 登录，可改头像（上传走 `/api/employee/upload`）、提交名片修改（待平台/企业管理员审核）。
+4. 员工登录页用 `13832603521 / weichuan123` 登录，可改头像（上传走 `/api/employee/upload`）、提交名片修改（待平台/企业管理员审核）。
 5. 多租户联调：平台超管在 PC 后台「企业管理」开通企业并建企业管理员 → 企业管理员登录管理自己企业的内容 → 小程序申请页填 `companyId` 或用 `?companyId=` 访问公开接口验证隔离（见「多租户与企业独立版」）。
 
 > 接口约定：登录返回 `token` 在**根级**（`{code:0, token}`），`login.ts` 按 `r.token` 读取（与 PC 后台 `adminLogin` 一致）；其余资源在 `data` 下。视频号 `<channel-video>` 需真机 + 已绑定视频号的小程序 AppID 才能渲染，测试号下该块留空、`company-video` 自动回退封面/MP4；小程序码接口需配置 `WX_APPID/WX_APPSECRET` 才返回真实码，未配置时返回 `code:1`（联调预期内）。

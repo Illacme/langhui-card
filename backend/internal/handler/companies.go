@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"langhui/internal/audit"
-	"langhui/internal/auth"
-	"langhui/internal/middleware"
-	"langhui/internal/model"
-	"langhui/internal/setting"
+	"weichuan/internal/audit"
+	"weichuan/internal/auth"
+	"weichuan/internal/middleware"
+	"weichuan/internal/model"
+	"weichuan/internal/setting"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"

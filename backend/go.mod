@@ -1,4 +1,4 @@
-module langhui
+module weichuan
 
 go 1.26.0
 
