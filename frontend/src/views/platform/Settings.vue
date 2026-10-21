@@ -13,7 +13,10 @@
       </div>
     </div>
 
+    <!-- 搜索态收起说明与就绪面板：聚焦结果。否则关键词命中少时内容比面板还短，
+         无滚动可吸，工具条被面板「拉」到页面中部，看起来像吸顶失效 -->
     <el-alert
+      v-if="!keyword.trim()"
       type="info"
       :closable="false"
       title="在此维护产品运行参数。常规项保存后即时生效；标注「需重启」的项要重启服务后才生效；标注「只读」的项只能改环境变量后重启。"
@@ -26,7 +29,7 @@
          - 本页可配置：能点「去配置」直接跳到对应行改；
          - 部署环境变量：只读项，界面改不了，直接给出要设的环境变量（可复制）+ 重启提示。
            （旧版只读项也跳「查看」，落到一个改不了的灰行，等于给了一条死路） -->
-    <el-card v-if="!loading && checks.length" shadow="never" class="ready-card">
+    <el-card v-if="!keyword.trim() && !loading && checks.length" shadow="never" class="ready-card">
       <template #header>
         <div class="group-header">
           <div class="group-title-wrap">
@@ -817,7 +820,10 @@ onMounted(load)
   position: sticky;
   top: calc(var(--toolbar-h, 112px) - 17px);
   z-index: 4;
-  background: #fff;
+  /* 与工具条同款毛玻璃，两截吸顶条质感一致 */
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
   border-bottom: 1px solid #ebeef5;
 }
 .group-header {
@@ -866,7 +872,11 @@ onMounted(load)
      ⚠️ 数值必须与 AdminLayout 里 .admin-main 的 padding-top 保持一致。 */
   top: -16px;
   z-index: 6;
-  background: #fff;
+  /* 毛玻璃：半透明白 + 背景模糊，吸顶时滚动内容从条后透过呈磨砂感。
+     未吸顶时身后是白卡片，视觉上与不透明无异 */
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
   border-bottom: 1px solid #ebeef5;
   /* 未吸顶时保持扁平（与卡片同一平面），吸住后才浮起——避免页面顶部凭空多一道阴影 */
   box-shadow: 0 0 0 rgba(0, 0, 0, 0);
