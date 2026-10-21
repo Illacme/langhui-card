@@ -46,7 +46,10 @@
         :disabled="item.readOnly"
         @change="(v: any) => emit('change', item.key, String(v ?? ''))"
       >
-        <el-option label="未设置（跟随环境变量）" value="" />
+        <!-- 「未设置」的含义按项而异：登记了环境变量的项才是回退到部署环境，
+             没有的（如 independent_lock）就是回退内置缺省值——统一写「跟随环境变量」
+             会让没有环境变量的项指错路 -->
+        <el-option :label="unsetLabel" value="" />
         <el-option label="开" value="true" />
         <el-option label="关" value="false" />
       </el-select>
@@ -131,6 +134,11 @@ function placeholderOf(item: SettingItem) {
   if (item.readOnly) return '只读'
   return item.type === 'string_slice' ? '逗号分隔，如 png,jpg,webp' : '未设置'
 }
+// 三态下拉第一档的文案：登记了环境变量名的项留空才回退到部署环境，
+// 没登记的（如 independent_lock）留空就是回退内置缺省值，不能混为一谈
+const unsetLabel = computed(() =>
+  props.item.envVar ? '未设置（用部署环境的值）' : '未设置（用缺省值）',
+)
 function secretPlaceholder(item: SettingItem) {
   // 只读敏感项不走密码框（走普通只读框显示后端预览），这里只服务于可写项
   if (item.readOnly) return '只读'
