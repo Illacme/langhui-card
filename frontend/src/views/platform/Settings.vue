@@ -798,13 +798,17 @@ onMounted(load)
 }
 .group-card {
   overflow: visible;
-  /* 模块锚点跳转时为吸顶工具条留出空间，避免标题被工具条盖住 */
-  scroll-margin-top: calc(var(--toolbar-h, 112px) + 4px);
+  /* 模块锚点跳转时为吸顶工具条留出空间：落点 = 滚动口顶 + 工具条可见高 - 1px，
+     让分组标题正好贴住工具条下缘（同 header 吸顶位的 -1px 压边逻辑），不留缝 */
+  scroll-margin-top: calc(var(--toolbar-h, 112px) - 1px);
 }
-/* 分组标题吸顶：滚到本组内容时标题停在工具条下方，始终知道当前在哪个模块 */
+/* 分组标题吸顶：滚到本组内容时标题停在工具条下方，始终知道当前在哪个模块。
+   sticky 参考系同样被 .admin-main 的 16px padding 内缩，且要压在工具条下 1px
+   （工具条 z-index 更高盖住接缝），故为 toolbar-h - 16 - 1 = -17px；
+   用 +Npx 留白会在两截吸顶条之间漏出 1-2px 的内容缝（实测踩过） */
 .group-card :deep(.el-card__header) {
   position: sticky;
-  top: calc(var(--toolbar-h, 112px) + 2px);
+  top: calc(var(--toolbar-h, 112px) - 17px);
   z-index: 4;
   background: #fff;
   border-bottom: 1px solid #ebeef5;
@@ -849,7 +853,11 @@ onMounted(load)
 /* 顶部工具条：搜索 + 模块锚点导航，吸顶常驻 */
 .toolbar {
   position: sticky;
-  top: 0;
+  /* sticky 的参考系会被滚动容器的 padding 内缩：.admin-main 有 16px 顶部 padding，
+     top:0 会钉在 padding 下缘、上方留一条 16px 透明带，滚动内容从带里漏出来。
+     top:-16px 恰好抵消内缩，让工具条贴住滚动口顶部（60px 处）盖住这条带。
+     ⚠️ 数值必须与 AdminLayout 里 .admin-main 的 padding-top 保持一致。 */
+  top: -16px;
   z-index: 6;
   background: #fff;
   border-bottom: 1px solid #ebeef5;
