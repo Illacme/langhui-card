@@ -11,11 +11,26 @@ import (
 	"langhui/internal/model"
 	"langhui/internal/repository"
 	"langhui/internal/setting"
+	"langhui/internal/setup"
 	"langhui/internal/storage"
 )
 
 func main() {
 	cfg := config.Load()
+
+	// 首次部署引导：连库必需的 DB_DSN 根本没提供时，不再直接 Fatal
+	// （运维只看到一行日志、不知道下一步做什么），而是以免数据库方式起来，
+	// 只提供只读引导页：说清缺什么、生成可复制的配置、提示改完重启。
+	// 判据刻意是「DB_DSN 未提供」而不是「连不上库」：后者是线上真故障，
+	// 若也进引导页，一次数据库抖动就会让终端用户看到安装页。
+	if setup.Unconfigured() {
+		log.Printf("[SETUP] 未检测到 DB_DSN，进入初始配置模式：不加载业务功能，仅提供引导页")
+		log.Printf("[SETUP] 请访问 http://<服务器IP>:%s/setup 查看并复制需要配置的内容", cfg.Port)
+		if err := setup.Engine().Run(":" + cfg.Port); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	// 安全硬门槛：带内置缺省的 JWT 密钥 / 超管口令上线，等于把后台开放给所有人——
 	// 这两个默认值都原样写在公开文档里，属于已知凭据，因此这里拒绝启动而不是只告警。
@@ -45,7 +60,15 @@ func main() {
 	// 所以库地址只能在启动时用环境变量定好，上线后改不动。
 	db, driver, err := dbopen.Open(cfg.DBDSN)
 	if err != nil {
-		log.Fatalf("db connect (%s): %v", driver, err)
+		// 走到这里说明 DB_DSN 给了但连不上——是配置错误 / 库不可用，不是「没配置」，
+		// 所以仍然 Fatal（不能让终端用户对着一个半成品服务）。但要把排查路径写明，
+		// 而不是留一句 "db connect: ..." 让人自己去猜。
+		// 注意：**不打印 DSN 原文**，里面含数据库口令，打印即泄密。
+		log.Printf("[FATAL] 数据库连接失败（driver=%s）：%v", driver, err)
+		log.Printf("[FATAL] 排查顺序：1) 数据库是否已启动、地址/端口是否可达；" +
+			"2) DB_DSN 的账号口令与库名是否正确（日志不打印 DSN，避免泄露口令）；" +
+			"3) 先跑 scripts/preflight.sh 做静态自检；4) 详见 docs/deploy-runbook.md")
+		log.Fatal("db connect failed")
 	}
 
 	// SQLite 没有可执行的 migrations：`migrations/*.sql` 是 MySQL 方言
@@ -134,6 +157,11 @@ func main() {
 	handler.RegisterAssets(r, db, up)                  // 常用素材库（内嵌图标/封面/LOGO）：清单 / 采用 / 预览图
 	handler.RegisterWechat(r, cfg, up)                 // GET /api/wechat/wxacode（小程序码，按 staffId）
 	handler.RegisterSettings(r, db, cfg)               // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	// 首次配置状态查询（只读）：已配置时返回 configured=true；未配置时进程根本进不到这里
+	// （见开头 setup.Unconfigured 分支）。前端据此决定是否显示配置引导。
+	// /setup 别名：安装完成后还有人手动敲 /setup 时 302 回首页，不给裸 404。
+	setup.RegisterStatus(r)
+	setup.RegisterSetupAlias(r)
 
 	log.Printf("listen :%s (storage driver=%s)", cfg.Port, cfg.StorageDriver)
 	if err := r.Run(":" + cfg.Port); err != nil {

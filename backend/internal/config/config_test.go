@@ -1,6 +1,17 @@
 package config
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
+
+// noConfigFile 把 CONFIG_FILE 指到一个不存在的临时路径：
+// 否则本机若跑过安装向导（./data/runtime.env 存在），文件里的值会渗进测试结果。
+// 每个用例调用一次，t.TempDir() 自动保证路径互不相同。
+func noConfigFile(t *testing.T) {
+	t.Helper()
+	t.Setenv("CONFIG_FILE", filepath.Join(t.TempDir(), "absent.env"))
+}
 
 // 安全门槛的语义必须钉死：这两项默认值都随演示账号写进了公开文档，
 // 属已知凭据——带它们上线等于把后台开放给所有人，所以必须拦启动而非仅告警。
@@ -42,6 +53,7 @@ func TestInsecureWarningsOnlyWarns(t *testing.T) {
 // 环境变量缺失时 Load 回退到内置缺省值，因此门槛必然命中——
 // 这是「不配置 = 拒绝启动」这一设计的保证，改动缺省值时需要同步更新本用例。
 func TestLoadDefaultsTriggerGates(t *testing.T) {
+	noConfigFile(t)
 	t.Setenv("JWT_KEY", "")
 	t.Setenv("ADMIN_PASS", "")
 	cfg := Load()

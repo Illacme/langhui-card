@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"strconv"
 	"time"
 )
@@ -117,8 +116,11 @@ func (c Config) InsecureGates() []string {
 	return gs
 }
 
+// getEnv 取配置值：环境变量 > 配置文件（CONFIG_FILE）> 内置缺省值。
+// 走 lookup 而不是直接读 os.Getenv，是为了让安装向导写进 runtime.env 的值
+// 在重启后生效；空串/纯空白一律视为未设置（见 file.go 的优先级说明）。
 func getEnv(k, def string) string {
-	if v := os.Getenv(k); v != "" {
+	if v, ok := lookup(k); ok {
 		return v
 	}
 	return def
