@@ -37,3 +37,7 @@ project.private.config.json
 # 真机复验脚本与截图、AI 出图：本轮联调产生的临时文件
 outputs/
 generated-images/
+
+# ── 客户专属设计文档（不入库，仅本地参考，含真实客户信息）──
+# 朗汇机电 V1.3 客户交付物归档，排除 git 提交，绝不推送 GitHub
+/设计文档/
