@@ -55,6 +55,10 @@ docker compose --profile mysql up -d --build
 > 并写进 `/app/data/runtime.env`（详见 `docs/deploy-runbook.md` §2.1）。
 > 后端 `cmd/server` 也会拒绝用缺省密钥 / 缺省口令启动（`InsecureGates`）。
 > 上线前可跑 `scripts/preflight.sh` 做一次静态自检（含小程序端引导基址是否仍指向 127.0.0.1）。
+> **国内网络**：构建需拉 `golang/node/nginx/mysql` 基础镜像，Docker Hub 直连超时的话先按
+> `部署与联调.md`「国内网络先看这里」配 registry 镜像加速（colima 改 `~/.colima/default/colima.yaml`
+> 的 `docker.registry-mirrors` 后 `colima restart`；Docker Desktop 在 Settings → Docker Engine 加
+> `registry-mirrors`），`scripts/verify_compose_dual_mode.sh --diag` 可自动探测这一点。
 
 ### 方式三：分别启动（开发态）
 ```bash

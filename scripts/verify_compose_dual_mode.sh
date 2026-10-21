@@ -29,6 +29,8 @@
 #     （entrypoint），不用 ${VAR:?}——否则默认（SQLite）形态的 up 会被未激活的 mysql 服务炸掉
 #   - 中文（非 ASCII）目录名下 compose 会推出空项目名、报 "project name must not be empty"，
 #     compose 文件已写死顶层 name: weichuan 规避
+#   - 国内网络直连 Docker Hub 不通会让 build 死在拉基础镜像（i/o timeout，错误埋在日志里）：
+#     registry_reachable 提前探测 + up 失败时按日志特征自动给出镜像加速配法
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -120,6 +122,27 @@ detect_compose() {
 }
 
 # ---------- 诊断 ----------
+# ---------- registry 可达性 ----------
+# 国内网络直连 Docker Hub（registry-1.docker.io）大概率不通，而失败发生在 build 里层、
+# 报错很难读。这里提前探一次（--noproxy 模拟 dockerd 的直连——守护进程默认不走 shell 代理），
+# 不通时给出镜像加速配法；注意：若镜像已全部本地缓存，本检查只提示、不拦截。
+registry_reachable() {
+  command -v curl >/dev/null 2>&1 || return 0   # 没 curl 就不探测，避免误判
+  curl -s -o /dev/null -m 5 --noproxy '*' "https://registry-1.docker.io/v2/" 2>/dev/null
+}
+registry_hint() {
+  echo "  → 直连 Docker Hub 不通，构建/拉镜像会失败（i/o timeout）。国内网络解法："
+  echo "    A. colima：编辑 ~/.colima/default/colima.yaml，把 'docker: {}' 改成"
+  echo "         docker:"
+  echo "           registry-mirrors:"
+  echo "             - https://docker.m.daocloud.io"
+  echo "             - https://docker.1panel.live"
+  echo "       保存后执行 colima restart。"
+  echo "    B. Docker Desktop：Settings → Docker Engine，JSON 里加"
+  echo "         \"registry-mirrors\": [\"https://docker.m.daocloud.io\"]，Apply & Restart。"
+  echo "    配完先 docker pull busybox 验证，再重跑本脚本。"
+  echo "    （若镜像已全部本地缓存可忽略本提示。）"
+}
 run_diag() {
   info "环境诊断"
   echo "── docker ──"
@@ -152,6 +175,15 @@ run_diag() {
     fi
   else
     echo "  ❌ 未检测到可用 compose（既无 'docker compose' 也无 'docker-compose'）"
+  fi
+  echo "── registry 可达性（拉基础镜像的前提）──"
+  if registry_reachable; then
+    echo "  ✅ Docker Hub 直连可达"
+  elif [ "$(docker info --format '{{len .RegistryConfig.Mirrors}}' 2>/dev/null || echo 0)" -gt 0 ] 2>/dev/null; then
+    echo "  ✅ Docker Hub 直连不通，但 daemon 已配 registry 镜像加速（可经加速拉取）"
+  else
+    echo "  ❌ Docker Hub 直连不通且未配镜像加速——build 会失败，除非镜像已本地缓存"
+    registry_hint
   fi
   echo "── Docker 引擎 ──"
   if docker info >/dev/null 2>&1; then
@@ -280,6 +312,10 @@ if [ "${DO_LIVE}" = "1" ]; then
   info "形态1：默认（SQLite 零依赖）— ${COMPOSE_BIN} up -d --build"
   if ! ${COMPOSE_BIN} up -d --build >/tmp/compose_default.log 2>&1; then
     bad "${COMPOSE_BIN} up -d --build 失败"
+    # 国内网络最常见死法：拉基础镜像 i/o timeout——错误埋在 build 日志里，这里识别并直接给解法
+    if grep -qE "i/o timeout|failed to resolve reference|failed to do request" /tmp/compose_default.log; then
+      registry_hint
+    fi
     sed 's/^/    /' /tmp/compose_default.log
     dump_diag
     DO_LIVE=0
