@@ -57,7 +57,7 @@ bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 info() { echo "🔹 $1"; }
 http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$@"; }
 status_configured() {
-  curl -s --max-time 5 "http://localhost:$BPORT/api/setup/status" \
+  curl -s --max-time 5 "http://localhost:${BPORT}/api/setup/status" \
     | python3 -c 'import sys,json
 try:
     print(json.load(sys.stdin).get("configured",""))
@@ -76,17 +76,34 @@ wait_cmd() {            # wait_cmd <timeout_sec> "<shell command>"
 running_names() { docker ps --format '{{.Names}}' 2>/dev/null; }
 has_ct() { running_names | grep -qx "$1"; }
 
-# ---------- compose 探测：区分 v2(docker compose) 与 v1(docker-compose) ----------
+# ---------- compose 探测：不按名字猜版本，直接测能力（是否支持 --profile） ----------
+# 坑：独立二进制 docker-compose 也可能是新版（支持 profiles），
+# 不能因为名字带连字符就当成 v1。用 `help up` 是否含 --profile 来判定。
 COMPOSE_BIN=""
-COMPOSE_V1=0
+COMPOSE_HAS_PROFILE=0
+compose_supports_profile() {   # 带 15s 超时保护，防止 help 卡住
+  [ -n "${COMPOSE_BIN}" ] || return 1
+  local tmp pid w
+  tmp=$(mktemp)
+  ${COMPOSE_BIN} help up >"$tmp" 2>&1 &
+  pid=$!; w=0
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 1; w=$((w+1)); [ "$w" -ge 15 ] && { kill "$pid" 2>/dev/null; break; }
+  done
+  wait "$pid" 2>/dev/null
+  if grep -q -- '--profile' "$tmp"; then rm -f "$tmp"; return 0; fi
+  rm -f "$tmp"; return 1
+}
 detect_compose() {
   if docker compose version >/dev/null 2>&1; then
-    COMPOSE_BIN="docker compose"; COMPOSE_V1=0; return 0
+    COMPOSE_BIN="docker compose"
+  elif command -v docker-compose >/dev/null 2>&1 && docker-compose version >/dev/null 2>&1; then
+    COMPOSE_BIN="docker-compose"
+  else
+    return 1
   fi
-  if command -v docker-compose >/dev/null 2>&1 && docker-compose version >/dev/null 2>&1; then
-    COMPOSE_BIN="docker-compose"; COMPOSE_V1=1; return 0
-  fi
-  return 1
+  if compose_supports_profile; then COMPOSE_HAS_PROFILE=1; else COMPOSE_HAS_PROFILE=0; fi
+  return 0
 }
 
 # ---------- 诊断 ----------
@@ -94,11 +111,14 @@ run_diag() {
   info "环境诊断"
   echo "── docker ──"
   if command -v docker >/dev/null 2>&1; then
-    echo "  可执行文件: $(command -v docker)"
+    echo "  ✅ docker 可执行文件: $(command -v docker)"
     docker version --format '{{.Server.Version}}' 2>/dev/null | sed 's/^/  Server 版本: /' \
       || echo "  Server 版本: (取不到，可能守护进程未运行)"
   else
-    echo "  ❌ 未找到 docker"
+    echo "  ❌ PATH 中找不到 docker CLI（本脚本的容器计数/exec 断言依赖它）"
+    for p in /opt/homebrew/bin/docker /usr/local/bin/docker; do
+      [ -x "$p" ] && echo "     提示: $p 存在但不在 PATH，可 export PATH=\"\$PATH:$(dirname "$p")\""
+    done
   fi
   echo "── 守护进程 ──"
   if docker info >/dev/null 2>&1; then
@@ -107,11 +127,26 @@ run_diag() {
     echo "  ❌ 守护进程不可达（docker info 失败）：无 Docker daemon 或未启动 Docker Desktop"
   fi
   echo "── compose ──"
+  docker compose version >/dev/null 2>&1 && echo "  ✅ docker compose (v2 插件)：$(docker compose version 2>&1 | head -1)"
+  if command -v docker-compose >/dev/null 2>&1; then
+    echo "  ℹ️  docker-compose：$(command -v docker-compose)｜$(docker-compose version 2>&1 | head -1)"
+  fi
   if detect_compose; then
-    echo "  ✅ $COMPOSE_BIN 可用：$($COMPOSE_BIN version 2>&1 | head -1)"
-    [ "$COMPOSE_V1" = "1" ] && echo "  ⚠️  Compose v1：不支持 profiles，无法验证双形态，需升级到 Compose v2"
+    if [ "${COMPOSE_HAS_PROFILE}" = "1" ]; then
+      echo "  ✅ 选用 ${COMPOSE_BIN}，且支持 --profile（双形态可验证）"
+    else
+      echo "  ❌ ${COMPOSE_BIN} 不支持 --profile：需 Compose v2（升级 compose 或安装 'docker compose' 插件）"
+    fi
   else
     echo "  ❌ 未检测到可用 compose（既无 'docker compose' 也无 'docker-compose'）"
+  fi
+  echo "── Docker 引擎（关键：没有它真机验证跑不了）──"
+  if [ -d "/Applications/Docker.app" ] || [ -d "/Applications/Docker Desktop.app" ]; then
+    if docker info >/dev/null 2>&1; then echo "  ✅ Docker Desktop 已安装且守护进程在跑"
+    else echo "  ⚠️  Docker Desktop 已安装但未启动：请打开 Docker Desktop 等鲸鱼图标稳定后再跑"; fi
+  else
+    echo "  ❌ 未安装 Docker Desktop（macOS 需要它提供 daemon）"
+    echo "     安装：brew install --cask docker，或官网下载；装完启动后再跑本脚本"
   fi
   echo "── 容器 ──"
   if docker info >/dev/null 2>&1; then
@@ -120,7 +155,7 @@ run_diag() {
   fi
   echo "── 端口占用（8080/8090/3306 是否被别的服务占用）──"
   if command -v lsof >/dev/null 2>&1; then
-    for p in "$FPORT" "$BPORT" 3306; do
+    for p in "${FPORT}" "${BPORT}" 3306; do
       r=$(lsof -nP -iTCP:"$p" -sTCP:LISTEN 2>/dev/null | tail -n +2)
       [ -n "$r" ] && echo "$r" | sed "s/^/  端口 $p: /" || echo "  端口 $p: 空闲"
     done
@@ -165,78 +200,78 @@ dump_diag() {
 
 # ─────────────────────────── 主流程 ───────────────────────────
 [ "$DO_DIAG" = "1" ] && { run_diag; exit 0; }
-[ "$DO_STATIC" = "1" ] && static_check
+[ "${DO_STATIC}" = "1" ] && static_check
 
-if [ "$DO_LIVE" = "1" ]; then
+if [ "${DO_LIVE}" = "1" ]; then
   info "环境自检"
   LIVE_OK=1
-  command -v docker >/dev/null 2>&1 || { bad "未找到 docker"; LIVE_OK=0; }
-  if [ "$LIVE_OK" = "1" ] && ! docker info >/dev/null 2>&1; then
-    bad "Docker 守护进程不可达（docker info 失败）— 请启动 Docker Desktop / daemon 后再跑"; LIVE_OK=0
+  command -v docker >/dev/null 2>&1 || { bad "未找到 docker CLI（compose 需要它，本脚本的容器断言也依赖它）"; LIVE_OK=0; }
+  if [ "${LIVE_OK}" = "1" ] && ! docker info >/dev/null 2>&1; then
+    bad "Docker 守护进程不可达（docker info 失败）— macOS 请启动 Docker Desktop，Linux 请启动 dockerd"; LIVE_OK=0
   fi
-  if [ "$LIVE_OK" = "1" ] && ! detect_compose; then
+  if [ "${LIVE_OK}" = "1" ] && ! detect_compose; then
     bad "未检测到可用 compose（缺 'docker compose' 与 'docker-compose'）"; LIVE_OK=0
   fi
-  if [ "$LIVE_OK" = "1" ] && [ "$COMPOSE_V1" = "1" ]; then
-    bad "Compose v1 不支持 profiles，双形态（--profile mysql）无法验证，请升级到 Compose v2"; LIVE_OK=0
+  if [ "${LIVE_OK}" = "1" ] && [ "${COMPOSE_HAS_PROFILE}" != "1" ]; then
+    bad "${COMPOSE_BIN} 不支持 --profile：双形态（--profile mysql）无法验证，需 Compose v2"; LIVE_OK=0
   fi
-  if [ "$LIVE_OK" != "1" ]; then
+  if [ "${LIVE_OK}" != "1" ]; then
     echo "  （真机验证已跳过；环境就绪后重跑本脚本，或先跑 --diag 看环境）"
     DO_LIVE=0
   else
-    ok "环境自检通过（$COMPOSE_BIN）"
+    ok "环境自检通过（${COMPOSE_BIN}）"
   fi
 fi
 
-if [ "$DO_LIVE" = "1" ]; then
+if [ "${DO_LIVE}" = "1" ]; then
   info "清理任何残留容器/卷"
-  $COMPOSE_BIN down -v >/dev/null 2>&1 || true
+  ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
 
-  info "形态1：默认（SQLite 零依赖）— $COMPOSE_BIN up -d --build"
-  if ! $COMPOSE_BIN up -d --build >/tmp/compose_default.log 2>&1; then
-    bad "$COMPOSE_BIN up -d --build 失败"
+  info "形态1：默认（SQLite 零依赖）— ${COMPOSE_BIN} up -d --build"
+  if ! ${COMPOSE_BIN} up -d --build >/tmp/compose_default.log 2>&1; then
+    bad "${COMPOSE_BIN} up -d --build 失败"
     sed 's/^/    /' /tmp/compose_default.log
     dump_diag
     DO_LIVE=0
   fi
 fi
 
-if [ "$DO_LIVE" = "1" ]; then
+if [ "${DO_LIVE}" = "1" ]; then
   wait_cmd 90 "docker ps --format '{{.Names}}' | grep -qx weichuan-backend"
   has_ct weichuan-backend && ok "backend 容器运行中" || { bad "backend 未运行"; dump_diag; }
   has_ct weichuan-frontend && ok "frontend 容器运行中" || bad "frontend 未运行"
   has_ct weichuan-mysql && bad "mysql 不应在默认形态启动" || ok "mysql 未启动（符合零依赖）"
 
-  wait_cmd 60 "curl -s --max-time 5 http://localhost:$BPORT/api/setup/status >/dev/null"
+  wait_cmd 60 "curl -s --max-time 5 http://localhost:${BPORT}/api/setup/status >/dev/null"
   cfg=$(status_configured)
   [ "$cfg" = "false" ] && ok "未配置模式 status.configured=false" || bad "status.configured=$cfg (期望 false)"
-  hc=$(http_code "http://localhost:$BPORT/healthz")
+  hc=$(http_code "http://localhost:${BPORT}/healthz")
   [ "$hc" = "503" ] && ok "/healthz 未配置模式返回 503" || bad "/healthz=$hc (期望 503)"
-  fp=$(http_code "http://localhost:$FPORT/")
+  fp=$(http_code "http://localhost:${FPORT}/")
   if [ "$fp" = "200" ]; then ok "前端 8080 返回 200（安装页可用）"; else
     bad "前端首页=$fp（非 200 通常是 8080 被别的服务占用或前端没起来）"; dump_diag
   fi
 
-  if [ "$DO_INSTALL" = "1" ]; then
+  if [ "${DO_INSTALL}" = "1" ]; then
     info "  安装（SQLite）"
-    body="{\"DSN\":\"$SQLITE_DSN\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
+    body="{\"DSN\":\"${SQLITE_DSN}\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
     ic=$(curl -s -o /tmp/install.res -w '%{http_code}' --max-time 30 -X POST \
-          -H 'Content-Type: application/json' -d "$body" "http://localhost:$BPORT/api/setup/install")
+          -H 'Content-Type: application/json' -d "$body" "http://localhost:${BPORT}/api/setup/install")
     [ "$ic" = "200" ] && ok "POST /api/setup/install 返回 200" || bad "install=$ic $(cat /tmp/install.res 2>/dev/null)"
     ready=0
     for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
     [ "$ready" = "1" ] && ok "安装完成，status.configured=true（backend 已自重启）" || bad "安装后未见 configured=true"
-    hc2=$(http_code "http://localhost:$BPORT/healthz")
+    hc2=$(http_code "http://localhost:${BPORT}/healthz")
     [ "$hc2" = "200" ] && ok "安装后 /healthz=200" || bad "/healthz=$hc2"
   fi
 
   # ===== 切到形态 2：MySQL opt-in =====
   info "清理默认形态容器/卷"
-  $COMPOSE_BIN down -v >/dev/null 2>&1 || true
+  ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
 
   info "形态2a：MySQL opt-in 缺口令必须报错"
   unset MYSQL_ROOT_PASSWORD
-  if $COMPOSE_BIN up -d --build --profile mysql >/tmp/compose_mysql_nopw.log 2>&1; then
+  if ${COMPOSE_BIN} up -d --build --profile mysql >/tmp/compose_mysql_nopw.log 2>&1; then
     bad "缺 MYSQL_ROOT_PASSWORD 时 compose 竟然成功（应报错）"
   else
     if grep -q "MYSQL_ROOT_PASSWORD" /tmp/compose_mysql_nopw.log; then
@@ -246,45 +281,45 @@ if [ "$DO_LIVE" = "1" ]; then
       sed 's/^/    /' /tmp/compose_mysql_nopw.log
     fi
   fi
-  $COMPOSE_BIN down -v >/dev/null 2>&1 || true
+  ${COMPOSE_BIN} down -v >/dev/null 2>&1 || true
 
   info "形态2b：MySQL opt-in 带口令启动"
   export MYSQL_ROOT_PASSWORD="Vp$(openssl rand -hex 8 2>/dev/null || date +%s%N)"
-  if ! $COMPOSE_BIN up -d --build --profile mysql >/tmp/compose_mysql.log 2>&1; then
+  if ! ${COMPOSE_BIN} up -d --build --profile mysql >/tmp/compose_mysql.log 2>&1; then
     bad "带口令启动 mysql 形态失败"; sed 's/^/    /' /tmp/compose_mysql.log; dump_diag
   else
     wait_cmd 90 "docker ps --format '{{.Names}}' | grep -qx weichuan-mysql"
     n=0
     for c in weichuan-backend weichuan-frontend weichuan-mysql; do has_ct "$c" && n=$((n+1)); done
     if [ "$n" = "3" ]; then ok "三容器运行 (backend+frontend+mysql)"; else bad "运行容器数=$n (期望 3)"; dump_diag; fi
-    wait_cmd 90 "docker exec weichuan-mysql mysqladmin ping -h 127.0.0.1 -uroot -p$MYSQL_ROOT_PASSWORD --silent >/dev/null 2>&1"
+    wait_cmd 90 "docker exec weichuan-mysql mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent >/dev/null 2>&1"
     if [ $? -eq 0 ]; then ok "mysql 健康检查通过"; else bad "mysql 未就绪"; dump_diag; fi
-    wait_cmd 60 "curl -s --max-time 5 http://localhost:$BPORT/healthz >/dev/null"
+    wait_cmd 60 "curl -s --max-time 5 http://localhost:${BPORT}/healthz >/dev/null"
 
-    if [ "$DO_INSTALL" = "1" ]; then
+    if [ "${DO_INSTALL}" = "1" ]; then
       info "  安装（MySQL）"
-      body="{\"DSN\":\"$MYSQL_DSN\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
+      body="{\"DSN\":\"${MYSQL_DSN}\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
       ic=$(curl -s -o /tmp/install2.res -w '%{http_code}' --max-time 30 -X POST \
-            -H 'Content-Type: application/json' -d "$body" "http://localhost:$BPORT/api/setup/install")
+            -H 'Content-Type: application/json' -d "$body" "http://localhost:${BPORT}/api/setup/install")
       [ "$ic" = "200" ] && ok "MySQL 形态安装返回 200" || bad "install=$ic $(cat /tmp/install2.res 2>/dev/null)"
       ready=0
       for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
       [ "$ready" = "1" ] && ok "MySQL 形态安装完成，status.configured=true" || bad "MySQL 形态未见 configured=true"
-      tbls=$(docker exec weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "use weichuan; show tables;" 2>/dev/null | wc -l)
+      tbls=$(docker exec weichuan-mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "use weichuan; show tables;" 2>/dev/null | wc -l)
       [ "${tbls:-0}" -gt 1 ] && ok "weichuan 库已建表（表数=$tbls）" || bad "MySQL 建表异常"
     fi
   fi
 
-  if [ "$KEEP" = "0" ]; then
+  if [ "${KEEP}" = "0" ]; then
     info "清理：teardown（含卷）"
-    $COMPOSE_BIN down -v >/dev/null 2>&1 && ok "已 teardown" || bad "teardown 失败"
+    ${COMPOSE_BIN} down -v >/dev/null 2>&1 && ok "已 teardown" || bad "teardown 失败"
   else
-    info "保留容器（--keep）；手动清理： $COMPOSE_BIN down -v"
+    info "保留容器（--keep）；手动清理： ${COMPOSE_BIN} down -v"
   fi
 fi
 
 echo
 echo "══════════════════════════════════════════════════════"
-echo "  通过 $PASS   失败 $FAIL"
+echo "  通过 ${PASS}   失败 ${FAIL}"
 echo "══════════════════════════════════════════════════════"
-[ "$FAIL" = "0" ] && exit 0 || exit 1
+[ "${FAIL}" = "0" ] && exit 0 || exit 1
