@@ -62,6 +62,8 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SettingRow: typeof import('./components/SettingRow.vue')['default']
+    SetupGuide: typeof import('./components/SetupGuide.vue')['default']
+    SetupInstaller: typeof import('./components/SetupInstaller.vue')['default']
     UploadField: typeof import('./components/UploadField.vue')['default']
   }
   export interface GlobalDirectives {
