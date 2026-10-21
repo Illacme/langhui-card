@@ -118,6 +118,23 @@ go run ./cmd/server
 
 > 启动时会执行 `SeedAdmin`：若 `admin` 表为空，则用 `ADMIN_USER`/`ADMIN_PASS`（bcrypt 哈希后）创建初始超管并打印登录提示；已存在则跳过。避免手工写库。
 
+## 首次部署：不配环境变量也能装（安装向导）
+`DB_DSN` 完全没提供时，`cmd/server` 不会 Fatal，而是进入「未配置模式」：
+不加载业务，只提供 `/setup` 安装页（`/healthz` 如实返回 503）。打开页面填数据库与管理员，
+保存即完成「建库 → 建表 → seed 系统设置与初始超管 → 写配置文件 → 自重启」。
+配置写进 `CONFIG_FILE`（默认 `./data/runtime.env`，权限 0600、原子写），
+优先级仍是 **环境变量 > 配置文件 > 内置缺省**，所以老部署给过环境变量的行为完全不变。
+
+```bash
+# 什么都不设，直接起（当前工作目录需可写，配置会落到 ./data/runtime.env）
+go run ./cmd/server
+# 浏览器打开 http://127.0.0.1:8080 → 自动跳 /setup
+```
+
+安装入口只在 `DB_DSN` 缺失时存在（进程内一次性锁 + 正常模式不挂写接口），
+且拒绝初始化 `admins` 表已有数据的库。想重装：删配置文件（或清空库）后重启。
+细节见 `docs/deploy-runbook.md` §2.1。
+
 ## 容器运行
 ```bash
 docker build -t langhui-backend ./backend
@@ -316,7 +333,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - **登录限流**：`middleware.NewLoginRateLimiter` 按客户端 IP 做固定窗口限流（默认每 IP 每分钟 10 次登录尝试），防爆破；超限返回 `{code:429}`（与现有鉴权约定一致）。`backend/internal/middleware/ratelimit_test.go` 覆盖计数与隔离逻辑。
 - **启动安全门槛（拒绝启动）**：`config.InsecureGates()` 命中「`JWT_KEY` 仍是缺省值 `change-me` 或长度 < 16」「`ADMIN_PASS` 仍是内置缺省口令」时，`cmd/server/main.go` 打印 `[SECURITY][FATAL]` 并 `log.Fatal` **拒绝启动**——这两个默认值连同演示账号写进了公开文档，属已知凭据，带它们上线等于把后台开放给所有人。自愈方式是改一个环境变量重启（不会像 `db_dsn` / `cookie_*` 那样把「改回来的入口」一起弄丢）；本地联调加 `ALLOW_INSECURE=1` 放行。测试见 `internal/config/config_test.go`。
 - **启动自检告警（只提示不拦）**：`config.InsecureWarnings()` 对「超管口令长度不足 8 位」打印 `[SECURITY]` 告警。与上面的门槛分工：口令是给人记的，强弱交给运维判断，不卡启动。
-- **健康检查（就绪探针）**：`GET /healthz` 先 `SELECT 1` 探活数据库——正常 `200 {status:"ok",db:"up"}`，DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`，frontend 的 `depends_on` 升级为 `service_healthy`。详见《运维与部署》。
+- **健康检查（就绪探针）**：`GET /healthz` 先 `SELECT 1` 探活数据库——正常 `200 {status:"ok",db:"up"}`，DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`（安装模式下 503 会二次确认 `/api/setup/status` 为 `configured=false`，按健康放行，避免装到一半被反复重启）。详见《运维与部署》。
 - **软删除**：`ProjectCase` / `BizService` / `AchievementCategory` 已接入 GORM `DeletedAt`，删除改为置空 `deleted_at`，列表接口默认不返回已删除记录；MySQL 侧迁移见 `migrations/0003_soft_delete.sql`。
 - **JWT 双令牌 + 即时吊销**：`auth.IssueTokens` 同时签发 access（15 分钟）与 refresh（30 天）；`POST /api/refresh` 用 refresh 换发新 access。`Employee` / `Admin` 含 `token_version`（安全戳，迁移 `migrations/0004_token_version.sql`），改密 / 管理员重置密码 / 禁用启用时自增，`middleware.AuthMiddleware` 校验令牌内 `vid` 与当前版本一致，**旧令牌立即失效**（账号级吊销，无需黑名单表）。覆盖测试见 `TestTokenRefresh` 与「超管改密与令牌吊销」。
 - **PC 管理后台 httpOnly Cookie 鉴权**：`/api/admin/login` 将 access/refresh 写入 `HttpOnly; SameSite=Lax` 的 Cookie（`access_token` / `refresh_token`，见 `handler/cookie.go`），响应体不再回传令牌；`AuthMiddleware` 支持「Authorization 头 或 `access_token` Cookie」两种来源（小程序走 Bearer，PC 走 Cookie）；`POST /api/logout` 清除 Cookie。`COOKIE_SECURE`（生产 HTTPS 置 true）/ `COOKIE_DOMAIN`（跨子域才设）可配。覆盖测试见 `TestCookieAuth`。
@@ -384,9 +401,9 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 - DB 正常：`200 {status:"ok", db:"up"}`
 - DB 不可达：`503 {status:"degraded", db:"down", error:"..."}`
 
-> **为什么不是无条件 200**：旧实现只做存活探测，DB 故障时仍返回 200，导致 `docker-compose.yml` 的 backend `healthcheck`（依赖本端点）与 `scripts/alert_check.sh` 的 R1 探活**误判为可用**——实际所有 `/api` 已 5xx。改为 DB 不可达返回 503 后，编排的 `depends_on: service_healthy` 与探活告警才能识别"进程在但不可用"。
+> **为什么不是无条件 200**：旧实现只做存活探测，DB 故障时仍返回 200，导致 `docker-compose.yml` 的 backend `healthcheck`（依赖本端点）与 `scripts/alert_check.sh` 的 R1 探活**误判为可用**——实际所有 `/api` 已 5xx。改为 DB 不可达返回 503 后，backend 的 `healthcheck`（安装模式例外，见下）与探活告警才能识别"进程在但不可用"。
 
-`docker-compose.yml` 已为 backend 配置 `healthcheck`（每 15s 探 `/healthz`，连续 5 次失败标记不健康），frontend 的 `depends_on` 升级为 `service_healthy`：MySQL 就绪、backend 探活通过后，frontend 才启动。
+`docker-compose.yml` 已为 backend 配置 `healthcheck`（每 15s 探 `/healthz`，连续 5 次失败标记不健康；安装模式下 `/healthz` 如实返回 503，此时会再看一眼 `/api/setup/status`，`configured=false` 按健康放行——否则首次部署装到一半就被反复重启）。frontend 只 `depends_on: backend`（**不等 healthy**：安装模式下 backend 的 `/healthz` 就是 503，而安装页正是由本前端提供的，等 healthy 会永远等不到）；backend 也**不依赖** mysql 的 healthy（连不连库由安装向导在「装」的那一步决定，硬绑会让纯 SQLite 部署永远起不来）。
 
 ### 2. 访问日志落盘（告警 R2 的前置条件，极易踩坑）
 `middleware.AccessLog` 使用 Go 标准 `log` 包，输出到 **stderr**（每行含方法/路径/状态/耗时/IP；5xx 以 `[ACCESS-5XX]` 前缀标出）。`scripts/alert_check.sh` 的 **R2 规则读取日志文件**（`LOG_FILE`，默认 `/var/log/langhui/access.log`）扫描新增 `[ACCESS-5XX]` 行。

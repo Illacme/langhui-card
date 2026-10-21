@@ -221,9 +221,10 @@ if [ "$is_sqlite" = "1" ]; then
 else
   mrp="${MYSQL_ROOT_PASSWORD:-}"
   # 示例值也从编排文件现读，避免改了 compose、脚本还在检查旧值
-  def_mysql="$(sed -n 's/.*MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD:[-?]\([^}]*\)}.*/\1/p' "$ROOT/docker-compose.yml" | head -1)"
+  # （只匹配 :- 回退形式；编排里已是 :? 必填形式，不存在示例值可回退）
+  def_mysql="$(sed -n 's/.*MYSQL_ROOT_PASSWORD: \${MYSQL_ROOT_PASSWORD:-\([^}]*\)}.*/\1/p' "$ROOT/docker-compose.yml" | head -1)"
   if [ -z "$mrp" ]; then
-    warn "MYSQL_ROOT_PASSWORD 未设置：docker-compose 会回退内置示例值，生产请改强随机值"
+    warn "MYSQL_ROOT_PASSWORD 未设置：仅 --profile mysql 形态需要（未设则该形态下 compose 直接报错，不回退示例值）；默认 SQLite 形态可不管"
   elif [ -n "$def_mysql" ] && [ "$mrp" = "$def_mysql" ]; then
     warn "MYSQL_ROOT_PASSWORD 仍是编排文件里的示例值：生产请改强随机值"
   else

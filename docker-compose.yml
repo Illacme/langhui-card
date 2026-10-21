@@ -1,23 +1,35 @@
-# 朗汇机电电子名片 · 三端联调（前端 + 后端 + MySQL）
+# 朗汇机电电子名片 · 三端联调（前端 + 后端 + 可选 MySQL）
 #
-# 用法：
-#   docker compose up -d --build        # 构建并启动
-#   docker compose logs -f backend      # 看后端日志（含 seed 超管）
-#   http://localhost:8080               # PC 管理后台（nginx 反代 /api 与 /uploads）
-#   docker compose down                 # 停止（保留数据卷）
-#   docker compose down -v              # 停止并清空 mysql / uploads 数据卷
+# 两种部署形态任选其一（数据库引擎在安装向导里也能再切换）：
+#   1) 零依赖起步（默认，推荐试用 / 小体量内部使用）：
+#        docker compose up -d --build
+#      → 只起 backend + frontend，浏览器开 http://localhost:8080 进安装向导，
+#        选 SQLite 即可，不需要任何数据库口令、也不必起 MySQL 容器。
+#   2) 生产用 MySQL：
+#        docker compose up -d --build --profile mysql
+#      → 额外起 mysql 容器，安装向导自动预填连接信息，选 MySQL 即可。
 #
-# 密码等敏感变量通过 .env 注入（见 .env.example）。未提供 .env 时使用下方默认值。
-# 注意：DB_DSN 中的主机名是 mysql 服务名，UPLOAD_BASE_URL 用宿主机访问地址（与 nginx 发布端口一致）。
+# 密码等敏感变量通过 .env 注入（见 .env.example）。
+# 注意：DB_DSN 中的主机名是 mysql 服务名（仅 --profile mysql 时存在），
+#       UPLOAD_BASE_URL 用宿主机访问地址（与 nginx 发布端口一致）。
+#
+# 首次部署推荐「什么都不填」直接起：DB_DSN / JWT_KEY / ADMIN_PASS 都留空，
+# 浏览器打开 http://localhost:8080 会进安装向导，填完自动建库建表、写回配置并重启。
+# MYSQL_ROOT_PASSWORD 只有用 MySQL（--profile mysql）时才需要给。
 
 services:
   mysql:
+    # profiles: 默认 docker compose up 不起 mysql（零依赖起步、选 SQLite 不需要它）；
+    # 仅 `docker compose up --profile mysql` 才启动。这样「任选数据库」在编排层也成立，
+    # SQLite 用户不必被迫配置 MySQL 口令、也不起一个用不到的数据库容器。
+    profiles: [mysql]
     image: mysql:8.0
     container_name: langhui-mysql
     restart: unless-stopped
     environment:
-      # 必填：不设则 compose 直接报错，而不是悄悄带着编排里的示例口令起库
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置：请 cp .env.example .env 后改成强随机值}
+      # 必填（仅 --profile mysql 生效）：不设则 compose 直接报错，
+      # 而不是悄悄带着编排里的示例口令起库
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置：请 cp .env.example .env 后改成强随机值，并加 --profile mysql 启用 MySQL}
       MYSQL_DATABASE: langhui
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_general_ci
@@ -28,7 +40,7 @@ services:
       # 注意：仅首启（mysql_data 为空）时执行；对已有数据库需手动执行新增迁移
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
     ports:
-      - "3306:3306"
+      - "3306:3306" # 仅本机调试用；生产建议删掉或绑 127.0.0.1，勿对公网开放
     healthcheck:
       # CMD-SHELL 形式让容器内 shell 展开 $MYSQL_ROOT_PASSWORD
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
@@ -42,17 +54,23 @@ services:
       dockerfile: Dockerfile
     container_name: langhui-backend
     restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
+    # 不依赖 mysql：安装模式下 backend 根本不连库，连不连得上由安装向导在「装」的那一步决定；
+    # MySQL 模式下装完自重启时 mysql 早已 healthy。硬绑 service_healthy 反而会在
+    # 纯 SQLite 部署（mysql 不启）时让 backend 永远起不来。
     environment:
-      DB_DSN: "root:${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD 未设置}@tcp(mysql:3306)/langhui?charset=utf8mb4&parseTime=true"
+      # 留空即进入「首次安装向导」：浏览器打开 8080 会直接进 /setup 安装页，
+      # 在页面里填数据库与管理员即可自动建库建表并写回 /app/data/runtime.env。
+      # 想跳过向导就在这里（或 .env）显式给 DSN——给了 DSN 就永远不进安装模式。
+      DB_DSN: ${DB_DSN:-}
       PORT: "8080"
-      # 必填：不设则 compose 直接报错，而不是悄悄带着内置缺省值把服务跑起来
-      # （后端 cmd/server 也会拒绝用缺省密钥/缺省口令启动，这里是更早的一道闸）
-      JWT_KEY: ${JWT_KEY:?JWT_KEY 未设置：请 cp .env.example .env 后填入 openssl rand -base64 32 生成的随机串}
-      ADMIN_PASS: ${ADMIN_PASS:?ADMIN_PASS 未设置：初始超管口令，上线必改（openssl rand -base64 12）}
+      # 不设时由安装向导现场生成随机值（写进配置文件而不是环境变量）；
+      # 只有「自己写死配置、不用向导」的部署才需要在 .env 里给。
+      JWT_KEY: ${JWT_KEY:-}
+      ADMIN_PASS: ${ADMIN_PASS:-}
       ADMIN_USER: ${ADMIN_USER:-admin}
+      # 安装向导把配置写到这里（默认 ./data/runtime.env）。必须落在持久卷上，
+      # 否则容器重建后配置丢失、又会回到安装页。
+      CONFIG_FILE: /app/data/runtime.env
       STORAGE_DRIVER: local
       STORAGE_PUBLIC: "true"
       UPLOAD_DIR: /app/uploads
@@ -68,13 +86,19 @@ services:
       # 可选：WX_APPID / WX_APPSECRET / MINIO_* / OSS_* / CDN_*
     volumes:
       - uploads_data:/app/uploads
+      # 安装向导写出的配置（runtime.env）与 SQLite 库文件都在这里，必须持久化
+      - data_data:/app/data
     expose:
       - "8080"
     ports:
       - "8090:8080" # 后端直连调试端口（绕过 nginx）
     healthcheck:
-      # 依赖 /healthz 端点（见 handler.New）
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz || exit 1"]
+      # 依赖 /healthz 端点（见 handler.New），但「未配置模式」要例外：
+      # 安装向导页期间 /healthz 如实返回 503（业务确实不可用），可进程是健康的——
+      # 若也判 unhealthy，编排会反复重启、装到一半被打断。故 503 时再确认一次
+      # /api/setup/status 是否 configured=false，是则按健康放行；
+      # 已配置却 503（数据库连不上）仍然判失败，这也是监控要看的信号。
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/healthz >/dev/null 2>&1 && exit 0; wget -q -O - http://127.0.0.1:8080/api/setup/status | grep -q 'configured\":false'"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -86,12 +110,16 @@ services:
       dockerfile: Dockerfile
     container_name: langhui-frontend
     restart: unless-stopped
+    # 只等 backend 容器起来（nginx 需要能解析 upstream 主机名），不等 healthy：
+    # 首次部署时 backend 处于安装模式、/healthz 报 503，等 healthy 会永远等不到，
+    # 而这一版的安装页正是由本前端提供的——前端起不来就等于装不了。
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     ports:
       - "8080:80" # PC 管理后台入口；nginx 反代 /api 与 /uploads 到 backend:8080
 
 volumes:
-  mysql_data:
+  mysql_data: # 仅 --profile mysql 时创建
   uploads_data:
+  # 后端配置（runtime.env）与可选 SQLite 库文件；删掉它会回到「未配置」状态
+  data_data:

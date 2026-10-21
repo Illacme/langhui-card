@@ -36,13 +36,22 @@ cd backend && go run ./cmd/devserver      # 监听 :8080
 > 注意：`go run ./cmd/devserver` 每次启动都用**新的临时 SQLite 库**，改过的密码/新建的账号
 > 重启即回到初始演示状态（开发态有意设计）。需要持久化请用 `cmd/server`（MySQL）或 docker-compose。
 
-### 方式二：容器一键起（MySQL + 后端 + 前端）
+### 方式二：容器一键起（两种数据库形态任选）
 ```bash
-cp .env.example .env          # 必改 JWT_KEY / ADMIN_PASS / MYSQL_ROOT_PASSWORD（三者为必填变量）
-docker compose up -d --build  # 访问 http://localhost:8080
+cp .env.example .env
+
+# 形态一（默认）：零依赖起步——只起 backend + frontend，浏览器开 http://localhost:8080
+# 进安装向导选 SQLite 即可，JWT_KEY / ADMIN_PASS / MYSQL_ROOT_PASSWORD 全部不用给
+docker compose up -d --build
+
+# 形态二：生产 MySQL——加 --profile mysql 额外起 mysql 容器（MYSQL_ROOT_PASSWORD 必填）
+docker compose up -d --build --profile mysql
 ```
-> `JWT_KEY` / `ADMIN_PASS` / `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 中是**必填**变量（`${VAR:?提示}`），
-> 未设置时 compose 直接报错，不会带默认值悄悄启动；后端 `cmd/server` 也会拒绝用缺省密钥 / 缺省口令启动。
+> `docker-compose.yml` 里只有 `MYSQL_ROOT_PASSWORD` 是**必填**变量（`${VAR:?提示}`），且只在
+> `--profile mysql` 形态校验：未设置则 compose 直接报错，不会带默认值悄悄启动；
+> `JWT_KEY` / `ADMIN_PASS` 刻意放宽为**可选**——留空即进入安装向导，由向导现场生成强随机值
+> 并写进 `/app/data/runtime.env`（详见 `docs/deploy-runbook.md` §2.1）。
+> 后端 `cmd/server` 也会拒绝用缺省密钥 / 缺省口令启动（`InsecureGates`）。
 > 上线前可跑 `scripts/preflight.sh` 做一次静态自检（含小程序端引导基址是否仍指向 127.0.0.1）。
 
 ### 方式三：分别启动（开发态）

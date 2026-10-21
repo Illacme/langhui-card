@@ -37,7 +37,7 @@ nginx（即 Docker 版 `frontend/nginx.conf` 的配置，仅把 `backend:8080` �
 ```nginx
 server {
     listen 80;
-    root /path/to/langhui-card/frontend/dist;
+    root /path/to/weichuan-card/frontend/dist;
     index index.html;
     client_max_body_size 50m;
     location / { try_files $uri $uri/ /index.html; }
@@ -49,7 +49,7 @@ server {
 后端常驻，二选一：
 
 ```bash
-nohup /path/to/langhui-card/backend/langhui > /var/log/langhui.log 2>&1 &   # 最简
+nohup /path/to/weichuan-card/backend/langhui > /var/log/langhui.log 2>&1 &   # 最简
 ```
 
 ```ini
@@ -59,9 +59,9 @@ Description=langhui backend (dev mode)
 After=network.target
 
 [Service]
-WorkingDirectory=/path/to/langhui-card/backend
+WorkingDirectory=/path/to/weichuan-card/backend
 Environment=DEV_UPLOAD_BASE_URL=http://192.168.1.10:8080/uploads
-ExecStart=/path/to/langhui-card/backend/langhui
+ExecStart=/path/to/weichuan-card/backend/langhui
 Restart=always
 RestartSec=2
 
@@ -153,7 +153,7 @@ export COOKIE_SECURE=true
 
 | 项 | 要求 | 说明 |
 |---|---|---|
-| 服务器 | Linux x86_64，2C4G+，磁盘 40G+ | Go 后端 + nginx + MySQL 8.0 三容器，名片类应用流量小，2C4G 足够 |
+| 服务器 | Linux x86_64，2C4G+，磁盘 40G+ | 默认形态 backend + frontend 两容器（选 SQLite）；MySQL 形态（`--profile mysql`）三容器。名片类应用流量小，2C4G 足够 |
 | Docker | Docker 24+ 与 compose 插件 | `docker compose version` 验证 |
 | 域名 | **已 ICP 备案**，A 记录指向服务器 | 微信小程序合法域名的硬性要求，未备案域名配不了 |
 | 端口 | 80 / 443 对外 | 3306 **不要**对公网开放（compose 里 `3306:3306` 生产建议删掉或绑 127.0.0.1） |
@@ -162,8 +162,8 @@ export COOKIE_SECURE=true
 ## 1. 获取代码与配置
 
 ```bash
-git clone git@github.com:Illacme/langhui-card.git
-cd langhui-card
+git clone git@github.com:Illacme/weichuan-card.git
+cd weichuan-card
 cp .env.example .env
 ```
 
@@ -171,15 +171,26 @@ cp .env.example .env
 
 ```bash
 openssl rand -base64 48   # → JWT_KEY
-openssl rand -base64 24   # → MYSQL_ROOT_PASSWORD
+openssl rand -base64 24   # → MYSQL_ROOT_PASSWORD（仅 --profile mysql 形态需要）
 openssl rand -base64 12   # → ADMIN_PASS（或自定义强口令）
 ```
 
-编辑 `.env`，生产必改项：`JWT_KEY`、`MYSQL_ROOT_PASSWORD`、`ADMIN_PASS`、`COOKIE_SECURE=true`（HTTPS 生产必须，见第 5 节）。可选按需：`WX_APPID/WX_APPSECRET`（小程序码）、`MINIO_*`/`OSS_*`（对象存储）、`METRICS_ENABLED=1`。
+> 走 **§2.1 安装向导**的话：`JWT_KEY` 与初始超管口令由向导现场随机生成并写进配置文件，这两行可以跳过；
+> `MYSQL_ROOT_PASSWORD` 只有 **MySQL 形态**（`docker compose up --profile mysql`）才必须自己给，
+> 默认的 SQLite 形态连这个都不用填。
+
+编辑 `.env`：`COOKIE_SECURE=true`（HTTPS 生产必须，见第 5 节）是唯一无条件必改项；
+`JWT_KEY` / `ADMIN_PASS` 不给就由向导生成；`MYSQL_ROOT_PASSWORD` 仅 MySQL 形态必填。
+可选按需：`WX_APPID/WX_APPSECRET`（小程序码）、`MINIO_*`/`OSS_*`（对象存储）、`METRICS_ENABLED=1`。
 
 > **三处「忘了改就出事」的项，已由代码强制把关**（不是靠人记住）：
-> 1. `JWT_KEY` / `ADMIN_PASS` / `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 里是**必填变量**
->    （`${VAR:?提示}` 语法），未设置时 `docker compose up` 直接报错、不会带默认值悄悄启动；
+> 1. `MYSQL_ROOT_PASSWORD` 在 `docker-compose.yml` 里是**必填变量**（`${VAR:?提示}` 语法），
+>    但只在你显式启用 MySQL 形态（`docker compose up --profile mysql`）时才校验——
+>    未设置则 `docker compose up` 直接报错、不会带默认值悄悄启动；
+>    默认 SQLite 形态不起 mysql，完全不碰这个变量；
+>    `DB_DSN` / `JWT_KEY` / `ADMIN_PASS` 则刻意放宽为**可选**——留空即进入安装向导，
+>    由向导现场生成强随机值并写进 `/app/data/runtime.env`（见 §2.1），
+>    这样「忘记生成密钥」这件事从根上不存在；
 > 2. 后端 `cmd/server` 启动时若检测到 `JWT_KEY` 仍是缺省值 `change-me`（或长度 < 16）、
 >    或 `ADMIN_PASS` 仍是内置缺省口令，会**拒绝启动**并打印 `[SECURITY][FATAL]`
 >    （这两个默认值连同演示账号写进了公开文档，等于已知凭据）；
@@ -203,19 +214,76 @@ openssl rand -base64 12   # → ADMIN_PASS（或自定义强口令）
 
 ## 2. 启动
 
+两种形态任选其一（数据库引擎进了安装向导还能再改）：
+
 ```bash
+# 形态一：零依赖起步（默认）——只起 backend + frontend，向导里选 SQLite，不需要任何口令
 docker compose up -d --build
+docker compose ps        # backend / frontend 两服务；没有 mysql 是正常的
+
+# 形态二：生产 MySQL——额外起 mysql 容器（MYSQL_ROOT_PASSWORD 必填，见第 1 节）
+docker compose up -d --build --profile mysql
 docker compose ps        # mysql / backend / frontend 三服务均 healthy
 ```
 
-首启时 MySQL 容器自动按序执行 `backend/migrations/0001–0005` 建表；`backend` 等 mysql healthy 后启动，自动 seed 初始超管。
+MySQL 形态首启时，mysql 容器自动按序执行 `backend/migrations/0001–0005` 建表。
+backend 刻意**不**依赖 mysql 的 healthy 状态：安装模式下它根本不连库，连不连得上由安装向导
+在「装」的那一步决定；硬绑 `service_healthy` 反而会让纯 SQLite 部署（mysql 不启）时
+backend 永远起不来。MySQL 形态装完自重启时，mysql 早已就绪。
+
+## 2.1 首次访问：安装向导（推荐路径）
+
+`.env` 里 `DB_DSN` / `JWT_KEY` / `ADMIN_PASS` 全部留空时（`MYSQL_ROOT_PASSWORD` 按形态给：
+SQLite 形态不用给，MySQL 形态必须给），服务起来会进入「未配置模式」：
+浏览器打开 `http://<服务器IP>:8080`（nginx 发布端口）会直接落到安装页，
+不用再回头改 `.env`、也不用记环境变量名。
+
+页面三步：
+
+1. **选数据库**：MySQL 或 SQLite，与启动时选的 compose 形态对应即可（向导里也能改）。
+   MySQL 形态（`--profile mysql`）下会检测到编排环境并预填
+   主机 `mysql` / 端口 `3306` / 用户 `root` / 库名 `langhui`，
+   口令仍需自己填 `.env` 里的 `MYSQL_ROOT_PASSWORD`（响应与日志都不回显口令）；
+   SQLite 形态下直接选 SQLite，库文件落在 `/app/data`（`data_data` 卷持久化）；
+2. **填管理员账号**：用户名 + 口令（≥8 位，两次一致）。JWT 密钥留空由服务端随机生成；
+   勾选「Cookie 强制 HTTPS」后才写 `COOKIE_SECURE=true`；
+3. **测试连接 → 开始安装**：连通性通过后确认一次即执行。
+
+安装动作（服务端一次做完，任何一步失败都不会留下半配置）：
+
+| 步骤 | MySQL | SQLite |
+|---|---|---|
+| 建库 | 勾选「自动创建」时 `CREATE DATABASE IF NOT EXISTS`（utf8mb4） | 目录自动创建 |
+| 建表 | 空库按模型 `AutoMigrate`；compose 已跑过迁移时只补缺失的表/列，不删不改 | 同（与路径 D 同一套代码） |
+| 初始数据 | `sys_setting` 缺省值 + 初始超管（bcrypt 哈希） | 同 |
+| 落配置 | 写入 `CONFIG_FILE`（compose 里是 `/app/data/runtime.env`），权限 0600、临时文件 + rename 原子写 | 同 |
+| 生效 | `syscall.Exec` 原地自重启（Linux）；Windows / 手动托管时提示人工重启 | 同 |
+
+装完页面自动轮询 `/api/setup/status`，一旦 `configured=true` 就倒计时跳转登录页。
+
+> **边界与安全**（这几条是刻意的，改动前先看测试 `backend/internal/setup/install_test.go`）：
+> - 只有在「`DB_DSN` 未提供」时才有安装入口；装完进程内一次性锁生效，
+>   正常模式连写接口都不挂（`/setup` 只返回 302 回首页），不存在「重放安装页重置系统」；
+> - `admins` 表已有数据的库直接拒绝安装（不会接管在用系统）；
+> - 写接口带同源检查（Origin/Referer 与 Host 比对），挡跨站 CSRF 与 DNS rebinding；
+> - 响应与日志一律掩码，口令与完整 DSN 不落明文；
+> - 配置写进**配置文件**而非环境变量，优先级仍只有一条：环境变量 > 配置文件 > 内置缺省。
+>   已在 `.env` 里显式给过值的老部署行为完全不变。
+
+排查：装完却没跳登录页 → 先看 `docker compose logs backend | grep SETUP`；
+容器里自重启失败（非 Linux、或进程被托管）→ 手动 `docker compose restart backend`，
+页面会提示「重新检测」。想重新走一次向导：停服务后删掉 `data_data` 卷
+（`docker compose down -v` 会连 MySQL / uploads 一起删，别在已上线环境用）。
 
 ## 3. 首次验证清单（按顺序过一遍）
 
-- [ ] `curl http://127.0.0.1:8090/healthz` → `{"status":"ok"}`（8090 是后端直连调试端口）
+- [ ] `curl http://127.0.0.1:8090/healthz` → `{"status":"ok"}`（8090 是后端直连调试端口；
+      安装模式下这里返回 503 + `"db":"unknown"` 是**正常**的，装完才会变 200）
 - [ ] `docker compose logs backend | grep SECURITY` **无输出**（有输出说明密钥还是默认值，回第 1 步）
-- [ ] 浏览器开 `http://<服务器IP>:8080`，用 `.env` 的 `ADMIN_USER/ADMIN_PASS` 登录 PC 后台，**立即改密码**
-- [ ] 表结构齐全：`docker exec -i langhui-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" langhui -e "show tables;"` —— 应包含 `revoked_sessions`（0005）等全部迁移产物
+- [ ] 浏览器开 `http://<服务器IP>:8080`：未配置时先出安装页（§2.1），装完落到登录页；
+      用安装时填的管理员口令（或 `.env` 的 `ADMIN_USER/ADMIN_PASS`）登录 PC 后台，**立即改密码**
+- [ ] `docker compose ps` 里 backend 是 healthy（安装期间判据放宽为「进程活着」，装完恢复按 `db` 判）
+- [ ] 表结构齐全（MySQL 形态）：`docker exec -i langhui-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" langhui -e "show tables;"` —— 应包含 `revoked_sessions`（0005）等全部迁移产物；SQLite 形态可跳过此项（`AutoMigrate` 自动建表，库在 `data_data` 卷里）
 - [ ] 上传一张图片（公司信息/封面），确认返回 URL 可访问（`uploads_data` 卷已挂载）
 
 ## 4. 存量数据库手动应用迁移（仅「数据库已存在」时）
@@ -229,6 +297,8 @@ done
 ```
 
 迁移向后兼容、只增不改；若报 `1060 Duplicate column` / `1050 table already exists`，说明该变更已应用过，可忽略。**执行前先 `mysqldump` 备份**。
+
+> SQLite 形态不适用本节：没有手工迁移，表由服务启动时 `AutoMigrate` 自动建（见「无 Docker 部署」路径 D）。
 
 ## 5. HTTPS（生产必须，小程序合法域名的前提）
 
@@ -311,7 +381,7 @@ TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:13306)/langhui_test?charset=utf8mb4&pars
 
 | 现象 | 原因 / 处理 |
 |---|---|
-| backend 反复重启 | 多在等 mysql healthy；`docker compose logs backend` 看 DB_DSN 与 mysql 状态 |
+| backend 反复重启 | 已配置模式下多是数据库连不上：`docker compose logs backend` 看 DB_DSN 与实际库状态（SQLite 形态确认 `data_data` 卷还在；MySQL 形态确认启动时带了 `--profile mysql`）。安装模式（未配置）下 backend 健康判据已放宽为「进程活着」，不属于此项 |
 | 登录后立刻 401 循环 | `COOKIE_SECURE` 与协议不匹配——http 访问却设了 `true`（或反之） |
 | 上传报 413 | 请求体超限：`frontend/nginx.conf` 已设 50m；前置 Caddy 默认不限 |
 | 小程序码接口 code=1 | 未配 `WX_APPID/WX_APPSECRET`，联调期属预期 |

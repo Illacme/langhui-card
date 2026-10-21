@@ -63,9 +63,12 @@ paths:
       summary: 健康检查（就绪探针：探活数据库）
       description: |
         先 `SELECT 1` 探活数据库：正常 `200 {status:"ok",db:"up"}`；
-        DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`。
+        DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`；
+        首次部署尚未配置（`DB_DSN` 未提供）时 `503 {status:"unconfigured",db:"unknown"}`。
         docker-compose 的 backend healthcheck 与最小告警 R1 依赖本端点，
         因此 DB 故障时能识别"进程在但不可用"，而非误判为健康。
+        注意「未配置」也是一种不可用，必须如实 503——容器编排另按
+        `/api/setup/status` 的 `configured=false` 把安装阶段视为"进程健康"。
       responses:
         "200":
           description: 服务就绪（DB 可达）
@@ -108,6 +111,140 @@ paths:
             text/plain:
               schema:
                 type: string
+
+  /api/setup/status:
+    get:
+      tags: [系统]
+      summary: 首次安装状态（安装向导用，无需鉴权）
+      description: |
+        `configured` 一律以 `DB_DSN` 为准（环境变量与配置文件两层都查）。
+        未配置时附带 `installable=true`、可复制的 `envText` 与 `mysqlHint`
+        （编排环境预填值，**不含口令**）。前端在挂载前调用一次：
+        未配置 → 渲染安装向导（旧后端没有安装接口则退回只读引导）；失败 → 按"已配置"处理。
+      responses:
+        "200":
+          description: 安装状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 0
+                  data:
+                    type: object
+                    properties:
+                      configured:
+                        type: boolean
+                      installable:
+                        type: boolean
+                      configFile:
+                        type: string
+                        example: ./data/runtime.env
+                      adminUser:
+                        type: string
+                        example: admin
+                      sqlitePath:
+                        type: string
+                        example: ./data/langhui.db
+                      envText:
+                        type: string
+                      missing:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            env:
+                              type: string
+                            why:
+                              type: string
+                            value:
+                              type: string
+
+  /api/setup/test:
+    post:
+      tags: [系统]
+      summary: 测试数据库连接（不建库、不建表、不写任何东西）
+      description: |
+        仅在"未配置模式"下挂载（正常模式返回 404，结构上不可重放）。
+        带同源检查：Origin/Referer 的宿主必须与 Host 一致，挡 CSRF 与 DNS rebinding；
+        两个头都缺失（curl / 脚本）放行。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupInstallReq"
+      responses:
+        "200":
+          description: 连通（code=0，data 含掩码 DSN）或失败（code=1，msg 为可读原因）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  msg:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      driver:
+                        type: string
+                        example: mysql
+                      dsn:
+                        type: string
+                        description: 掩码后的连接串（口令显示为 ******）
+                      willCreate:
+                        type: boolean
+                      note:
+                        type: string
+
+  /api/setup/install:
+    post:
+      tags: [系统]
+      summary: 执行安装（建库建表 + seed 超管 + 写配置文件 + 自重启）
+      description: |
+        同样的未配置模式门禁与同源检查，另外还有两道硬条件：
+        (1) 进程内一次性锁，装过一次即拒绝；(2) 目标库 `admins` 表已有数据即拒绝，
+        绝不接管在用系统。配置写入 `CONFIG_FILE`（0600、临时文件 + rename 原子写），
+        最后由页面轮询 `/api/setup/status` 感知 `configured=true` 后跳登录页。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupInstallReq"
+      responses:
+        "200":
+          description: 安装成功（code=0）或失败（code=1）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                  msg:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      ok:
+                        type: boolean
+                      driver:
+                        type: string
+                      dsn:
+                        type: string
+                      configFile:
+                        type: string
+                      restarted:
+                        type: boolean
+                        description: 是否已安排自重启（Linux 用 syscall.Exec；Windows 为 false，需人工重启）
+                      message:
+                        type: string
 
   # ───────────────────────── 公开内容 ─────────────────────────
   /api/card:
@@ -1789,7 +1926,8 @@ paths:
     get:
       summary: 读取全部可配置项（平台超管）
       description: |
-        返回 registry 全量项（当前 34 项），每项带生效方式元数据：
+        返回 registry 全量项（当前 35 项），每项带生效方式元数据：
+        - name：中文名（界面主标签，key 降级为次要灰字）
         - secret：敏感项，value 恒为掩码 "******"（真实值不下发）
         - restart：保存后需重启进程才生效（云存储 / CDN 客户端在启动时构造）
         - readOnly：只读项（db_dsn / jwt_key / cookie_*），PUT 会被拒绝
@@ -2582,6 +2720,10 @@ components:
       properties:
         key:
           type: string
+          description: 配置项标识（环境变量风格，界面降级为次要灰字展示）
+        name:
+          type: string
+          description: 中文名（界面主标签）；为空时前端回落显示 key
         group:
           type: string
           enum: [general, miniprogram, upload, wechat, auth, storage, security, feature]
@@ -2658,3 +2800,54 @@ components:
         createdAt:
           type: string
           format: date-time
+
+# ───────────────────────── 公共数据结构 ─────────────────────────
+# 说明：本文件其余部分沿用「就地内联 schema」的写法，只有安装向导的请求体
+# 被两条路径共用（/api/setup/test 与 /api/setup/install），故单独抽取。
+components:
+  schemas:
+    SetupInstallReq:
+      type: object
+      description: 安装/测试连接的扁平表单，与后端 `setup.InstallReq` 字段一一对应
+      properties:
+        engine:
+          type: string
+          enum: [mysql, sqlite]
+          description: 缺省按 mysql 处理
+        dbHost:
+          type: string
+          example: mysql
+        dbPort:
+          type: string
+          example: "3306"
+        dbUser:
+          type: string
+          example: root
+        dbPassword:
+          type: string
+          description: 仅上行，响应与日志不回显
+        dbName:
+          type: string
+          example: langhui
+          description: 仅字母数字下划线（服务端白名单校验，防注入）
+        createDatabase:
+          type: boolean
+          description: 仅 MySQL：库不存在时 CREATE DATABASE IF NOT EXISTS
+        sqlitePath:
+          type: string
+          example: ./data/langhui.db
+        adminUser:
+          type: string
+          example: admin
+        adminPass:
+          type: string
+          description: ≥8 位，且不能是内置缺省口令
+        adminPass2:
+          type: string
+          description: 必须与 adminPass 一致（装完登不进去的第一大原因）
+        jwtKey:
+          type: string
+          description: 留空由服务端 crypto/rand 生成；不能是内置缺省密钥
+        cookieSecure:
+          type: boolean
+          description: true 时写入 COOKIE_SECURE=true（站点已启用 https）
