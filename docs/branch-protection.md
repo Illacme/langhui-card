@@ -1,16 +1,16 @@
 # 分支保护与协作规范
 
-本仓库为 monorepo（`backend/` + `frontend/` + `miniprogram/` + `docs/`），CI 见 `.github/workflows/ci.yml`。
+本仓库为 monorepo（`backend/` + `frontend/` + `miniprogram/` + `docs/`），CI 见 `.github/workflows/ci.yml`。  
 本文给出推荐的 GitHub 分支保护配置，保证 `main` 始终处于「构建通过 + 测试通过 + 类型检查通过」的状态。
 
 ## 1. CI 门禁（四个 job）
 
-| Job | 内容 | 是否阻塞合并 |
-|---|---|---|
-| `后端 (Go / SQLite)` | `go build` + `go vet` + `go test ./...`（SQLite 全流程，零外部依赖） | ✅ 必跑 |
-| `前端 (Vue)` | `npm ci` + `npm run build` + `npm run test`（含小程序端纯逻辑测试） | ✅ 必跑 |
-| `前端类型检查 (vue-tsc)` | `vue-tsc --noEmit` 全量类型检查 | ✅ 必跑（历史遗留的 4 个 wangEditor 类型错已修复，不再是「非阻塞预警」） |
-| `后端 (Go / MySQL parity)` | 连真实 MySQL 跑生产契约 parity | ⬜ 可选（需在仓库 Variables 配 `TEST_MYSQL_DSN` 才触发） |
+| Job                      | 内容                                                        | 是否阻塞合并                                       |
+| ------------------------ | --------------------------------------------------------- | -------------------------------------------- |
+| `后端 (Go / SQLite)`       | `go build` + `go vet` + `go test ./...`（SQLite 全流程，零外部依赖） | ✅ 必跑                                         |
+| `前端 (Vue)`               | `npm ci` + `npm run build` + `npm run test`（含小程序端纯逻辑测试）   | ✅ 必跑                                         |
+| `前端类型检查 (vue-tsc)`       | `vue-tsc --noEmit` 全量类型检查                                 | ✅ 必跑（历史遗留的 4 个 wangEditor 类型错已修复，不再是「非阻塞预警」） |
+| `后端 (Go / MySQL parity)` | 连真实 MySQL 跑生产契约 parity                                    | ⬜ 可选（需在仓库 Variables 配 `TEST_MYSQL_DSN` 才触发）  |
 
 ## 2. 开启分支保护（GitHub UI）
 

@@ -61,8 +61,8 @@ npm install
 npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 ```
 
-- 开发期 `vite.config.ts` 已将 `/api` 与 `/uploads` 代理到 `http://127.0.0.1:8080`；
-  如需指向其他后端地址，用 `VITE_API_BASE=http://x.x.x.x:8080/api npm run dev`
+- 开发期 `vite.config.ts` 已将 `/api` 与 `/uploads` 代理到 `http://127.0.0.1:8080`；  
+  如需指向其他后端地址，用 `VITE_API_BASE=http://x.x.x.x:8080/api npm run dev`  
   （代理目标自动由 `VITE_API_BASE` 去掉末尾 `/api` 推导，无需再设 `VITE_BACKEND_URL`）。
 - 生产构建：`npm run build`（产物在 `dist/`，交由 Nginx 托管，API 走反向代理或同源）。
 
@@ -97,7 +97,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - 按位置传入 `library-type`（`icon` / `cover` / `logo` / `avatar` / `background`）控制默认定位的分类；素材资产与许可证见后端 `internal/assets/library/`（Lucide 图标 ISC 许可 + 程序化生成图形）。
 
 ```vue
-<!-- 分类/服务：图标库；项目：封面库；公司简介：封面库；公司信息：LOGO 库；员工：头像库；首页布局：背景库 -->
+
 <UploadField v-model="form.icon" library-type="icon" :multiple="false" />
 <UploadField v-model="form.cover" library-type="cover" :multiple="false" />
 <UploadField v-model="layout.bgImage" library-type="background" :multiple="false" />
@@ -105,23 +105,23 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 ## 企业内容管理说明
 
-| 页面 | 接口 | 备注 |
-|---|---|---|
-| 公司信息 | `GET/PUT /api/admin/company-info` | id=1 单行，PUT 自动建首行 |
-| 公司简介 | `GET/PUT /api/admin/company-profile` | 文字 + 视频号 ID + 降级 MP4 + 封面 |
-| 业绩分类 | `GET/POST/PUT/DELETE /api/admin/categories` | 删除强校验：锁定或存在关联项目拦截 |
-| 项目案例 | `GET/POST/PUT/DELETE /api/admin/projects` | 详情含 `<wx-video channel-id>` 视频号块；相册为 URL 数组 |
-| 业务服务 | `GET/POST/PUT/DELETE /api/admin/services` | content 含视频号块 |
-| 首页布局 | `GET/PUT /api/admin/home-layout` | 板块顺序 + **首页背景图**（可从素材库「背景」分类直接选用）+ 遮罩浓度滑块与效果预览 |
+| 页面   | 接口                                          | 备注                                             |
+| ---- | ------------------------------------------- | ---------------------------------------------- |
+| 公司信息 | `GET/PUT /api/admin/company-info`           | id=1 单行，PUT 自动建首行                              |
+| 公司简介 | `GET/PUT /api/admin/company-profile`        | 文字 + 视频号 ID + 降级 MP4 + 封面                      |
+| 业绩分类 | `GET/POST/PUT/DELETE /api/admin/categories` | 删除强校验：锁定或存在关联项目拦截                              |
+| 项目案例 | `GET/POST/PUT/DELETE /api/admin/projects`   | 详情含 `<wx-video channel-id>` 视频号块；相册为 URL 数组    |
+| 业务服务 | `GET/POST/PUT/DELETE /api/admin/services`   | content 含视频号块                                  |
+| 首页布局 | `GET/PUT /api/admin/home-layout`            | 板块顺序 + **首页背景图**（可从素材库「背景」分类直接选用）+ 遮罩浓度滑块与效果预览 |
 
 > 富文本编辑器（项目案例.详情 / 业务服务.内容）已接入 wangEditor v5 可视化编辑，并注册「视频号块」自定义节点；详见下方「富文本编辑器（wangEditor）」。
 
 ## 平台管理说明（仅平台超级管理员）
 
-| 页面 | 接口 | 备注 |
-|---|---|---|
-| 企业管理 | `GET/POST/PUT /api/admin/companies` 等 | 多租户：开通/停用企业、企业管理员管理、企业简称；企业管理员访问会被后端 403 拒绝 |
-| CDN 刷新 | `POST /api/admin/cdn/refresh` | 平台级基础设施操作，需 `CDN_ENABLED=1`；上传后已自动 purge，此处为覆盖写场景的兜底 |
+| 页面     | 接口                                    | 备注                                                   |
+| ------ | ------------------------------------- | ---------------------------------------------------- |
+| 企业管理   | `GET/POST/PUT /api/admin/companies` 等 | 多租户：开通/停用企业、企业管理员管理、企业简称；企业管理员访问会被后端 403 拒绝          |
+| CDN 刷新 | `POST /api/admin/cdn/refresh`         | 平台级基础设施操作，需 `CDN_ENABLED=1`；上传后已自动 purge，此处为覆盖写场景的兜底 |
 
 ## 列表分页 / 搜索
 
@@ -149,6 +149,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 前端配套 Vitest 单测，覆盖关键纯逻辑与契约约定（不依赖真实后端 / 浏览器）。**同时纳管小程序端的纯逻辑测试**（小程序本身无独立测试工具链，`vitest.config.ts` 通过 `server.fs.allow` 放行仓库根外的 spec 路径）。
 
 前端（`src/`）：
+
 - `src/composables/useTable.spec.ts`：分页切片、关键字筛选（大小写不敏感）、关键字变化后回到首页等纯逻辑。
 - `src/store/auth.spec.ts`：Pinia 登录态 `setAuth` / `logout` 与 `localStorage` 同步。
 - `src/api/request.spec.ts`：统一响应拦截的**鉴权契约**——`code=0` 透传、`code=401` 清 token + 跳登录并重 reject、`code=403` 警告、`code!=0` 业务失败报错；以及请求拦截注入 `Bearer` 头。
@@ -159,6 +160,7 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
 
 小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：
+
 - `miniprogram/tests/richtext.spec.ts`：`<wx-video>` 富文本拆分（自闭合 / 成对 / 属性顺序无关）、无视频号时整体走 `rich-text` 等。
 - `miniprogram/tests/request.spec.ts`：`wx.request` 封装的 token 注入、`code=401` 静默 refresh 重试一次、失败清 token 等。
 
@@ -170,7 +172,7 @@ npm test            # 等价于 vitest run，跑前端 + 小程序全部 spec
 npm run test:watch  # 监听模式
 ```
 
-> 说明：CI 中 `frontend` job 执行 `npm ci` + `npm run build` + `npm test`（前端与小程序单测一并覆盖）。
+> 说明：CI 中 `frontend` job 执行 `npm ci` + `npm run build` + `npm test`（前端与小程序单测一并覆盖）。  
 > 严格类型检查（`npm run type-check` / `vue-tsc --noEmit`）历史上有 4 个 `@wangeditor/*` 相关错误（editor-for-vue 的 `exports` 未暴露 types、自定义节点 `registerNodeType` 的类型签名），已通过 tsconfig `paths` 指向其真实 d.ts + 精准断言收敛修复，**当前 0 错误**；CI 的 `frontend-typecheck` job 已从「预警（continue-on-error）」升级为**阻塞门禁**，后续不得引入新的类型错误。
 
 ## 已知边界（与后端一致）
