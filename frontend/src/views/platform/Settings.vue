@@ -46,21 +46,27 @@
       style="margin-bottom: 16px"
     />
 
-    <!-- 上线就绪检查：把「上线前必须配好的项」从全量里挑出来集中呈现。
-         分两类，避免误导：
+    <!-- 上线就绪检查：默认收起成一条状态栏，点「查看详情」再展开清单。
+         本页主任务是改配置，7 项清单常驻会把它推到屏幕外；但完全藏起来又丢掉
+         「还差几项」这个一眼可见的信号——所以留一行摘要：未就绪时给出待处理数与归属，
+         全就绪时只留一句「已全部就绪」，不再占用注意力。
+         清单内仍分两类，避免误导：
          - 本页可配置：能点「去配置」直接跳到对应行改；
          - 部署环境变量：只读项，界面改不了，直接给出要设的环境变量（可复制）+ 重启提示。
            （旧版只读项也跳「查看」，落到一个改不了的灰行，等于给了一条死路） -->
-    <el-card v-if="!keyword.trim() && !loading && checks.length" shadow="never" class="ready-card">
-      <template #header>
-        <div class="group-header">
-          <div class="group-title-wrap">
-            <span class="group-accent" />
-            <span class="group-title">上线就绪检查</span>
-          </div>
-          <span class="group-count">{{ readyCount }} / {{ checks.length }} 项就绪</span>
-        </div>
-      </template>
+    <template v-if="!keyword.trim() && !loading && checks.length">
+      <div class="ready-bar" :class="{ ok: readyCount === checks.length }">
+        <span class="ready-bar-title">上线就绪检查</span>
+        <span class="ready-bar-count">{{ readyCount }} / {{ checks.length }} 项就绪</span>
+        <span v-if="readyCount < checks.length" class="ready-bar-pending">
+          还有 {{ checks.length - readyCount }} 项待处理<template v-if="uiPending">：本页可配 {{ uiPending }} 项</template><template v-if="envPending">、环境变量 {{ envPending }} 项</template>
+        </span>
+        <span v-else class="ready-bar-done">上线必配项已全部就绪</span>
+        <el-button size="small" text type="primary" class="ready-bar-toggle" @click="toggleReady">
+          {{ readyOpen ? '收起' : '查看详情' }}
+        </el-button>
+      </div>
+      <el-card v-if="readyOpen" shadow="never" class="ready-card">
 
       <template v-if="uiChecks.length">
         <div class="ready-section-title">
@@ -110,7 +116,8 @@
           开始配置向导
         </el-button>
       </div>
-    </el-card>
+      </el-card>
+    </template>
 
     <div v-if="loading" class="loading">加载中…</div>
 
@@ -351,6 +358,35 @@ function copyEnv(c: ReadyCheck) {
     }
   } catch {
     ElMessage.info(text)
+  }
+}
+
+// ---- 上线就绪清单的展开状态 ----
+// 默认收起（清单是「体检报告」，不是每天要看的东西），但两种情况下默认展开：
+// ① 一项都没配（readyCount=0）——这时清单就是首配的导航图；
+// ② 用户手动展开过——记住选择，之后保持展开，不用每次点。
+const READY_OPEN_KEY = 'settings_ready_open'
+const readyOpen = ref(false)
+// 只按「初始状态」决定一次：之后用户手动开合过就不再覆盖（否则每次刷新都被重置）
+let readyOpenDecided = false
+function decideReadyOpen() {
+  if (readyOpenDecided || checks.value.length === 0) return
+  readyOpenDecided = true
+  const fallback = readyCount.value === 0
+  try {
+    const s = localStorage.getItem(READY_OPEN_KEY)
+    // 没存过（含隐私模式写不进）→ 按「全新部署才展开」给默认值
+    readyOpen.value = s === null ? fallback : s === '1'
+  } catch {
+    readyOpen.value = fallback
+  }
+}
+function toggleReady() {
+  readyOpen.value = !readyOpen.value
+  try {
+    localStorage.setItem(READY_OPEN_KEY, readyOpen.value ? '1' : '0')
+  } catch {
+    // 写不进只影响「记住选择」，本次开合已生效，静默跳过
   }
 }
 
@@ -704,6 +740,8 @@ async function load() {
       if (readyCount.value === 0 && !wizardSeen()) {
         openWizard()
       }
+      // 数据到位后才能判断「是否全新部署」→ 就绪清单的初始展开态在这里定
+      decideReadyOpen()
     }
   } catch {
     // 拦截器已提示（如非平台超管越权）
@@ -941,7 +979,48 @@ onMounted(load)
   background: #409eff;
   border-color: #409eff;
 }
-/* 上线就绪面板 */
+/* 上线就绪：常驻摘要条（默认） + 点「查看详情」展开的清单卡片 */
+.ready-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px solid #f0d8b8;
+  background: #fdf6ec;
+  border-radius: 8px;
+  font-size: 13px;
+}
+/* 全部就绪：换成绿色，不再用橙色「警告」语气打扰 */
+.ready-bar.ok {
+  border-color: #d9eccb;
+  background: #f0f9eb;
+}
+.ready-bar-title {
+  font-weight: 600;
+  color: #303133;
+}
+.ready-bar-count {
+  color: #409eff;
+  background: #ecf5ff;
+  border: 1px solid #d9ecff;
+  border-radius: 999px;
+  padding: 1px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ready-bar-pending {
+  color: #e6a23c;
+}
+.ready-bar-done {
+  color: #67c23a;
+}
+/* 展开开关推到最右，与摘要文字分开：摘要是状态，按钮是动作 */
+.ready-bar-toggle {
+  margin-left: auto;
+}
+/* 展开后的清单卡片紧贴摘要条（摘要条已给 10px 下间距） */
 .ready-card {
   margin-bottom: 14px;
   border-radius: 8px;

@@ -193,6 +193,13 @@ describe('Settings 系统设置', () => {
     // 破坏性确认默认「同意」：只有专门测取消行为的用例才改写为拒绝
     vi.mocked(ElMessageBox.confirm).mockReset()
     vi.mocked(ElMessageBox.confirm).mockResolvedValue('confirm' as any)
+    // localStorage 每个用例清空：就绪清单展开态与向导「已看过」都是持久化状态，
+    // 不清会在用例间互相污染（前一个用例点开过，后一个用例的默认值就变了）
+    try {
+      localStorage.clear()
+    } catch {
+      // jsdom 一定能读写；真出异常时至少不影响其它断言
+    }
   })
 
   it('按分组渲染全部配置项与说明（含存储与只读分组）', async () => {
@@ -377,12 +384,46 @@ describe('Settings 系统设置', () => {
     expect(w.findAll('.group-blurb')).toHaveLength(8)
   })
 
+  it('上线就绪清单默认收起为摘要条：点「查看详情」才展开，并记住选择', async () => {
+    const { w } = await setup()
+    // 常驻摘要条：一眼给出「还差几项」及其归属（本页可配 / 环境变量）
+    expect(w.find('.ready-bar').exists()).toBe(true)
+    expect(w.text()).toContain('3 / 7 项就绪')
+    expect(w.text()).toContain('还有 4 项待处理')
+    // 清单本身默认不展开：本页主任务是改配置，不能被 7 项清单推到屏幕外
+    expect(w.find('.ready-card').exists()).toBe(false)
+    await w.find('.ready-bar-toggle').trigger('click')
+    await nextTick()
+    expect(w.find('.ready-card').exists()).toBe(true)
+    expect(w.find('.ready-bar-toggle').text()).toBe('收起')
+    await w.find('.ready-bar-toggle').trigger('click')
+    await nextTick()
+    expect(w.find('.ready-card').exists()).toBe(false)
+  })
+
+  it('全新部署（0 项就绪）时清单默认展开：这时它就是首配的导航图', async () => {
+    vi.mocked(getSettings).mockImplementationOnce(async () => ({
+      code: 0,
+      data: items.map((it) => ({ ...it, value: '', configured: false })),
+    }) as any)
+    const { w } = await setup()
+    // 0 就绪会自动拉起向导（stub 不传送门，页面本体仍在同一棵树上，可直接断言）
+    expect(w.find('.el-dialog').exists()).toBe(true)
+    expect(w.text()).toContain('0 / 7 项就绪')
+    expect(w.find('.ready-card').exists()).toBe(true)
+  })
+
   it('上线就绪面板：按「本页可配置 / 部署环境变量」分组；只读项给环境变量示例而非死路入口', async () => {
     const { w } = await setup()
     // 夹具已配置 jwt_key / db_dsn / storage_driver → 3/7；
     // cookie_secure=false、wx_appid 未配、upload_base_url 夹具缺省、miniprogram_base_url 未配
     expect(w.text()).toContain('上线就绪检查')
     expect(w.text()).toContain('3 / 7 项就绪')
+    // 清单默认收起：点「查看详情」展开后再断言明细
+    if (!w.find('.ready-card').exists()) {
+      await w.find('.ready-bar-toggle').trigger('click')
+      await nextTick()
+    }
     const readyRows = w.findAll('.ready-row')
     expect(readyRows).toHaveLength(7)
 
