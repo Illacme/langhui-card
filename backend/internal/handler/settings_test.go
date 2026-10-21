@@ -257,7 +257,10 @@ func TestReadOnlySettingsCannotBeWrittenFromUI(t *testing.T) {
 		require.Equal(t, true, meta[k]["readOnly"], k)
 		require.NotEmpty(t, meta[k]["envVar"], k)
 	}
-	require.Equal(t, setting.Mask, meta["db_dsn"]["value"])
+	// 只读项界面改不了，展示它的全部意义就是「让人核对当前配的是什么」，
+	// 所以给的是可辨认预览而不是六颗星：无凭据形态（sqlite://）原样显示，
+	// 含口令的连接串只遮口令段（遮罩规则见 setting 包的 preview 单测）。
+	require.Equal(t, "sqlite://test-only", meta["db_dsn"]["value"])
 
 	// 2) 试图从界面改写 → 拒绝，并提示改法（只说「不允许」等于没说）
 	_, body = c.do("PUT", "/api/admin/settings", map[string]string{"db_dsn": "root@tcp(bad)"}, adminToken)

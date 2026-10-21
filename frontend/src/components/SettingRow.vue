@@ -29,9 +29,9 @@
       <div class="row-desc">
         {{ item.description }}
         <span v-if="item.envVar" class="env-hint">
-          环境变量：{{ item.envVar }}
+          部署环境配置名：{{ item.envVar }}
           <template v-if="item.readOnly">
-            ——请到部署环境（docker-compose.yml / .env / k8s ConfigMap）修改后重启服务，本页不可改
+            ——本页不可改，请到部署环境改环境变量或配置文件（默认 data/runtime.env）后重启服务
           </template>
         </span>
       </div>
@@ -59,8 +59,10 @@
         controls-position="right"
         @change="(v: any) => emit('change', item.key, String(v ?? 0))"
       />
-      <!-- 敏感文本：只显示掩码，留空不提交；点「清除」可显式置空回退环境变量 -->
-      <div v-else-if="item.secret" class="secret-control">
+      <!-- 敏感文本：可写项用密码框（只显示掩码，留空不提交，可点「清除」）。
+           只读项例外：后端给的是「可辨认预览」（保留结构与首尾、遮住中段），
+           用密码框会把预览变成圆点、反而什么都看不清，故用普通只读框原样显示。 -->
+      <div v-if="item.secret && !item.readOnly" class="secret-control">
         <el-input
           :model-value="modelValue"
           type="password"
@@ -80,7 +82,8 @@
           清除
         </el-button>
       </div>
-      <!-- 其余（string / string_slice）按文本编辑 -->
+      <!-- 其余（string / string_slice）按文本编辑；只读敏感项也走这里，
+           原样显示后端给的「可辨认预览」 -->
       <el-input
         v-else
         :model-value="modelValue"
@@ -129,8 +132,9 @@ function placeholderOf(item: SettingItem) {
   return item.type === 'string_slice' ? '逗号分隔，如 png,jpg,webp' : '未设置'
 }
 function secretPlaceholder(item: SettingItem) {
-  if (item.readOnly) return '已配置（只读）'
-  return item.configured ? '已配置，留空则不修改' : '未设置，留空则回退环境变量'
+  // 只读敏感项不走密码框（走普通只读框显示后端预览），这里只服务于可写项
+  if (item.readOnly) return '只读'
+  return item.configured ? '已配置，留空则不修改' : '未设置，留空则用部署环境的值'
 }
 
 // 整型控件的值：草稿是字符串，转不成数字时给 0（与旧实现一致）
