@@ -67,7 +67,7 @@ miniprogram/
 2. **平台模式**（`pinned_company_id = 0`，默认）：
    访客扫企业专属小程序码（scene 携带 `companyId=N`，或分享链接带 `companyId`）
    首次进入时绑定该企业并写入 Storage 粘滞，之后本机所有入口（直接打开 / 分享）均落该企业；
-   无任何来源时不传 companyId，由后端缺省落 1 号租户（朗汇）。
+   无任何来源时不传 companyId，由后端缺省落 1 号租户（演示租户）。
 
 机制说明：
 - `request.ts` 对内容类 GET（`/api/achievements|services|projects|home-layout|company`）与申请 POST（`/api/apply/open`）自动注入 companyId；`/api/card` 按员工归属企业取，`/api/employee/*`、登录刷新等与租户无关，一律不注入。

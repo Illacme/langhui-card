@@ -14,7 +14,7 @@ backend/
 │   ├── repository/session.go    # 会话黑名单读写 + 过期清理（revoked_sessions）
 │   ├── auth/jwt.go              # JWT 双令牌签发 / 解析（access 15m + refresh 30d，sid 会话维度，claims 带 companyId）
 │   ├── auth/password.go         # bcrypt 哈希 / 校验
-│   ├── handler/handler.go       # 首页相关 HTTP 接口（读，按租户：companyId 缺省朗汇）
+│   ├── handler/handler.go       # 首页相关 HTTP 接口（读，按租户：companyId 缺省落演示租户）
 │   ├── handler/auth.go          # 员工/管理员登录，签发 JWT + 刷新 + 登出（企业停用校验）
 │   ├── handler/apply.go         # 开通申请 / 名片修改审核 / 员工管理 / 统计（写 + 审核流，按租户隔离）
 │   ├── handler/content.go       # 企业内容管理（分类/项目/服务/简介…）按租户隔离 + 分类删除强校验
@@ -220,8 +220,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ## 已实现接口
 
-> **多租户**：所有业务表带 `company_id`；朗汇机电为 1 号租户。
-> 公开内容接口接受可选 `?companyId=`（缺省 1=朗汇），企业停用即拒。
+> **多租户**：所有业务表带 `company_id`；1 号租户为内置演示租户。
+> 公开内容接口接受可选 `?companyId=`（缺省 1=演示租户），企业停用即拒。
 > 后台两级身份：平台超管（`admin.company_id=0`，可见全部租户）/ 企业管理员（`company_id>0`，仅本企业），
 > 由 JWT `companyId` claim 承载（见 `internal/auth/jwt.go`、`internal/middleware/auth.go`）。
 > 小程序分发（第二期，已落地）：`miniprogram/utils/tenant.ts` 支持两种形态——
@@ -232,7 +232,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET  | /api/card?staffId= | 聚合名片（员工+企业+简介），禁用返回 code=2；企业信息按员工归属租户取 |
-| GET  | /api/achievements?companyId= | 分类 + 精选项目（缺省朗汇；企业停用返回 code=1） |
+| GET  | /api/achievements?companyId= | 分类 + 精选项目（缺省演示租户；企业停用返回 code=1） |
 | GET  | /api/projects?categoryId=&companyId= | 项目列表（enabled=1；列表项含回填的 categoryName） |
 | GET  | /api/projects/:id?companyId= | 项目详情（解析 album JSON；含 categoryName 与 updatedAt） |
 | GET  | /api/services?companyId= | 业务服务列表 |
@@ -248,7 +248,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/admin/login | 否 | 管理员登录（用户名+密码）→ 写 httpOnly Cookie，响应体仅 expiresIn + 身份（companyId/companyName/isPlatform） |
 | POST | /api/refresh | 否 | 换发新 access（PC 读 refresh Cookie；小程序 body 传 refreshToken） |
 | POST | /api/logout | 否 | 吊销当前会话 sid（单设备精确吊销）+ 清除 httpOnly 鉴权 Cookie（PC 后台登出） |
-| POST | /api/apply/open | 否 | 员工自助提交开通申请（pending；可含 landline / avatar / companyId，缺省落朗汇） |
+| POST | /api/apply/open | 否 | 员工自助提交开通申请（pending；可含 landline / avatar / companyId，缺省落演示租户） |
 | POST | /api/apply/open/avatar | 否 | 申请开通时上传头像（公开端点，仅图片，供访客在账号创建前设置头像） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息；可含 landline） |
@@ -272,7 +272,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 ### 企业内容管理（管理员登录，按租户隔离）
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET  | /api/admin/company-info?companyId= | 公司基础信息（按租户单行；企业管理员固定本企业，平台超管缺省朗汇） |
+| GET  | /api/admin/company-info?companyId= | 公司基础信息（按租户单行；企业管理员固定本企业，平台超管缺省演示租户） |
 | PUT  | /api/admin/company-info | 更新公司信息 |
 | GET  | /api/admin/company-profile?companyId= | 公司简介 + 视频号 |
 | PUT  | /api/admin/company-profile | 更新简介 + 视频号 |
