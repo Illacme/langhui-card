@@ -382,7 +382,7 @@ const pageTpl = `<!doctype html>
 <body>
 <div class="wrap">
   <header class="hd">
-    <div class="brand">朗汇机电 · 电子名片</div>
+    <div class="brand">微传名片</div>
     <h1>安装向导</h1>
     <p class="lead">首次部署需要两步：连接数据库、创建管理员账号。保存后服务会自动重启，随后即可登录使用。</p>
   </header>
