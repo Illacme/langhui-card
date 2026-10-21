@@ -1,8 +1,8 @@
 -- 0002：审核流相关表 + 员工 staff_id 改为自增
 
-ALTER TABLE employee MODIFY staff_id BIGINT NOT NULL AUTO_INCREMENT;
+ALTER TABLE employees MODIFY staff_id BIGINT NOT NULL AUTO_INCREMENT;
 
-CREATE TABLE IF NOT EXISTS admin (
+CREATE TABLE IF NOT EXISTS admins (
   id            BIGINT PRIMARY KEY AUTO_INCREMENT,
   username      VARCHAR(64) NOT NULL DEFAULT '',
   password_hash VARCHAR(255) NOT NULL DEFAULT '',
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS admin (
   UNIQUE KEY uk_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS open_apply (
+CREATE TABLE IF NOT EXISTS open_applies (
   id            BIGINT PRIMARY KEY AUTO_INCREMENT,
   name          VARCHAR(64)  NOT NULL DEFAULT '',
   phone         VARCHAR(32)  NOT NULL DEFAULT '',
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS open_apply (
   KEY idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS card_modify_apply (
+CREATE TABLE IF NOT EXISTS card_modify_applies (
   id            BIGINT PRIMARY KEY AUTO_INCREMENT,
   staff_id      BIGINT NOT NULL DEFAULT 0,
   snapshot      JSON,

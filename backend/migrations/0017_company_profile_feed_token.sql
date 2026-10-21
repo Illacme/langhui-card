@@ -8,5 +8,5 @@
 -- 与 feed_id 二选一，feed_id 优先（同主体可自动播放、且从视频号助手复制即可，更稳定）。
 -- feed-token 的获取有 24 小时窗口且只对操作者本人可见，属于需要人工协助配置的字段。
 
-ALTER TABLE company_profile
+ALTER TABLE company_profiles
   ADD COLUMN video_feed_token VARCHAR(512) NOT NULL DEFAULT '' AFTER video_feed_id;

@@ -3,6 +3,6 @@
 -- 删除操作改为 UPDATE 置空该列，避免误删数据；列表接口默认不返回已删除记录。
 -- 仅对全新初始化的库执行：已存在的库请手动执行以下 ALTER（可重复执行，列已存在时报错可忽略）。
 
-ALTER TABLE achievement_category ADD COLUMN deleted_at DATETIME NULL;
-ALTER TABLE project_case ADD COLUMN deleted_at DATETIME NULL;
-ALTER TABLE biz_service ADD COLUMN deleted_at DATETIME NULL;
+ALTER TABLE achievement_categories ADD COLUMN deleted_at DATETIME NULL;
+ALTER TABLE project_cases ADD COLUMN deleted_at DATETIME NULL;
+ALTER TABLE biz_services ADD COLUMN deleted_at DATETIME NULL;

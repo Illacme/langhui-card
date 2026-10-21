@@ -434,11 +434,14 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			Save    int64 `gorm:"column:save"`
 		}
 		var rows []statRow
+		// 别名必须加反引号：call 是 MySQL 8 保留字（存储过程关键字），
+		// 裸 AS call 直接 1064（SQLite 不保留所以潜伏——2026-10-21 parity 首跑抓出）。
+		// 反引号在 SQLite 同样合法（MySQL 兼容引用符），两边都能跑。
 		db.Model(&model.StatEvent{}).
 			Select("staff_id, " +
-				"SUM(CASE WHEN event_type = 'visit' THEN 1 ELSE 0 END) AS visit, " +
-				"SUM(CASE WHEN event_type = 'call' THEN 1 ELSE 0 END) AS call, " +
-				"SUM(CASE WHEN event_type = 'save' THEN 1 ELSE 0 END) AS save").
+				"SUM(CASE WHEN event_type = 'visit' THEN 1 ELSE 0 END) AS `visit`, " +
+				"SUM(CASE WHEN event_type = 'call' THEN 1 ELSE 0 END) AS `call`, " +
+				"SUM(CASE WHEN event_type = 'save' THEN 1 ELSE 0 END) AS `save`").
 			Group("staff_id").Scan(&rows)
 		byStaff := map[int64]statRow{}
 		for _, r := range rows {

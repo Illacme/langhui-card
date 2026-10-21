@@ -263,10 +263,25 @@ var (
 
 // Init 首次启动时建表（AutoMigrate）、seed 缺省值、载入内存缓存，并置为全局实例。
 // 必须在 handler 装配之前调用（cmd/server 与 devserver 均已接入）。
+//
+// 建表加 HasTable 门闩的原因（2026-10-21 实证，别改回去）：
+// MySQL 下 sys_setting 由 migrations/0014 建（UNIQUE KEY uk_setting_key），
+// 而模型 Key 用的是 uniqueIndex（gorm 自动名 uni_sys_setting_key）而非 unique
+// tag——field.Unique=false。gorm 的 MigrateColumnUnique 看到「库里的 key 列带
+// 唯一索引（column_key=UNI）而模型没有 unique tag」，误判为「模型删掉了唯一
+// 约束」，按命名策略名执行 DROP CONSTRAINT uni_sys_setting_key；mysql driver
+// v1.5.2 的 DropConstraint 无条件发 ALTER TABLE ... DROP FOREIGN KEY（v1.3.6
+// 还有 nil 守卫，5.x 删了），而库里实际叫 uk_setting_key → Error 1091，
+// 安装向导与 MySQL 形态启动全部卡死在这。
+// 表已存在时跳过 AutoMigrate 即绕开该假阳性；MySQL 的表结构本就归 migrations
+// 管（与 main.go 对 MySQL 不 AutoMigrate 同一策略），缺列应补迁移而非靠
+// AutoMigrate 擅自改。SQLite 下 HasTable 恒同步，行为不变。
 func Init(db *gorm.DB) error {
 	s := &Store{db: db, values: map[string]string{}}
-	if err := db.AutoMigrate(&Setting{}); err != nil {
-		return fmt.Errorf("auto migrate sys_setting: %w", err)
+	if !db.Migrator().HasTable(&Setting{}) {
+		if err := db.AutoMigrate(&Setting{}); err != nil {
+			return fmt.Errorf("auto migrate sys_setting: %w", err)
+		}
 	}
 	if err := s.seedDefaults(); err != nil {
 		return err
@@ -288,7 +303,10 @@ func (s *Store) seedDefaults() error {
 			continue
 		}
 		var cnt int64
-		if err := s.db.Model(&Setting{}).Where("key = ?", d.Key).Count(&cnt).Error; err != nil {
+		// key 是 MySQL 保留字：必须用 map/struct 条件让 gorm 按方言加引号
+		// （裸字符串 "key = ?" 不会被 gorm 补反引号，MySQL 直接 1064；
+		// SQLite 宽容所以潜伏至今——2026-10-21 parity 首跑抓出）
+		if err := s.db.Model(&Setting{}).Where(map[string]interface{}{"key": d.Key}).Count(&cnt).Error; err != nil {
 			return err
 		}
 		if cnt > 0 {
@@ -408,7 +426,8 @@ func (s *Store) Set(key, value string) error {
 	}
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		var existing Setting
-		if err := tx.Where("key = ?", key).First(&existing).Error; err == nil {
+		// 同 seedDefaults：key 是 MySQL 保留字，用 map 条件让 gorm 加引号
+		if err := tx.Where(map[string]interface{}{"key": key}).First(&existing).Error; err == nil {
 			existing.Value = value
 			return tx.Save(&existing).Error
 		} else if !isNotFound(err) {

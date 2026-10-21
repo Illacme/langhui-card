@@ -28,14 +28,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
-	"runtime"
-	"sort"
 	"strings"
 	"testing"
 	"time"
 
 	"weichuan/internal/config"
+	"weichuan/internal/migrate"
 	"weichuan/internal/model"
 	"weichuan/internal/setting"
 	"weichuan/internal/storage"
@@ -727,6 +725,22 @@ func TestAPIFlowMySQL(t *testing.T) {
 	}
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
+	// 可重复跑：先断表清空业务数据，再重新应用迁移（种子随 INSERT 重新写入），
+	// 恢复到「刚迁移完」的状态。否则上一次跑出的员工/申请会把
+	// 「尚不存在的员工 → code:1」这类断言带偏（本地迭代与 CI 共库都会踩）。
+	var tables []string
+	require.NoError(t, db.Raw(
+		"SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()",
+	).Scan(&tables).Error)
+	// 不能断言 tables 非空：全新库（mysql 容器刚建好、从未跑过迁移）就是 0 张表，
+	// 而 parity 测试必须能在这种库上独立跑——CI 的 MySQL service 容器首启正是
+	// 这个状态（曾因断言非空，空库上 0.01s 假失败，2026-10-21 修）。
+	// 空列表时下面的 TRUNCATE 循环是空转，随后 applyMigrations 建全量 schema，终态一致。
+	require.NoError(t, db.Exec("SET FOREIGN_KEY_CHECKS = 0").Error)
+	for _, tbl := range tables {
+		require.NoError(t, db.Exec("TRUNCATE TABLE `"+tbl+"`").Error)
+	}
+	require.NoError(t, db.Exec("SET FOREIGN_KEY_CHECKS = 1").Error)
 	applyMigrations(t, db)
 
 	uploadDir, err := os.MkdirTemp("", "weichuan-upload-")
@@ -768,8 +782,9 @@ func TestMySQLMigrations(t *testing.T) {
 
 	applyMigrations(t, db)
 
-	// 校验 migrations 确实建出了关键表
-	for _, tbl := range []string{"employee", "achievement_category", "home_layout", "project_case", "admin", "open_apply", "card_modify_apply"} {
+	// 校验 migrations 确实建出了关键表（表名与 gorm 模型一致——复数；
+	// 单数名是 2026-10-21 修掉的历史不一致，见 model 包的守门测试）
+	for _, tbl := range []string{"employees", "achievement_categories", "home_layouts", "project_cases", "admins", "open_applies", "card_modify_applies"} {
 		var cnt int64
 		require.NoError(t, db.Raw(
 			"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?", tbl,
@@ -778,44 +793,12 @@ func TestMySQLMigrations(t *testing.T) {
 	}
 }
 
-// applyMigrations 读取并顺序执行 migrations 下的建表 SQL（按 ";" 切分，逐条 Exec）。
-// 用 runtime.Caller 定位本测试文件所在目录，再回溯到 migrations/，
-// 避免依赖 go test 的 CWD（不同调用方式下 CWD 可能不同）。
-// 按文件名排序执行全部 *.sql（不再硬编码清单）——新增迁移忘记登记时，
-// MySQL parity 会静默缺列并在业务断言处才炸，难以定位；glob 从机制上杜绝漏登记。
+// applyMigrations 顺序应用 migrations 下的建表 SQL。
+// 实现委托给 internal/migrate.Apply——与安装向导（MySQL 分支）同一条代码路径，
+// 测试即生产。Apply 自带幂等容错（Duplicate column / already exists /
+// Duplicate entry 忽略），parity 用例可重复跑。
 func applyMigrations(t *testing.T, db *gorm.DB) {
-	_, thisFile, _, ok := runtime.Caller(0)
-	require.True(t, ok, "runtime.Caller failed")
-	migrationsDir := filepath.Join(filepath.Dir(thisFile), "..", "..", "migrations")
-	matches, err := filepath.Glob(filepath.Join(migrationsDir, "*.sql"))
-	require.NoError(t, err)
-	require.NotEmpty(t, matches)
-	sort.Strings(matches)
-	for _, path := range matches {
-		raw, err := os.ReadFile(path)
-		require.NoError(t, err)
-		for _, stmt := range strings.Split(string(raw), ";") {
-			s := strings.TrimSpace(stmt)
-			if s == "" {
-				continue
-			}
-			err := db.Exec(s).Error
-			if err != nil {
-				// 幂等：建表用 IF NOT EXISTS，但 0001 的分类种子是固定主键 INSERT，
-				// 重复执行会撞 duplicate entry；ALTER 在列已存在时报
-				// "Duplicate column" / 1060。这里忽略「已存在」类错误，使 parity
-				// 用例可重复跑（CI 中会被多个用例依次应用）。
-				msg := err.Error()
-				if strings.Contains(msg, "Duplicate entry") ||
-					strings.Contains(msg, "already exists") ||
-					strings.Contains(msg, "Duplicate column") ||
-					strings.Contains(msg, "1060") {
-					continue
-				}
-				require.NoError(t, err)
-			}
-		}
-	}
+	require.NoError(t, migrate.Apply(db))
 }
 
 // ---- 存储增强「成功分支」测试：用 fake 实现覆盖预签名 / 私有签名 / CDN 刷新 ----

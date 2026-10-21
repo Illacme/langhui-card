@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS employee (
+CREATE TABLE IF NOT EXISTS employees (
   staff_id      BIGINT PRIMARY KEY,
   name          VARCHAR(64)  NOT NULL DEFAULT '',
   title         VARCHAR(64)  NOT NULL DEFAULT '',
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS employee (
   created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS company_info (
+CREATE TABLE IF NOT EXISTS company_infos (
   id        BIGINT PRIMARY KEY AUTO_INCREMENT,
   full_name VARCHAR(128) NOT NULL DEFAULT '',
   address   VARCHAR(255) NOT NULL DEFAULT '',
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS company_info (
   logo      VARCHAR(255) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS company_profile (
+CREATE TABLE IF NOT EXISTS company_profiles (
   id               BIGINT PRIMARY KEY AUTO_INCREMENT,
   intro_text       TEXT,
   video_channel_id VARCHAR(64)  NOT NULL DEFAULT '',
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS company_profile (
   cover            VARCHAR(512) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS achievement_category (
+CREATE TABLE IF NOT EXISTS achievement_categories (
   id        BIGINT PRIMARY KEY AUTO_INCREMENT,
   name      VARCHAR(64) NOT NULL DEFAULT '',
   icon      VARCHAR(512) NOT NULL DEFAULT '',
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS achievement_category (
   is_locked TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS project_case (
+CREATE TABLE IF NOT EXISTS project_cases (
   id               BIGINT PRIMARY KEY AUTO_INCREMENT,
   category_id      BIGINT NOT NULL DEFAULT 0,
   name             VARCHAR(128) NOT NULL DEFAULT '',
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS project_case (
   KEY idx_featured (is_home_featured, enabled)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS biz_service (
+CREATE TABLE IF NOT EXISTS biz_services (
   id        BIGINT PRIMARY KEY AUTO_INCREMENT,
   title     VARCHAR(128) NOT NULL DEFAULT '',
   content   TEXT,
@@ -58,12 +58,12 @@ CREATE TABLE IF NOT EXISTS biz_service (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS home_layout (
+CREATE TABLE IF NOT EXISTS home_layouts (
   id        BIGINT PRIMARY KEY AUTO_INCREMENT,
   order_col JSON
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS stat_event (
+CREATE TABLE IF NOT EXISTS stat_events (
   id         BIGINT PRIMARY KEY AUTO_INCREMENT,
   staff_id   BIGINT NOT NULL DEFAULT 0,
   event_type VARCHAR(16) NOT NULL DEFAULT '',
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS stat_event (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 种子：经典业绩 7 分类（客户确认）
-INSERT INTO achievement_category (id, name, icon, sort, is_locked) VALUES
+INSERT INTO achievement_categories (id, name, icon, sort, is_locked) VALUES
   (1, '居住住宅',             '', 1, 0),
   (2, '政务办公',             '', 2, 0),
   (3, '医院、学校',           '', 3, 0),

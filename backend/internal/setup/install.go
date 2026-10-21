@@ -16,6 +16,7 @@ import (
 	"weichuan/internal/config"
 	"weichuan/internal/dbopen"
 	"weichuan/internal/handler"
+	"weichuan/internal/migrate"
 	"weichuan/internal/model"
 	"weichuan/internal/setting"
 )
@@ -188,10 +189,26 @@ func Install(req InstallReq) (InstallResult, error) {
 		}
 	}
 
-	// 建表：全新库按模型 AutoMigrate（与 SQLite 生产路径同一套代码）。
-	// MySQL 老库走到这里只补缺失的表/列，不删不改——models 是迁移脚本的超集。
-	if err := db.AutoMigrate(model.All()...); err != nil {
-		return InstallResult{}, fmt.Errorf("初始化表结构失败：%v", err)
+	// 建表策略与 cmd/server 逐条对齐（见 main.go 同址注释）：
+	//   SQLite —— migrations/*.sql 是 MySQL 方言执行不了，按模型 AutoMigrate；
+	//   MySQL  —— 表结构归 migrations/*.sql 管，这里按序应用（幂等，已应用过
+	//     的语句按 Duplicate column / already exists / Duplicate entry 忽略，
+	//     与 runbook §4 手工迁移的容错一致）。
+	// 曾经这里对 MySQL 也无条件 AutoMigrate(model.All())，三个后果：
+	//   ① 建出一套与迁移表名不一致的复数空表（ migrations 单数 vs gorm 复数，
+	//      2026-10-21 已把迁移改名对齐，并有守门测试钉死）；
+	//   ② 把迁移建的表按模型定义 MODIFY 成 longtext，正是 main.go 刻意规避的
+	//      「AutoMigrate 擅自改列类型」；
+	//   ③ sys_setting 因唯一有显式 TableName 而撞车，触发 gorm mysql driver 的
+	//      MigrateColumnUnique 假阳性直接 1091（详见 setting.Init 的注释）。
+	if driver == dbopen.DriverSQLite {
+		if err := db.AutoMigrate(model.All()...); err != nil {
+			return InstallResult{}, fmt.Errorf("初始化表结构失败：%v", err)
+		}
+	} else {
+		if err := migrate.Apply(db); err != nil {
+			return InstallResult{}, fmt.Errorf("应用数据库迁移失败：%v", err)
+		}
 	}
 
 	// 系统设置 seed（后台「系统设置」的缺省值）

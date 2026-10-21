@@ -226,10 +226,30 @@ docker compose --profile mysql up -d --build
 docker compose ps        # mysql / backend / frontend 三服务均 healthy
 ```
 
-MySQL 形态首启时，mysql 容器自动按序执行 `backend/migrations/0001–0005` 建表。  
+MySQL 形态首启时（`mysql_data` 卷为空），mysql 容器自动按序执行 `backend/migrations/` 下**全部**
+`.sql`（0001–0019）建表 + 种子。安装向导在 MySQL 分支也会按序应用同一批迁移（幂等：已应用过的
+语句按 Duplicate column / already exists / Duplicate key name / Duplicate entry 忽略），
+因此卷被预建、initdb 未执行的场景照样装得上。  
 backend 刻意**不**依赖 mysql 的 healthy 状态：安装模式下它根本不连库，连不连得上由安装向导  
 在「装」的那一步决定；硬绑 `service_healthy` 反而会让纯 SQLite 部署（mysql 不启）时  
 backend 永远起不来。MySQL 形态装完自重启时，mysql 早已就绪。
+
+> **2026-10-21 表名对齐修复（只影响 2026-10-21 之前初始化过的 MySQL 库）**：  
+> migrations 建的表名原为单数（`employee` / `admin` / `company_info`…），而业务代码（gorm 模型）
+> 用的是复数（`employees` / `admins` / `company_infos`…）——旧版 MySQL 形态下 migrations 建的表
+> 根本没有业务使用，且安装向导会另建一套复数空表，系统是残的（`sys_setting` 还会直接报
+> Error 1091 装不上）。现已把 migrations 全部改为复数表名，并有守门测试
+> （`internal/model/migrations_guard_test.go`）永久钉住两边一致。  
+> **存量旧库处理**：那种库从未真正跑起来过（无业务数据），建议 `docker compose down -v` 删卷
+> 重建；确要保留卷则手动改名：`RENAME TABLE employee TO employees, admin TO admins, ...`
+> （清单见 migrations 各文件），并补执行 0019。
+
+> **backend 镜像自带 migrations（2026-10-21 修）**：运行镜像把 `migrations/` 拷到
+> `/app/migrations`（与二进制同级），安装向导的 MySQL 分支直接按序应用——曾因镜像只含
+> 二进制、`runtime.Caller` 在容器里只返回编译期 `/src` 路径，MySQL 安装报
+> 「读取 migrations 目录失败」。自建镜像/改布局时可用环境变量
+> `WEICHUAN_MIGRATIONS_DIR` 显式指定目录（候选顺序：该变量 → 可执行同级
+> `migrations/` → 源码树路径 → CWD 下 `migrations/`）。
 
 ## 2.1 首次访问：安装向导（推荐路径）
 
@@ -284,7 +304,7 @@ SQLite 形态不用给，MySQL 形态必须给），服务起来会进入「未�
 - [ ] 浏览器开 `http://<服务器IP>:8080`：未配置时先出安装页（§2.1），装完落到登录页；  
   用安装时填的管理员口令（或 `.env` 的 `ADMIN_USER/ADMIN_PASS`）登录 PC 后台，**立即改密码**
 - [ ] `docker compose ps` 里 backend 是 healthy（安装期间判据放宽为「进程活着」，装完恢复按 `db` 判）
-- [ ] 表结构齐全（MySQL 形态）：`docker exec -i weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" weichuan -e "show tables;"` —— 应包含 `revoked_sessions`（0005）等全部迁移产物；SQLite 形态可跳过此项（`AutoMigrate` 自动建表，库在 `data_data` 卷里）
+- [ ] 表结构齐全（MySQL 形态）：`docker exec -i weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" weichuan -e "show tables;"` —— 应包含 `revoked_sessions`（0005）等全部迁移产物（复数表名：`employees`/`admins`/`company_infos`…）；SQLite 形态可跳过此项（`AutoMigrate` 自动建表，库在 `data_data` 卷里）
 - [ ] 上传一张图片（公司信息/封面），确认返回 URL 可访问（`uploads_data` 卷已挂载）
 
 

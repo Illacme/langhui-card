@@ -18,5 +18,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
 FROM alpine:3.19
 WORKDIR /app
 COPY --from=build /out/server /app/server
+# migrations 必须进运行镜像：MySQL 形态的表结构由 internal/migrate 按序应用
+# （runtime.Caller 在容器里只返回编译期 /src 路径，不可用；migrate 走「可执行文件
+# 同级的 migrations/」候选，即 /app/migrations）。data_data 卷只挂 /app/data，
+# 不影响这里。
+COPY --from=build /src/migrations /app/migrations
 EXPOSE 8080
 ENTRYPOINT ["/app/server"]
