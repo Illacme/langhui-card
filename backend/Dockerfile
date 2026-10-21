@@ -10,10 +10,13 @@ ENV GOPROXY=$GOPROXY
 COPY go.mod ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app ./cmd/server
+# 产物放 /out/server（独立路径）：早期版本直接 -o /app，而最终阶段 WORKDIR /app 会先建出
+# /app 目录，COPY 于是把二进制塞进目录变成 /app/app，ENTRYPOINT ["/app"] 启动即
+# "exec: /app: is a directory"——该镜像在 Docker 里从未真正跑起来过。
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
 
 FROM alpine:3.19
 WORKDIR /app
-COPY --from=build /app /app
+COPY --from=build /out/server /app/server
 EXPOSE 8080
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["/app/server"]
