@@ -59,7 +59,7 @@ const rules: FormRules = {
 }
 
 // 登录页标题品牌名取自后台「系统设置 → brand_name」（公开接口，无需登录）；
-// 未配置 / 接口不可用时由 store 回落内置默认「智能名片」。
+// 未配置 / 接口不可用时由 store 回落内置默认「微传名片」。
 onMounted(() => {
   settings.load()
 })

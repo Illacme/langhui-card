@@ -97,7 +97,7 @@ type Item struct {
 //	security   安全与基础设施（只读：DB 连接串 / JWT 密钥 / Cookie）
 //	feature    特性开关（Prometheus 指标 / 独立版企业锁定）
 var registry = []def{
-	{Key: "brand_name", Group: "general", Type: "string", Value: "智能名片",
+	{Key: "brand_name", Group: "general", Type: "string", Value: "微传名片",
 		Name: "品牌名称",
 		Desc: "后台侧边栏 / 页标题品牌名（未设置回落此值）"},
 	{Key: "miniprogram_base_url", Group: "miniprogram", Type: "string",

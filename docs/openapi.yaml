@@ -2232,7 +2232,7 @@ paths:
     post:
       summary: 开通企业（可选一并创建企业管理员）
       description: |
-        简称（shortName）：PC 后台侧边栏品牌名缺省「智能名片」；显式填写的值同时作为
+        简称（shortName）：PC 后台侧边栏品牌名缺省「微传名片」；显式填写的值同时作为
         公司信息简称的初始值，此后两者相互独立。
         independent_lock 开启时整体只读，写操作一律 code=403。
       tags: [租户]

@@ -6,7 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 vi.mock('@/api/settings', () => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(async () => ({ code: 0, data: { restartKeys: [] } })),
-  getPublicSettings: vi.fn(async () => ({ code: 0, data: { brand_name: '智能名片' } })),
+  getPublicSettings: vi.fn(async () => ({ code: 0, data: { brand_name: '微传名片' } })),
 }))
 vi.mock('element-plus', () => ({
   ElMessage: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
@@ -21,7 +21,7 @@ import type { SettingItem } from '@/api/settings'
 
 // 与后端 setting.registry 一致的夹具（分组 / 类型 / 值 / 生效方式元数据 / 中文名）
 const items: SettingItem[] = [
-  { key: 'brand_name', name: '品牌名称', group: 'general', type: 'string', value: '智能名片', description: '品牌名', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'brand_name', name: '品牌名称', group: 'general', type: 'string', value: '微传名片', description: '品牌名', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'miniprogram_base_url', name: '小程序接口基址', group: 'miniprogram', type: 'string', value: '', description: '小程序基址', secret: false, restart: false, readOnly: false, envVar: '', configured: false },
   { key: 'pinned_company_id', name: '独立版锁定企业', group: 'miniprogram', type: 'int', value: '0', description: '锁定租户', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'upload_allow_ext', name: '允许上传的文件类型', group: 'upload', type: 'string_slice', value: 'png,jpg', description: '扩展名', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
@@ -325,7 +325,7 @@ describe('Settings 系统设置', () => {
     const resetBtn = w.findAll('button.el-button').find((b: any) => b.text().includes('重置'))!
     await resetBtn.trigger('click')
     await nextTick()
-    expect((input.element as HTMLInputElement).value).toBe('智能名片')
+    expect((input.element as HTMLInputElement).value).toBe('微传名片')
     expect(saveButton(w).attributes('disabled')).toBeDefined()
   })
 

@@ -17,10 +17,10 @@ import (
 )
 
 // defaultShortName 企业简称缺省值：企业管理里未设置简称（留空/纯空白）时，
-// 侧边栏品牌名回落为「智能名片」。
-const defaultShortName = "智能名片"
+// 侧边栏品牌名回落为「微传名片」。
+const defaultShortName = "微传名片"
 
-// resolveShortName 规整企业简称：去首尾空白；为空则回落缺省值「智能名片」。
+// resolveShortName 规整企业简称：去首尾空白；为空则回落缺省值「微传名片」。
 func resolveShortName(raw string) string {
 	if s := strings.TrimSpace(raw); s != "" {
 		return s
@@ -146,7 +146,7 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 
 	// 开通企业：建租户行 + 种子企业内容三件套（公司信息/简介/首页布局）；
 	// 可选一并创建企业管理员（adminUsername + adminPassword）。
-	// shortName（企业简称）：① 未设置时默认「智能名片」，作为 PC 后台侧边栏品牌名；
+	// shortName（企业简称）：① 未设置时默认「微传名片」，作为 PC 后台侧边栏品牌名；
 	// ② 显式填写的值同时作为公司信息简称的初始值，企业管理员登录后可在
 	// 「公司信息」页继续完善（此后仅影响小程序展示）。
 	r.POST("/api/admin/companies", plat, func(c *gin.Context) {
@@ -183,7 +183,7 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 		}
 		// 种子内容三件套：新企业开箱即有空白公司信息/简介/默认布局；
 		// 简称种子取开通时显式填写的值，未填则留空——小程序顶栏回落展示企业全称，
-		// 不跟随 company.short_name 的缺省值「智能名片」（两者相互独立）
+		// 不跟随 company.short_name 的缺省值「微传名片」（两者相互独立）
 		db.Create(&model.CompanyInfo{CompanyID: comp.ID, FullName: req.Name, ShortName: strings.TrimSpace(req.ShortName)})
 		db.Create(&model.CompanyProfile{CompanyID: comp.ID})
 		db.Create(&model.HomeLayout{CompanyID: comp.ID, Order: `["achievement","service"]`})
@@ -202,7 +202,7 @@ func RegisterCompanies(r *gin.Engine, db *gorm.DB) {
 	})
 
 	// 编辑企业（名称 / 简称）：只改 company 表本身。
-	// 简称改后同步侧边栏品牌名（未设置/清空则回落缺省值「智能名片」），但不回写公司信息的简称——
+	// 简称改后同步侧边栏品牌名（未设置/清空则回落缺省值「微传名片」），但不回写公司信息的简称——
 	// 公司信息里的简称是企业管理员在「公司信息」页维护的小程序展示值，两者相互独立。
 	r.PUT("/api/admin/companies/:id", plat, func(c *gin.Context) {
 		if writeLocked(c) {

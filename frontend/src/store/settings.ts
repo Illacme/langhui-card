@@ -5,7 +5,7 @@ import { getPublicSettings } from '@/api/settings'
 //
 // 为什么缓存到 localStorage：每次进入后台都等接口返回会让侧边栏品牌名先闪一下占位。
 // 这里用「上次已知值先渲染 + 后台静默刷新」的策略，既即时又最终一致；
-// 接口不可用（未登录 / 后端未升级）时回落到内置默认「智能名片」，不阻塞界面。
+// 接口不可用（未登录 / 后端未升级）时回落到内置默认「微传名片」，不阻塞界面。
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     brandName: localStorage.getItem('sys_brand_name') || '',
@@ -13,7 +13,7 @@ export const useSettingsStore = defineStore('settings', {
   }),
   getters: {
     // 品牌名：未配置 / 接口不可用回落内置默认
-    displayBrandName: (s): string => s.brandName || '智能名片',
+    displayBrandName: (s): string => s.brandName || '微传名片',
   },
   actions: {
     // 拉取公开设置并刷新本地缓存（force=true 用于「系统设置」保存后立刻同步品牌名）

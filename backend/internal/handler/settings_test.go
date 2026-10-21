@@ -39,7 +39,7 @@ func TestSettingsAPI(t *testing.T) {
 			uploadDef = m["value"].(string)
 		}
 	}
-	require.Equal(t, "智能名片", brandDef)
+	require.Equal(t, "微传名片", brandDef)
 	require.Equal(t, "10", uploadDef)
 
 	// 2) 批量更新：改品牌名 / 上传上限 / 指标开关 → 成功

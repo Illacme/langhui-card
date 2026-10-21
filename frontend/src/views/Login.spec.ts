@@ -12,7 +12,7 @@ vi.mock('@/api/auth', () => ({
 }))
 // 登录页标题品牌名走公开设置接口（无需登录），此处 mock 掉网络层
 vi.mock('@/api/settings', () => ({
-  getPublicSettings: vi.fn(async () => ({ code: 0, data: { brand_name: '智能名片' } })),
+  getPublicSettings: vi.fn(async () => ({ code: 0, data: { brand_name: '微传名片' } })),
   getSettings: vi.fn(async () => ({ code: 0, data: [] })),
   updateSettings: vi.fn(async () => true),
 }))
