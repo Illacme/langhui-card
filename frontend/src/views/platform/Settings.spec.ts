@@ -537,7 +537,7 @@ describe('Settings 系统设置', () => {
   // ---- P2：搜索过滤 + 破坏性更改二次确认 ----
   it('搜索过滤：环境变量名可搜，未命中分组整组隐藏，无匹配给空态提示', async () => {
     const { w } = await setup()
-    const search = w.find('.filter-bar input')
+    const search = w.find('input.head-search')
     // 环境变量名搜索（大小写不敏感）：MINIO_ENDPOINT → 只命中存储服务端点
     await search.setValue('minio_endpoint')
     await nextTick()
@@ -565,7 +565,7 @@ describe('Settings 系统设置', () => {
   it('过滤不影响草稿：被搜掉的行保存时仍进载荷（草稿按 key 持有）', async () => {
     const { w } = await setup()
     await textInputOf(w, 'brand_name').setValue('朗汇机电')
-    await w.find('.filter-bar input').setValue('minio_endpoint')
+    await w.find('input.head-search').setValue('minio_endpoint')
     await nextTick()
     expect(rowExists(w, 'brand_name')).toBe(false)
     await saveButton(w).trigger('click')

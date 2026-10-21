@@ -1,15 +1,37 @@
 <template>
   <el-card class="settings-shell" :style="{ '--toolbar-h': toolbarH + 'px' }">
-    <div class="page-bar">
-      <h3>系统设置</h3>
-      <div class="bar-actions">
-        <!-- 配置向导：给第一次部署的人一条明确顺序（品牌→存储→上传→微信→小程序→确认），
-             不必在 35 个输入框里自己猜该从哪开始、按什么顺序配 -->
-        <el-button :disabled="loading" @click="openWizard">配置向导</el-button>
-        <el-button :disabled="!dirty || saving" @click="reset">重置</el-button>
-        <el-button type="primary" :loading="saving" :disabled="!dirty" @click="save">
-          保存{{ dirty ? `（${changedCount} 项）` : '' }}
-        </el-button>
+    <!-- 吸顶头：标题 + 搜索 + 操作按钮 + 模块锚点整块常驻。搜索框放标题栏
+         （配置向导左侧）是常规后台布局；整块吸顶后，搜不搜索、滚不滚动，
+         标题与操作都可见，行为一致 -->
+    <div ref="toolbarRef" class="sticky-head" :class="{ pinned }">
+      <div class="page-bar">
+        <h3>系统设置</h3>
+        <div class="bar-actions">
+          <el-input
+            v-model="keyword"
+            clearable
+            placeholder="搜索配置项：中文名 / key / 环境变量名"
+            class="head-search"
+          />
+          <!-- 配置向导：给第一次部署的人一条明确顺序（品牌→存储→上传→微信→小程序→确认），
+               不必在 35 个输入框里自己猜该从哪开始、按什么顺序配 -->
+          <el-button :disabled="loading" @click="openWizard">配置向导</el-button>
+          <el-button :disabled="!dirty || saving" @click="reset">重置</el-button>
+          <el-button type="primary" :loading="saving" :disabled="!dirty" @click="save">
+            保存{{ dirty ? `（${changedCount} 项）` : '' }}
+          </el-button>
+        </div>
+      </div>
+      <div v-if="!loading" class="module-nav">
+        <span v-if="keyword.trim()" class="filter-count">匹配 {{ matchCount }} / {{ items.length }} 项</span>
+        <button
+          v-for="g in filteredGroups"
+          :key="g.key"
+          type="button"
+          class="module-pill"
+          :class="{ active: g.key === activeKey }"
+          @click="jumpToGroup(g.key)"
+        >{{ g.label }}</button>
       </div>
     </div>
 
@@ -96,30 +118,6 @@
       <!-- 搜索过滤：35 个配置项平铺时「找一个项」本身就是成本。
            中文名 / key / 环境变量都能搜；分组整体命中（如搜「存储」出整组），
            未命中分组整组隐藏。草稿按 key 持有，过滤掉的行不会丢改动。 -->
-      <!-- 顶部工具条吸顶：搜索 + 模块锚点导航。滚动时始终可见，
-           既保留搜索，又随时给出「当前在哪个模块 / 一键跳到某模块」的入口，
-           长列表翻找不再靠肉眼扫标题 -->
-      <div ref="toolbarRef" class="toolbar" :class="{ pinned }">
-        <div class="filter-bar">
-          <span v-if="keyword.trim()" class="filter-count">匹配 {{ matchCount }} / {{ items.length }} 项</span>
-          <el-input
-            v-model="keyword"
-            clearable
-            placeholder="搜索配置项：中文名 / key / 环境变量（如「存储」「minio」「JWT_KEY」）"
-            class="filter-input"
-          />
-        </div>
-        <div v-if="!keyword.trim() || matchCount > 0" class="module-nav">
-          <button
-            v-for="g in filteredGroups"
-            :key="g.key"
-            type="button"
-            class="module-pill"
-            :class="{ active: g.key === activeKey }"
-            @click="jumpToGroup(g.key)"
-          >{{ g.label }}</button>
-        </div>
-      </div>
       <div v-if="keyword.trim() && matchCount === 0" class="filter-empty">
         没有匹配「{{ keyword.trim() }}」的配置项——换个关键词，或清空搜索查看全部。
       </div>
@@ -776,19 +774,6 @@ onMounted(load)
 </script>
 
 <style scoped>
-.page-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.page-bar h3 {
-  margin: 0;
-}
-.bar-actions {
-  display: flex;
-  gap: 8px;
-}
 .loading {
   padding: 24px 0;
   text-align: center;
@@ -863,12 +848,13 @@ onMounted(load)
   color: #909399;
   line-height: 1.6;
 }
-/* 顶部工具条：搜索 + 模块锚点导航，吸顶常驻 */
-.toolbar {
+/* 吸顶头：标题 + 搜索 + 操作按钮 + 模块锚点。整块常驻，滚不滚动、搜不搜索
+   看到的结构都一样（旧版标题随内容滚走、搜索后才露出，两态不一致） */
+.sticky-head {
   position: sticky;
   /* sticky 的参考系会被滚动容器的 padding 内缩：.admin-main 有 16px 顶部 padding，
      top:0 会钉在 padding 下缘、上方留一条 16px 透明带，滚动内容从带里漏出来。
-     top:-16px 恰好抵消内缩，让工具条贴住滚动口顶部（60px 处）盖住这条带。
+     top:-16px 恰好抵消内缩，让吸顶头贴住滚动口顶部（60px 处）盖住这条带。
      ⚠️ 数值必须与 AdminLayout 里 .admin-main 的 padding-top 保持一致。 */
   top: -16px;
   z-index: 6;
@@ -885,9 +871,36 @@ onMounted(load)
   margin-bottom: 14px;
 }
 /* 吸顶态：更强的投影 + 更实的分隔线，明确「这一层浮在内容之上」 */
-.toolbar.pinned {
+.sticky-head.pinned {
   border-bottom-color: #d4d7de;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.page-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* 标题行在吸顶头内部，间距交给 .module-nav 的 margin-top，这里不再留白 */
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+.page-bar h3 {
+  margin: 0;
+  flex: none;
+}
+.bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+/* 搜索框在「配置向导」左侧：常规后台布局（标题 | 搜索 | 操作按钮），
+   且与操作同处一行，滚动 / 搜索两态都不会移位 */
+.head-search {
+  flex: none;
+  width: 300px;
+  max-width: 46vw;
 }
 /* 模块锚点导航：横向排开所有模块，超出可横滑；当前模块高亮 */
 .module-nav {
@@ -1022,23 +1035,18 @@ onMounted(load)
   color: #909399;
   line-height: 1.6;
 }
-/* 搜索过滤：搜索框靠右（模块胶囊行才是主行，左对齐占满整行，避免被挤压成横向滚动）。
-   margin-left:auto 把输入框推到右侧，匹配数紧随其后。 */
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.filter-input {
-  max-width: 460px;
-  margin-left: auto;
-}
-/* 窄屏：搜索框独占一行铺满，否则 460px 上限 + 靠右会挤得只剩一小截 */
-@media (max-width: 767px) {
-  .filter-input {
-    max-width: none;
+/* 窄屏：标题与操作按钮各占一行，搜索框铺满，否则 300px 固定宽会把按钮挤到折行错位 */
+@media (max-width: 900px) {
+  .page-bar {
+    align-items: stretch;
+  }
+  .bar-actions {
     width: 100%;
+  }
+  .head-search {
+    width: 100%;
+    max-width: none;
+    order: -1;
   }
 }
 .filter-count {
