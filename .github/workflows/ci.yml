@@ -43,7 +43,7 @@ jobs:
 
   # ───────── 后端：MySQL 生产契约 parity（可选，需配置 TEST_MYSQL_DSN） ─────────
   # 启用方式：在仓库 Settings → Secrets and variables → Actions → Variables
-  # 新增变量 TEST_MYSQL_DSN（如 root:pwd@tcp(host:3306)/langhui_test?charset=utf8mb4&parseTime=true）。
+  # 新增变量 TEST_MYSQL_DSN（如 root:pwd@tcp(host:3306)/weichuan_test?charset=utf8mb4&parseTime=true）。
   # 未配置时该 job 直接跳过，不影响 CI 绿灯。
   backend-mysql:
     name: 后端 (Go / MySQL parity)
