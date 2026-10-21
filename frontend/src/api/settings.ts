@@ -4,6 +4,8 @@ import http from './request'
 // 与后端 sys_setting 表 + internal/setting 的 registry 一一对应。
 export interface SettingItem {
   key: string
+  /** 中文名（界面主标签；旧响应可能缺省，界面回落显示 key） */
+  name?: string
   group: string
   value: string
   // int | string | bool | string_slice（后端按此校验，前端据此渲染控件）

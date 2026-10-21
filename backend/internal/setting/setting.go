@@ -45,6 +45,9 @@ func (Setting) TableName() string { return "sys_setting" }
 // def 单条可配置项的静态定义（类型契约 + 默认值 + 文案 + 生效方式元数据）。
 type def struct {
 	Key, Group, Type, Value, Desc string
+	// Name 中文名：界面主标签。商业产品的配置页不能把 snake_case 的 key
+	// 当标签甩给运营看（key 降级为次要灰字，排查日志/环境变量时仍可对照）。
+	Name string
 	// Secret：敏感项。接口只回传掩码（Mask），真实值永不出现在响应里；
 	// 界面提交掩码或缺省表示「不改动」，提交空串表示「清掉、回退环境变量」。
 	Secret bool
@@ -69,6 +72,7 @@ const Mask = "******"
 // 与 DB 模型 Setting 分开，避免把 secret 的真实值随表结构一并序列化出去。
 type Item struct {
 	Key         string `json:"key"`
+	Name        string `json:"name"` // 中文名（界面主标签；为空时前端回落显示 key）
 	Group       string `json:"group"`
 	Type        string `json:"type"` // int | string | bool | string_slice
 	Description string `json:"description"`
@@ -83,27 +87,33 @@ type Item struct {
 
 // registry 全量「可后台配置项」清单：新增可配置项只在此追加一行即可。
 // 分组（group）直接对应前端「系统设置」的分组表单：
-//   general    通用（品牌名）
-//   miniprogram 小程序（默认基址 / 独立版锁定租户）
-//   upload     上传（单文件上限 / 允许扩展名 / 各类签名有效期）
-//   wechat     微信（小程序码 TTL / AppID / AppSecret）
-//   auth       登录与令牌（令牌有效期 / 登录与刷新限流）
-//   storage    文件存储与 CDN（驱动 / 端点 / 桶 / 凭据 / 上传基址 / CDN 刷新）
-//   security   安全与基础设施（只读：DB 连接串 / JWT 密钥 / Cookie）
-//   feature    特性开关（Prometheus 指标 / 独立版企业锁定）
+//
+//	general    通用（品牌名）
+//	miniprogram 小程序（默认基址 / 独立版锁定租户）
+//	upload     上传（单文件上限 / 允许扩展名 / 各类签名有效期）
+//	wechat     微信（小程序码 TTL / AppID / AppSecret）
+//	auth       登录与令牌（令牌有效期 / 登录与刷新限流）
+//	storage    文件存储与 CDN（驱动 / 端点 / 桶 / 凭据 / 上传基址 / CDN 刷新）
+//	security   安全与基础设施（只读：DB 连接串 / JWT 密钥 / Cookie）
+//	feature    特性开关（Prometheus 指标 / 独立版企业锁定）
 var registry = []def{
 	{Key: "brand_name", Group: "general", Type: "string", Value: "智能名片",
+		Name: "品牌名称",
 		Desc: "后台侧边栏 / 页标题品牌名（未设置回落此值）"},
 	{Key: "miniprogram_base_url", Group: "miniprogram", Type: "string",
+		Name:     "小程序接口基址",
 		Validate: httpURLOrEmpty(),
 		Desc:     "小程序端默认接口基址；空则小程序用自身内置 baseUrl。必须是 http:// 或 https:// 开头的完整地址"},
 	{Key: "pinned_company_id", Group: "miniprogram", Type: "int", Value: "0",
+		Name:     "独立版锁定企业",
 		Validate: companyEnabledOrZero,
 		Desc:     "企业独立版锁定租户：>0 锁定该企业（必须存在且启用），0=平台模式"},
 	{Key: "upload_max_mb", Group: "upload", Type: "int", Value: "10",
+		Name:     "单张图片大小上限",
 		Validate: intRange(1, 1024),
 		Desc:     "单文件上传上限（MB），1~1024"},
 	{Key: "upload_allow_ext", Group: "upload", Type: "string_slice", Value: "png,jpg,jpeg,gif,webp,mp4",
+		Name: "允许上传的文件类型",
 		Desc: "允许上传的扩展名（小写，逗号分隔）"},
 	// 视频单独一个上限：图片 10MB 够用，视频动辄几十上百 MB。
 	// 若复用 upload_max_mb，为迁就视频把上限拉到 100MB，等于把图片的限制一起放开
@@ -111,85 +121,115 @@ var registry = []def{
 	// 注意：本值只约束「前端选文件时的预校验」——直传预签名由对象存储直接收文件，
 	// 应用服务器看不到内容，无法在服务端强拦；要真正封顶需在对象存储侧配 Post Policy。
 	{Key: "upload_video_max_mb", Group: "upload", Type: "int", Value: "100",
+		Name:     "单个视频大小上限",
 		Validate: intRange(1, 2048),
 		Desc:     "视频上传上限（MB），1~2048；仅作用于视频，图片仍受 upload_max_mb 约束"},
 	// 签名有效期：直传 PUT 与私有桶 GET 的限时链接时长。太短前端还没传完就过期，
 	// 太长等于把对象存储写成公开读，故留界面可调，但代码内有下限兜底。
 	{Key: "presign_put_ttl_minutes", Group: "upload", Type: "int", Value: "15",
+		Name: "上传链接有效期",
 		Desc: "直传预签名 PUT 链接有效期（分钟），最短 1 分钟"},
 	{Key: "sign_get_ttl_minutes", Group: "upload", Type: "int", Value: "30",
+		Name: "私有桶下载链接有效期",
 		Desc: "私有桶限时签名 GET 链接有效期（分钟），最短 1 分钟"},
 	{Key: "wxacode_ttl_hours", Group: "wechat", Type: "int", Value: "720",
+		Name: "小程序码缓存时长",
 		Desc: "小程序码缓存有效期（小时）"},
 	{Key: "wxacode_sign_ttl_minutes", Group: "wechat", Type: "int", Value: "60",
+		Name: "小程序码签名链接有效期",
 		Desc: "私有桶下小程序码签名链接有效期（分钟），最短 1 分钟"},
 	{Key: "wx_appid", Group: "wechat", Type: "string", EnvVar: "WX_APPID",
+		Name: "小程序 AppID",
 		Desc: "小程序 AppID（小程序码与微信登录用）；留空回退环境变量 WX_APPID"},
 	{Key: "wx_appsecret", Group: "wechat", Type: "string", Secret: true, EnvVar: "WX_APPSECRET",
+		Name: "小程序 AppSecret",
 		Desc: "小程序 AppSecret（小程序码用，敏感）；留空回退环境变量 WX_APPSECRET"},
 
 	// ---- 登录与令牌（即时生效）----
 	// 令牌有效期设太短会把人一直踢下线；代码内保留**安全下限**，
 	// 界面填 0 / 负数时回落缺省，避免管理员把自己锁在系统外（改错可自愈）。
 	{Key: "access_token_ttl_minutes", Group: "auth", Type: "int", Value: "15",
+		Name: "登录凭证有效期",
 		Desc: "access 令牌有效期（分钟），最短 1 分钟；改后新签发的令牌立即按新值，已签发的不追溯"},
 	{Key: "refresh_token_ttl_days", Group: "auth", Type: "int", Value: "30",
+		Name: "免登录保持时长",
 		Desc: "refresh 令牌有效期（天），最短 1 天；决定多久要重新登录一次"},
 	{Key: "login_rate_limit_per_min", Group: "auth", Type: "int", Value: "10",
+		Name: "登录尝试频率限制",
 		Desc: "每 IP 每分钟允许的登录尝试次数（防爆破），最小 1"},
 	{Key: "refresh_rate_limit_per_min", Group: "auth", Type: "int", Value: "60",
+		Name: "凭证刷新频率限制",
 		Desc: "每 IP 每分钟允许的令牌刷新次数（刷新比登录频繁，配额更宽松），最小 1"},
 
 	// ---- 文件存储与 CDN（改后需重启：客户端在启动时构造）----
 	// 凭据写错最坏结果是「上传失败」，改回来重启即可自愈，不会把自己锁在系统外，
 	// 因此允许在界面维护；留空则回退同名环境变量。
 	{Key: "storage_driver", Group: "storage", Type: "string", Restart: true, EnvVar: "STORAGE_DRIVER",
+		Name:     "存储方式",
 		Validate: oneOf("local", "minio", "oss"),
 		Desc:     "存储驱动：local(本地磁盘) | minio(MinIO/S3 兼容) | oss(阿里云 OSS)；留空回退环境变量"},
 	{Key: "storage_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ENDPOINT",
+		Name: "存储服务端点",
 		Desc: "对象存储端点（不含协议头）；MinIO 对应 MINIO_ENDPOINT，OSS 对应 OSS_ENDPOINT"},
 	{Key: "storage_bucket", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_BUCKET",
+		Name: "存储空间名称",
 		Desc: "对象存储桶名（MinIO 对应 MINIO_BUCKET，OSS 对应 OSS_BUCKET）"},
 	{Key: "storage_access_key", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ACCESS_KEY",
+		Name: "存储 AccessKey",
 		Desc: "对象存储 AccessKey（MinIO 的 access key / OSS 的 AccessKeyId）"},
 	{Key: "storage_secret_key", Group: "storage", Type: "string", Secret: true, Restart: true, EnvVar: "MINIO_SECRET_KEY",
+		Name: "存储 SecretKey",
 		Desc: "对象存储 SecretKey（敏感，界面只回传掩码）"},
 	{Key: "storage_use_ssl", Group: "storage", Type: "bool", Restart: true, EnvVar: "MINIO_USE_SSL",
+		Name: "存储启用 HTTPS",
 		Desc: "MinIO 是否走 HTTPS；留空回退环境变量 MINIO_USE_SSL"},
 	{Key: "storage_public", Group: "storage", Type: "bool", Restart: true, EnvVar: "STORAGE_PUBLIC",
+		Name: "存储空间公开访问",
 		Desc: "是否公开桶：false=私有桶，已存图片需限时签名才能访问"},
 	{Key: "upload_dir", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_DIR",
+		Name: "本地上传目录",
 		Desc: "本地存储目录（仅 local 驱动；小程序码缓存也落这里）"},
 	{Key: "upload_base_url", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_BASE_URL",
+		Name:     "文件访问基址",
 		Validate: httpURLOrEmpty(),
 		Desc:     "上传文件公开访问基址（小程序 / 前端拼绝对 URL 用），须为 http(s) 完整地址"},
 	{Key: "cdn_enabled", Group: "storage", Type: "bool", Restart: true, EnvVar: "CDN_ENABLED",
+		Name: "启用 CDN 刷新",
 		Desc: "是否启用 CDN 缓存刷新（覆盖写后使边缘缓存失效）"},
 	{Key: "cdn_access_key_id", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ACCESS_KEY_ID",
+		Name: "CDN AccessKeyId",
 		Desc: "CDN 刷新 AccessKeyId（阿里云，可与 OSS 凭据相同）"},
 	{Key: "cdn_access_key_secret", Group: "storage", Type: "string", Secret: true, Restart: true, EnvVar: "CDN_ACCESS_KEY_SECRET",
+		Name: "CDN AccessKeySecret",
 		Desc: "CDN 刷新 AccessKeySecret（敏感）"},
 	{Key: "cdn_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ENDPOINT",
+		Name: "CDN 服务端点",
 		Desc: "CDN 刷新端点，留空默认 cdn.aliyuncs.com"},
 
 	// ---- 安全与基础设施（只读：只能改环境变量后重启）----
 	// 这三项改错会把「改回来的入口」一起弄丢（连不上库 / 登不进后台），故界面只展示。
 	{Key: "db_dsn", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "DB_DSN",
+		Name: "数据库连接串",
 		Desc: "数据库连接串（敏感，只读）。配置本身存在库里，改错就连不上库、再也读不出配置，因此只能改环境变量 DB_DSN 后重启"},
 	{Key: "jwt_key", Group: "security", Type: "string", Secret: true, Restart: true, ReadOnly: true, EnvVar: "JWT_KEY",
+		Name: "登录签名密钥",
 		Desc: "JWT 签名密钥（敏感，只读）。改错会让所有已登录会话立即失效且无法回退，只能改环境变量 JWT_KEY 后重启"},
 	{Key: "cookie_secure", Group: "security", Type: "bool", Restart: true, ReadOnly: true, EnvVar: "COOKIE_SECURE",
+		Name: "登录 Cookie 强制 HTTPS",
 		Desc: "鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true）。改错会导致 http 环境登录不上，只能改环境变量 COOKIE_SECURE 后重启"},
 	{Key: "cookie_domain", Group: "security", Type: "string", Restart: true, ReadOnly: true, EnvVar: "COOKIE_DOMAIN",
+		Name: "登录 Cookie 作用域",
 		Desc: "鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）"},
 
 	// 缺省空串 = 「未设置」，读取时回退环境变量 METRICS_ENABLED；
 	// 一旦在界面显式设为 true/false 就以界面为准（避免升级后让既有部署的开关行为突变）。
 	{Key: "metrics_enabled", Group: "feature", Type: "bool", EnvVar: "METRICS_ENABLED",
+		Name: "开放监控指标",
 		Desc: "是否开放 /metrics（Prometheus 指标）；留空则跟随环境变量 METRICS_ENABLED"},
 	// 开启后企业管理页整体只读：列表/管理员列表可查，但新建企业、编辑企业、
 	// 启停企业、新建企业管理员一律拒绝（见 handler/companies.go 的 writeLocked）。
 	{Key: "independent_lock", Group: "feature", Type: "bool", Value: "false",
+		Name: "独立版企业锁定",
 		Desc: "独立版企业锁定：开启后企业管理页只读（不可新建/编辑/启停企业、不可加企业管理员）"},
 }
 
@@ -204,9 +244,9 @@ var registryByKey = func() map[string]def {
 
 // publicKeys 公开接口仅下发这些非敏感项（小程序 / 前端引导用）。
 var publicKeys = map[string]bool{
-	"brand_name":          true,
+	"brand_name":           true,
 	"miniprogram_base_url": true,
-	"pinned_company_id":   true,
+	"pinned_company_id":    true,
 }
 
 // Store 内存缓存 + DB 持久化的设置存储。
@@ -433,9 +473,9 @@ func getStore() *Store {
 }
 
 // GetString / GetInt / GetBool / GetStringSlice 包级封装。
-func GetString(key, def string) string            { return getStore().GetString(key, def) }
-func GetInt(key string, def int) int             { return getStore().GetInt(key, def) }
-func GetBool(key string, def bool) bool          { return getStore().GetBool(key, def) }
+func GetString(key, def string) string  { return getStore().GetString(key, def) }
+func GetInt(key string, def int) int    { return getStore().GetInt(key, def) }
+func GetBool(key string, def bool) bool { return getStore().GetBool(key, def) }
 func GetStringSlice(key string, def []string) []string {
 	return getStore().GetStringSlice(key, def)
 }
@@ -483,7 +523,7 @@ func All() []Item {
 			stored = envValue(d.Key, d.EnvVar)
 		}
 		it := Item{
-			Key: d.Key, Group: d.Group, Type: d.Type,
+			Key: d.Key, Name: d.Name, Group: d.Group, Type: d.Type,
 			Description: d.Desc,
 			Secret:      d.Secret, Restart: d.Restart, ReadOnly: d.ReadOnly, EnvVar: d.EnvVar,
 		}
