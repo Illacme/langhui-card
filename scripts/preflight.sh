@@ -77,7 +77,7 @@ DEF_PASS="$(const_str DefaultAdminPass)"; [ -n "$DEF_PASS" ] || DEF_PASS=""
 MIN_JWT="$(const_num MinJWTKeyLen)";      [ -n "$MIN_JWT" ] || MIN_JWT=16
 MIN_PASS="$(const_num MinAdminPassLen)";  [ -n "$MIN_PASS" ] || MIN_PASS=8
 
-echo "朗汇机电电子名片 · 上线前配置自检"
+echo "微传名片 · 上线前配置自检"
 echo "仓库根：$ROOT"
 
 # ── 1. JWT 签名密钥 ──

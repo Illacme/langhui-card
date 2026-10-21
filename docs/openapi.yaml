@@ -1,12 +1,12 @@
 openapi: 3.0.3
 
-# 朗汇机电电子名片小程序 · 后端 API 规范
+# 微传名片 · 后端 API 规范
 # 单一事实来源：路由见 backend/internal/handler/*.go，本文档与之保持同步。
 # 本地预览：VS Code 装 "OpenAPI (Swagger) Editor" 插件，或粘贴到 https://editor.swagger.io
-# 字段级映射（三端联调）另见《朗汇机电小程序V1.3_三端联调与接口总表.md》。
+# 字段级映射（三端联调）另见《微传名片V1.3_三端联调与接口总表.md》。
 
 info:
-  title: 朗汇机电名片小程序 API
+  title: 微传名片 API
   version: "1.3.0"
   description: |
     电子名片小程序 + PC 管理后台的后端接口。

@@ -1,5 +1,5 @@
 {
-  "description": "朗汇机电电子名片小程序（原生 + TS）",
+  "description": "微传名片小程序（原生 + TS）",
   "miniprogramRoot": "./",
   "projectname": "weichuan-card",
   "setting": {
