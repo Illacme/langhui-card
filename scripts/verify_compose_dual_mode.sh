@@ -31,6 +31,17 @@
 #     compose 文件已写死顶层 name: weichuan 规避
 #   - 国内网络直连 Docker Hub 不通会让 build 死在拉基础镜像（i/o timeout，错误埋在日志里）：
 #     registry_reachable 提前探测 + up 失败时按日志特征自动给出镜像加速配法
+#   - 安装接口（POST /api/setup/install）是**扁平表单**：engine/dbHost/dbPort/dbUser/
+#     dbPassword/dbName/createDatabase/sqlitePath/adminUser/adminPass/adminPass2/jwtKey，
+#     没有 DSN 字段。JSON 里多写 "DSN" 会被 Go 静默丢弃 → Engine 为空 → 走 mysql 分支
+#     → 报「请填写完整的 MySQL 连接信息」。字段名见 backend/internal/setup/install.go
+#     与安装页 JS 的 payload()（backend/internal/setup/setup.go）。
+#   - /api/setup/status 与 install 的响应都是标准信封 {code:0,data:...}/{code:1,msg:...}，
+#     HTTP 200 不代表安装成功，必须读 body 里的 code。
+#   - bash 全角标点吞变量名：$VAR 后紧跟全角 ，。（）：；、 会被并进变量名，
+#     报 "VAR，: unbound variable"（本项目已第三次踩）——必须写 ${VAR}。
+#   - 端口占用预检必须放在「清理残留」之后：colima/lima 的端口发布是 ssh -L 转发，
+#     上次异常退出后 ssh 进程可能仍占着 8090，先 down 再查，且 ssh owner 按残留转发提示不拦截。
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -39,8 +50,11 @@ cd "$(cd "$(dirname "$0")" && pwd)/.." || exit 1
 
 BPORT=8090          # 后端直连调试端口（绕过 nginx）
 FPORT=8080          # 前端入口（nginx 反代 /api → backend:8080）
-SQLITE_DSN="sqlite:///data/weichuan.db"
-MYSQL_DSN="root:\${MYSQL_ROOT_PASSWORD}@tcp(mysql:3306)/weichuan"
+# 安装请求是扁平表单（无 DSN 字段），这里是各形态的表单值：
+SQLITE_PATH="/app/data/weichuan.db"   # 容器内路径，必须在 data_data 卷（/app/data）上，否则容器重建即丢
+MYSQL_DB_NAME="weichuan"              # 与 compose 的 MYSQL_DATABASE 一致
+ADMIN_USER="admin"
+ADMIN_PASS="VerifyPass-123"           # 仅验证用；≠ 内置缺省口令、≥ 最小长度（见 validateAdmin）
 
 # ---------- 标志 ----------
 DO_STATIC=1
@@ -64,13 +78,23 @@ ok()   { echo "  ✅ $1"; PASS=$((PASS+1)); }
 bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 info() { echo "🔹 $1"; }
 http_code() { curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$@"; }
+# /api/setup/status 的响应是标准信封 {code:0,data:{configured:...}}，要解一层 data；
+# 且 Python 的 False/True 打印是大写，必须 .lower() 才能和 shell 的 "false"/"true" 比
 status_configured() {
   curl -s --max-time 5 "http://localhost:${BPORT}/api/setup/status" \
     | python3 -c 'import sys,json
 try:
-    print(json.load(sys.stdin).get("configured",""))
+    print(str(json.load(sys.stdin).get("data",{}).get("configured","")).lower())
 except Exception:
     pass' 2>/dev/null
+}
+# 安装/测试接口 HTTP 恒 200，成败看信封的 code（0=成功）
+json_code() {   # json_code <响应文件>
+  python3 -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1])).get("code",""))
+except Exception:
+    pass' "$1" 2>/dev/null
 }
 wait_cmd() {            # wait_cmd <timeout_sec> "<shell command>"
   local t=$1; shift; local w=0
@@ -270,14 +294,27 @@ if [ "${DO_LIVE}" = "1" ]; then
   if [ "${LIVE_OK}" = "1" ] && [ "${COMPOSE_HAS_PROFILE}" != "1" ]; then
     bad "${COMPOSE_BIN} 不支持 --profile：双形态（--profile mysql）无法验证，需 Compose v2"; LIVE_OK=0
   fi
+  # 预清理必须放在端口占用预检之前：colima/lima 的端口发布靠 ssh -L 转发，上次异常
+  # 退出后 ssh 进程可能仍占着 8090/3306，先 down -v 让转发拆除，再做占用判定，
+  # 否则上次的残留会被误判成「端口被占用」而整个跳过真机验证。
+  if [ "${LIVE_OK}" = "1" ]; then
+    ${COMPOSE_BIN} --profile mysql down -v >/dev/null 2>&1 || true
+    sleep 2   # 给 lima 撤 ssh -L 转发留一点时间
+  fi
   # 端口占用预检：compose 要绑 8080(frontend) 与 8090(backend)，被占则容器必然起不来
   if [ "${LIVE_OK}" = "1" ]; then
     CLASH=0
     for p in "${FPORT}" "${BPORT}"; do
       owner=$(port_owner "$p")
       if [ -n "$owner" ]; then
-        bad "端口 $p 被占用：$owner"
-        CLASH=1
+        # ssh owner = colima/lima 的端口转发进程（docker 端口发布机制），不是第三方占用
+        case "$owner" in
+          ssh*)
+            echo "  ℹ️  端口 $p 由 ssh 转发进程占用（${owner}）——colima/lima 的端口发布机制，非第三方冲突，继续" ;;
+          *)
+            bad "端口 $p 被占用：$owner"
+            CLASH=1 ;;
+        esac
       fi
     done
     if [ "${CLASH}" = "1" ]; then
@@ -306,7 +343,9 @@ if [ "${DO_LIVE}" = "1" ]; then
 fi
 
 if [ "${DO_LIVE}" = "1" ]; then
-  info "清理任何残留容器/卷"
+  # 预清理已在「环境自检」里做过（先 down 再做端口预检）；这里幂等再清一次，
+  # 覆盖自检失败跳过预清理、或 static/live 分段跑的情况
+  info "再次清理残留容器/卷（幂等）"
   ${COMPOSE_BIN} --profile mysql down -v >/dev/null 2>&1 || true
 
   info "形态1：默认（SQLite 零依赖）— ${COMPOSE_BIN} up -d --build"
@@ -335,15 +374,18 @@ if [ "${DO_LIVE}" = "1" ]; then
   [ "$hc" = "503" ] && ok "/healthz 未配置模式返回 503" || bad "/healthz=$hc (期望 503)"
   fp=$(http_code "http://localhost:${FPORT}/")
   if [ "$fp" = "200" ]; then ok "前端 8080 返回 200（安装页可用）"; else
-    bad "前端首页=$fp（非 200 通常是 8080 被别的服务占用或前端没起来）"; dump_diag
+    bad "前端首页=${fp}（非 200 通常是 8080 被别的服务占用或前端没起来）"; dump_diag
   fi
 
   if [ "${DO_INSTALL}" = "1" ]; then
     info "  安装（SQLite）"
-    body="{\"DSN\":\"${SQLITE_DSN}\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
-    ic=$(curl -s -o /tmp/install.res -w '%{http_code}' --max-time 30 -X POST \
+    # 扁平表单：engine=sqlite + sqlitePath（没有 DSN 字段；路径必须在 data_data 卷上）
+    body="{\"engine\":\"sqlite\",\"sqlitePath\":\"${SQLITE_PATH}\",\"adminUser\":\"${ADMIN_USER}\",\"adminPass\":\"${ADMIN_PASS}\",\"adminPass2\":\"${ADMIN_PASS}\"}"
+    ic=$(curl -s -o /tmp/install.res -w '%{http_code}' --max-time 60 -X POST \
           -H 'Content-Type: application/json' -d "$body" "http://localhost:${BPORT}/api/setup/install")
-    [ "$ic" = "200" ] && ok "POST /api/setup/install 返回 200" || bad "install=$ic $(cat /tmp/install.res 2>/dev/null)"
+    jc=$(json_code /tmp/install.res)
+    [ "$ic" = "200" ] && [ "$jc" = "0" ] && ok "SQLite 安装成功（信封 code=0）" \
+      || bad "install http=$ic code=$jc body=$(cat /tmp/install.res 2>/dev/null)"
     ready=0
     for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
     [ "$ready" = "1" ] && ok "安装完成，status.configured=true（backend 已自重启）" || bad "安装后未见 configured=true"
@@ -372,9 +414,9 @@ if [ "${DO_LIVE}" = "1" ]; then
     done
     if [ -n "$bad_state" ]; then
       if docker logs weichuan-mysql 2>&1 | grep -q "MYSQL_ROOT_PASSWORD 未设置"; then
-        ok "缺口令时 mysql 容器 $bad_state，日志含明确提示"
+        ok "缺口令时 mysql 容器 ${bad_state}，日志含明确提示"
       else
-        bad "mysql $bad_state 但日志未见缺口令提示："
+        bad "mysql ${bad_state} 但日志未见缺口令提示："
         docker logs weichuan-mysql 2>&1 | sed 's/^/    /'
       fi
     else
@@ -387,7 +429,12 @@ if [ "${DO_LIVE}" = "1" ]; then
 
   info "形态2b：MySQL opt-in 带口令启动"
   owner3306=$(port_owner 3306)
-  [ -n "$owner3306" ] && bad "端口 3306 被占用：$owner3306（mysql 容器无法绑定，MySQL 形态会失败）"
+  if [ -n "$owner3306" ]; then
+    case "$owner3306" in
+      ssh*) echo "  ℹ️  端口 3306 由 ssh 转发进程占用（${owner3306}）——lima 端口发布机制，非第三方冲突，继续" ;;
+      *)    bad "端口 3306 被占用：${owner3306}（mysql 容器无法绑定，MySQL 形态会失败）" ;;
+    esac
+  fi
   export MYSQL_ROOT_PASSWORD="Vp$(openssl rand -hex 8 2>/dev/null || date +%s%N)"
   if ! ${COMPOSE_BIN} --profile mysql up -d --build >/tmp/compose_mysql.log 2>&1; then
     bad "带口令启动 mysql 形态失败"; sed 's/^/    /' /tmp/compose_mysql.log; dump_diag
@@ -402,15 +449,20 @@ if [ "${DO_LIVE}" = "1" ]; then
 
     if [ "${DO_INSTALL}" = "1" ]; then
       info "  安装（MySQL）"
-      body="{\"DSN\":\"${MYSQL_DSN}\",\"AdminUser\":\"admin\",\"AdminPass\":\"VerifyPass-123\",\"AdminPass2\":\"VerifyPass-123\"}"
-      ic=$(curl -s -o /tmp/install2.res -w '%{http_code}' --max-time 30 -X POST \
+      # 扁平表单：engine=mysql + 连接字段（dbPassword 用刚生成的随机口令）
+      # createDatabase=true：库已由 compose 的 MYSQL_DATABASE 建好时是 IF NOT EXISTS 空转，
+      # 换到没配 MYSQL_DATABASE 的环境也能装上
+      body="{\"engine\":\"mysql\",\"dbHost\":\"mysql\",\"dbPort\":\"3306\",\"dbUser\":\"root\",\"dbPassword\":\"${MYSQL_ROOT_PASSWORD}\",\"dbName\":\"${MYSQL_DB_NAME}\",\"createDatabase\":true,\"adminUser\":\"${ADMIN_USER}\",\"adminPass\":\"${ADMIN_PASS}\",\"adminPass2\":\"${ADMIN_PASS}\"}"
+      ic=$(curl -s -o /tmp/install2.res -w '%{http_code}' --max-time 60 -X POST \
             -H 'Content-Type: application/json' -d "$body" "http://localhost:${BPORT}/api/setup/install")
-      [ "$ic" = "200" ] && ok "MySQL 形态安装返回 200" || bad "install=$ic $(cat /tmp/install2.res 2>/dev/null)"
+      jc=$(json_code /tmp/install2.res)
+      [ "$ic" = "200" ] && [ "$jc" = "0" ] && ok "MySQL 形态安装成功（信封 code=0）" \
+        || bad "install http=$ic code=$jc body=$(cat /tmp/install2.res 2>/dev/null)"
       ready=0
       for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
       [ "$ready" = "1" ] && ok "MySQL 形态安装完成，status.configured=true" || bad "MySQL 形态未见 configured=true"
       tbls=$(docker exec weichuan-mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "use weichuan; show tables;" 2>/dev/null | wc -l)
-      [ "${tbls:-0}" -gt 1 ] && ok "weichuan 库已建表（表数=$tbls）" || bad "MySQL 建表异常"
+      [ "${tbls:-0}" -gt 1 ] && ok "weichuan 库已建表（表数=${tbls}）" || bad "MySQL 建表异常"
     fi
   fi
 
