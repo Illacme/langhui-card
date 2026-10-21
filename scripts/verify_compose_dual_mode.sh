@@ -42,6 +42,9 @@
 #     报 "VAR，: unbound variable"（本项目已第三次踩）——必须写 ${VAR}。
 #   - 端口占用预检必须放在「清理残留」之后：colima/lima 的端口发布是 ssh -L 转发，
 #     上次异常退出后 ssh 进程可能仍占着 8090，先 down 再查，且 ssh owner 按残留转发提示不拦截。
+#   - 安装后断言 /healthz=200 必须先等转正：配置写盘后旧进程还活约 900ms
+#     （ScheduleRestart 的 sleep），窗口内 status.configured=true 与 healthz=503 并存，
+#     直接断言会假失败（2026-10-21 实证 t+100~400ms 两态并存、t+600ms 后新进程才 200）。
 # ─────────────────────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -96,6 +99,13 @@ try:
 except Exception:
     pass' "$1" 2>/dev/null
 }
+# 安装后判断「新进程已就绪」的唯一可靠信号：/healthz 转正（200）。
+# 竞态（2026-10-21 实证）：安装成功、配置写盘后，旧进程还活约 900ms
+# （ScheduleRestart 的 sleep 才退出），窗口内 status.configured 已读文件报
+# true、但 healthz 还是 setup 模式的 503（实测 t+100~400ms 两态并存，
+# t+600ms 后新进程才 200）。所以安装后只等 configured=true 就断言 healthz
+# 会假失败，必须等 healthz 转 200。
+healthz_ok() { [ "$(http_code "http://localhost:${BPORT}/healthz")" = "200" ]; }
 wait_cmd() {            # wait_cmd <timeout_sec> "<shell command>"
   local t=$1; shift; local w=0
   while ! eval "$@" >/dev/null 2>&1; do
@@ -389,8 +399,11 @@ if [ "${DO_LIVE}" = "1" ]; then
     ready=0
     for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
     [ "$ready" = "1" ] && ok "安装完成，status.configured=true（backend 已自重启）" || bad "安装后未见 configured=true"
-    hc2=$(http_code "http://localhost:${BPORT}/healthz")
-    [ "$hc2" = "200" ] && ok "安装后 /healthz=200" || bad "/healthz=$hc2"
+    # 竞态：configured=true 到 healthz 转 200 之间有约数百毫秒的旧进程存活窗口，
+    # 必须等 healthz 转正再断言（只等 configured=true 会误报 503）
+    wait_cmd 30 healthz_ok \
+      && ok "安装后 /healthz=200" \
+      || bad "安装后 /healthz=$(http_code "http://localhost:${BPORT}/healthz")（新进程未就绪）"
   fi
 
   # ===== 切到形态 2：MySQL opt-in =====
@@ -445,7 +458,8 @@ if [ "${DO_LIVE}" = "1" ]; then
     if [ "$n" = "3" ]; then ok "三容器运行 (backend+frontend+mysql)"; else bad "运行容器数=$n (期望 3)"; dump_diag; fi
     wait_cmd 90 "docker exec weichuan-mysql mysqladmin ping -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} --silent >/dev/null 2>&1"
     if [ $? -eq 0 ]; then ok "mysql 健康检查通过"; else bad "mysql 未就绪"; dump_diag; fi
-    wait_cmd 60 "curl -s --max-time 5 http://localhost:${BPORT}/healthz >/dev/null"
+    # 等 backend HTTP 响应即可（此时是未配置模式，healthz=503 是预期，不能等 healthz_ok）
+    wait_cmd 60 "curl -s --max-time 5 http://localhost:${BPORT}/api/setup/status >/dev/null"
 
     if [ "${DO_INSTALL}" = "1" ]; then
       info "  安装（MySQL）"
@@ -461,6 +475,10 @@ if [ "${DO_LIVE}" = "1" ]; then
       ready=0
       for i in $(seq 1 45); do [ "$(status_configured)" = "true" ] && { ready=1; break; }; sleep 2; done
       [ "$ready" = "1" ] && ok "MySQL 形态安装完成，status.configured=true" || bad "MySQL 形态未见 configured=true"
+      # 同样等 healthz 转正再断言：新进程要重放迁移 + 连库，启动比 SQLite 慢
+      wait_cmd 30 healthz_ok \
+        && ok "MySQL 形态安装后 /healthz=200" \
+        || bad "MySQL 形态 /healthz=$(http_code "http://localhost:${BPORT}/healthz")（新进程未就绪，看 docker logs weichuan-backend）"
       tbls=$(docker exec weichuan-mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "use weichuan; show tables;" 2>/dev/null | wc -l)
       [ "${tbls:-0}" -gt 1 ] && ok "weichuan 库已建表（表数=${tbls}）" || bad "MySQL 建表异常"
     fi
