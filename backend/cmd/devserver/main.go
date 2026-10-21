@@ -192,9 +192,12 @@ func seedDemoData(db *gorm.DB, cfg config.Config) {
 		Tel: "0316-8023950", Logo: assets["logo.png"],
 	})
 	db.Where("company_id = ?", 1).FirstOrCreate(&model.CompanyProfile{
-		// 视频默认 none（展示封面占位）：种子里没有真实 feedId，填了反而会渲染出一个播不了的组件
+		// 视频号档（跨主体）：用 feed-token；feed-id 留空 → 组件走 channels-token 分支
+		// （强制 autoplay=false，用户点一下再播）。
 		CompanyID: 1, IntroText: "成立于 2015 年 11 月，专注于电梯销售、安装、维修保养与改造服务，为住宅、政务中心、医疗、商业、公共交通、生产制造与仓储物流等多场景提供机电一体化解决方案。",
-		VideoSource: model.VideoSourceNone, Cover: assets["cover-company.jpg"],
+		VideoSource:    model.VideoSourceChannels,
+		VideoFeedToken: "AThgKivzk",
+		Cover:          assets["cover-company.jpg"],
 	})
 
 	// 经典业绩 8 分类（与设计稿一致，客户已确认锁定；原「生产制造、仓储物流」按设计稿拆为两个分类）

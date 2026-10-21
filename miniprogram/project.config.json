@@ -1,7 +1,7 @@
 {
   "description": "朗汇机电电子名片小程序（原生 + TS）",
   "miniprogramRoot": "./",
-  "projectname": "langhui-card",
+  "projectname": "weichuan-card",
   "setting": {
     "es6": true,
     "enhance": true,
@@ -27,7 +27,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "latest",
-  "appid": "wxa04dc0e3d5d58eb3",
+  "appid": "wxfd7b2223be49022d",
   "condition": {},
   "simulatorPluginLibVersion": {},
   "packOptions": {

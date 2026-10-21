@@ -13,7 +13,8 @@
 const CACHE_KEY = 'publicSettingsCache'
 
 // 引导种子地址：换部署环境改这一处即可（模拟器用 127.0.0.1，真机用电脑局域网 IP）。
-export const DEFAULT_BASE_URL = 'http://127.0.0.1:8080'
+// 当前：真机预览/调试用 Mac 局域网 IP（改 Wi-Fi 后需同步更新）。
+export const DEFAULT_BASE_URL = 'http://192.168.31.224:8080'
 
 // 后台「系统设置」公开下发的非敏感项（与后端 setting.publicKeys 一致）
 export interface PublicSettings {
