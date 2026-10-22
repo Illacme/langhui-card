@@ -81,7 +81,12 @@
           <div class="si-grid">
             <label class="wide">
               <span class="si-field-cap">JWT 密钥（留空自动生成）
-                <el-tooltip placement="top" :content="jwtHint">
+                <el-tooltip placement="top" popper-class="si-hint-popper">
+                  <template #content>
+                    <p class="si-hint-line"><b>登录签名密钥</b>：服务端用它给每次登录签发的身份凭证盖章并校验真伪。</p>
+                    <p class="si-hint-line">留空即自动生成 32 字节随机值；手动填写至少 16 位，不能用内置缺省值（会被直接拒绝启动）。</p>
+                    <p class="si-hint-line">安装后更换它，所有人已登录的状态立即失效，需重新登录。</p>
+                  </template>
                   <span class="si-hint" tabindex="0" aria-label="JWT 密钥说明">?</span>
                 </el-tooltip>
               </span>
@@ -89,7 +94,11 @@
             </label>
             <el-checkbox v-model="form.cookieSecure" class="si-chk">
               Cookie 强制 HTTPS
-              <el-tooltip placement="top" :content="cookieHint">
+              <el-tooltip placement="top" popper-class="si-hint-popper">
+                <template #content>
+                  <p class="si-hint-line"><b>登录 Cookie 加 Secure 标记</b>：浏览器只在 HTTPS 连接下发送它，防止登录凭证在 http 明文传输中被窃取。</p>
+                  <p class="si-hint-line">站点正式上线（启用 HTTPS）后再勾选；本地 http 环境勾选会导致登录不上。</p>
+                </template>
                 <span class="si-hint" tabindex="0" aria-label="Cookie 强制 HTTPS 说明">?</span>
               </el-tooltip>
             </el-checkbox>
@@ -217,12 +226,6 @@ import {
 } from '@/api/setup'
 
 const props = defineProps<{ status: SetupStatus }>()
-
-// 高级选项说明：默认不占版面，悬浮「?」徽标时才显示，避免小视口被长文撑开。
-const jwtHint =
-  '登录凭证的签名密钥：服务端用它给每次登录签发的身份凭证盖章并校验真伪，是后台登录安全的核心。留空即自动生成 32 字节随机密钥；手动填至少 16 位，且不能用内置缺省值（会被直接拒绝启动）。安装后更换它，所有人已登录的状态立即失效，需重新登录。'
-const cookieHint =
-  '给登录 Cookie 加 Secure 标记，浏览器只在 HTTPS 连接下发送它，防止登录凭证在 http 明文传输中被窃取。站点正式上线（启用 HTTPS）后勾选；本地 http 环境先不要勾——浏览器将不再发送 Cookie，会导致登录不上。'
 
 const engine = ref<'mysql' | 'sqlite'>('mysql')
 const step = ref<1 | 2 | 3>(1)
@@ -1031,5 +1034,22 @@ code {
   .si-actions {
     flex-direction: column;
   }
+}
+</style>
+
+<!-- 说明弹层样式：el-tooltip 的 popper 挂在 body 下，scoped 样式够不到，必须用非 scoped 块。
+     限宽让长说明折行成短段落，而不是横穿全屏的一长行。 -->
+<style>
+.si-hint-popper {
+  max-width: 300px;
+  text-align: left;
+  line-height: 1.7;
+}
+.si-hint-popper .si-hint-line {
+  margin: 0;
+  font-size: 12px;
+}
+.si-hint-popper .si-hint-line + .si-hint-line {
+  margin-top: 6px;
 }
 </style>

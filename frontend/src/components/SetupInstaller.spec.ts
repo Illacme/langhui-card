@@ -48,7 +48,7 @@ const ElAlert = defineComponent({
 const ElTooltip = defineComponent({
   name: 'ElTooltip',
   props: ['content', 'placement'],
-  template: `<span class="stub-tip"><slot /><span class="stub-tip-content">{{ content }}</span></span>`,
+  template: `<span class="stub-tip"><slot /><span class="stub-tip-content"><slot name="content">{{ content }}</slot></span></span>`,
 })
 
 const stubs = {
@@ -221,10 +221,10 @@ describe('SetupInstaller', () => {
     // 说明以悬浮「?」徽标形式存在，文本仍在 DOM（stub 拍平）可断言
     const badges = w.findAll('.stub-tip .si-hint')
     expect(badges.length).toBeGreaterThanOrEqual(2)
-    expect(w.text()).toContain('登录凭证的签名密钥')
+    expect(w.text()).toContain('登录签名密钥')
     expect(w.text()).toContain('至少 16 位')
     expect(w.text()).toContain('所有人已登录的状态立即失效')
-    expect(w.text()).toContain('给登录 Cookie 加 Secure 标记')
-    expect(w.text()).toContain('浏览器将不再发送 Cookie')
+    expect(w.text()).toContain('登录 Cookie 加 Secure 标记')
+    expect(w.text()).toContain('浏览器只在 HTTPS 连接下发送')
   })
 })
