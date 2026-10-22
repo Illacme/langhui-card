@@ -29,10 +29,19 @@ type wxacodeEntry struct {
 	expAt     time.Time // 二维码内容过期时间（按 cfg.WxacodeTTL）
 }
 
+// getWXACode 小程序码生成器的间接层：生产指向 wechat.GetWXACodeUnlimit。
+// 抽这一层的唯一目的是可测——微信接口要外网 + 真凭据，注入后才能在单测里覆盖
+// 「固定对象名覆盖写 → CDN 刷新」这条支线（见 TestCDNRefreshOnOverwritePaths）。
+var getWXACode = wechat.GetWXACodeUnlimit
+
 // RegisterWechat 小程序码接口：按 staffId 生成（写入当前存储驱动）小程序码，返回可访问 URL
 // 海报合成放在小程序端 canvas；后端只负责产出小程序码图片，存到 local/minio/oss 后返回访问 URL。
 // 私有桶（STORAGE_PUBLIC=false）下，返回的是限时签名 GET URL，避免把对象设为公开读。
-func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
+//
+// refresher 可选：小程序码对象名固定（wxacode/<staffID>.jpg），TTL 到期重新生成 = 覆盖写，
+// 覆盖后要让 CDN 边缘失效，否则已分享出去的旧链接会一直拿到旧图
+// （2026-10-23 之前刷新只挂在随机名的上传接口，这条覆盖路径根本没触发）。
+func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader, refresher storage.CDNRefresher) {
 	// AppID / AppSecret 都每次请求解析：可在后台「系统设置 → 微信」配置，
 	// 未配置时回退环境变量 WX_APPID / WX_APPSECRET——换凭据不必改环境变量重启。
 	wcOf := func() wechat.Config {
@@ -91,7 +100,7 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
 		}
 
 		// 2) 重新生成：调微信 -> 写入当前存储驱动 -> 缓存
-		b, err := wechat.GetWXACodeUnlimit(wc, scene, page)
+		b, err := getWXACode(wc, scene, page)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 			return
@@ -106,6 +115,9 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader) {
 		wxacodeMu.Lock()
 		wxacodeCache[staffID] = e
 		wxacodeMu.Unlock()
+		// 固定对象名的覆盖写：刷新的是公开形态 URL（私有桶下返回的短期签名 URL 每次都变，
+		// 交给 CDN 刷也没有意义；私有桶本身也不该被 CDN 缓存）
+		refreshCDN(refresher, e.publicURL)
 
 		url, err := resolveWxacodeURL(e, cfg, up)
 		if err != nil {

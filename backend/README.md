@@ -177,7 +177,10 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ### 2. CDN 刷新
 - 启用：`CDN_ENABLED=1` + `CDN_ACCESS_KEY_ID` / `CDN_ACCESS_KEY_SECRET`（可与 OSS 凭据相同），可选 `CDN_ENDPOINT`（默认 `cdn.aliyuncs.com`，阿里云 CDN）。
-- 行为：每次 `POST /api/admin/upload` 成功后 best-effort 调用 `Refresh(urls)`，使边缘节点旧缓存失效（覆盖写头像/封面/相册时避免回源拿到旧图）；失败仅记录日志，不影响上传结果。
+- 触发点（三处覆盖写路径，均 best-effort，失败只记日志、不影响接口结果）：
+  - `POST /api/admin/upload`（含员工端 / 申请头像）：对象名随机，实际不会覆盖，刷新属「有备无患」；
+  - `POST /api/admin/assets/adopt`：对象名固定 `library/<素材ID>.<ext>`，**重复采用 = 覆盖写**（素材库升级换图），必须让边缘失效；
+  - `GET /api/wechat/wxacode`：对象名固定 `wxacode/<staffID>.jpg`，TTL 到期重生成 = 覆盖写；私有桶下刷新的是公开形态 URL（短期签名 URL 每次都变，不该交给 CDN 刷）。
 - 也可手动触发：`POST /api/admin/cdn/refresh` body `{"urls":["https://cdn.xxx/a.jpg", ...]}`（单次最多 1000 条，自动分批）。
 - 仅实现阿里云 CDN；其它 CDN 只需新增一个 `CDNRefresher` 实现并在 `main.go` 注入。
 
@@ -355,6 +358,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 测试文件：`internal/handler/handler_test.go`。入口：
   - `TestAPIFlow`（默认）：SQLite 跑完整流程，按「公开接口 → 超管登录 → 审核流 → 员工管理 → 强校验 → 服务 → 内容 → 上传存储 → 改密」分段执行。
   - `TestStorageEnhanceSuccess`：用 fake `Presigner`/`Signer`/`CDNRefresher` 覆盖存储增强**成功分支**（预签名返回 `putUrl/url/key`、私有签名返回 `signed` 映射、CDN 刷新被调用）。
+  - `TestCDNRefreshOnOverwritePaths`：守门「CDN 刷新确实挂在会覆盖同名对象的路径上」——素材采用（`library/<ID>.<ext>`）与小程序码重生成（`wxacode/<staffID>.jpg`，用注入的假生成器替代微信外网调用）各触发一次刷新，并断言刷新失败时接口仍返回 `code:0`。
   - `TestTokenRefresh` / `TestCookieAuth` / `TestSingleDeviceRevocation`：分别覆盖 refresh 换发与账号级吊销、PC 端 httpOnly Cookie 鉴权与登出、单设备精确吊销（会话黑名单）。
   - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、**分页（翻页不重复 / size 与上限 / 非法页码回落与末页夹取 / 分类与关键字过滤 / 无命中空结果）**、**视觉调性（五档清单 / 调性过滤生效 / styleCounts 排除 style 自身 / 分类+调性组合 / 图标只落 clean 一档 / 调性中文名可搜）**、采用落盘（含首页背景 JPEG）、预览图公开 + immutable、封面与背景缩略图、未知素材/空参/路径穿越 404。
   - `TestAPIFlowMySQL`（生产契约 parity）：设置 `TEST_MYSQL_DSN` 后，连真实 MySQL、应用 `migrations/*.sql`，再跑与 SQLite **完全相同的断言**，用以校验 AutoMigrate 与生产建表 SQL 行为一致。

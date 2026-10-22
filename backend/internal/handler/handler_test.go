@@ -22,6 +22,7 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -37,6 +38,7 @@ import (
 	"weichuan/internal/model"
 	"weichuan/internal/setting"
 	"weichuan/internal/storage"
+	"weichuan/internal/wechat"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -135,8 +137,8 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	r.Static("/uploads", cfg.UploadDir)
 	RegisterUpload(r, db, up, refresher)
 	RegisterStorage(r, db, up, refresher, cfg)
-	RegisterAssets(r, db, up) // 常用素材库（内嵌 Lucide 图标 + 通用封面/LOGO）
-	RegisterWechat(r, cfg, up)
+	RegisterAssets(r, db, up, refresher) // 常用素材库（内嵌 Lucide 图标 + 通用封面/LOGO）
+	RegisterWechat(r, cfg, up, refresher)
 	RegisterSettings(r, db, cfg) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	return r
@@ -806,8 +808,12 @@ func applyMigrations(t *testing.T, db *gorm.DB) {
 // fakeUploader 同时实现 Uploader + Presigner + Signer，用于验证成功路径。
 type fakeUploader struct{}
 
-func (fakeUploader) Save(*multipart.FileHeader) (string, error)       { return "http://up/x.png", nil }
-func (fakeUploader) SaveBytes(string, []byte, string) (string, error) { return "http://up/x.png", nil }
+func (fakeUploader) Save(*multipart.FileHeader) (string, error) { return "http://up/x.png", nil }
+func (fakeUploader) SaveBytes(key string, _ []byte, _ string) (string, error) {
+	// 按 key 回 URL：素材采用 / 小程序码两条「固定对象名」路径都走这里，
+	// 测试据此断言刷新的是刚覆盖写的那个对象，而不是上传的随机名对象。
+	return "http://final/" + key, nil
+}
 func (fakeUploader) PresignPut(key, _ string, _ time.Duration) (string, string, error) {
 	return "http://put/" + key, "http://final/" + key, nil
 }
@@ -815,12 +821,17 @@ func (fakeUploader) SignGetURL(key string, _ time.Duration) (string, error) {
 	return "http://signed/" + key, nil
 }
 
-// fakeRefresher 记录是否被调用。
-type fakeRefresher struct{ called bool }
+// fakeRefresher 记录调用次数、每次刷新的 URL，并可按需返回错误（验证失败不冒泡）。
+type fakeRefresher struct {
+	calls int
+	urls  []string
+	err   error // 非 nil 时 Refresh 返回该错误
+}
 
-func (f *fakeRefresher) Refresh([]string) error {
-	f.called = true
-	return nil
+func (f *fakeRefresher) Refresh(urls []string) error {
+	f.calls++
+	f.urls = append(f.urls, urls...)
+	return f.err
 }
 
 // TestStorageEnhanceSuccess 验证存储增强在对象存储驱动可用时的成功分支。
@@ -863,7 +874,73 @@ func TestStorageEnhanceSuccess(t *testing.T) {
 	_, body = c.do("POST", "/api/admin/cdn/refresh",
 		map[string]interface{}{"urls": []string{"http://final/a.jpg"}}, adminToken)
 	require.EqualValues(t, 0, body["code"])
-	require.True(t, ref.called)
+	require.Equal(t, 1, ref.calls)
+	require.Equal(t, []string{"http://final/a.jpg"}, ref.urls)
+}
+
+// TestCDNRefreshOnOverwritePaths 覆盖写路径的 CDN 刷新守门：
+//  1. 素材采用（对象名 library/<素材ID>.<ext>）→ 刷新刚写入的 URL；
+//  2. 小程序码重生成（对象名 wxacode/<staffID>.jpg）→ 刷新公开 URL；
+//  3. 刷新失败只 [WARN] 记日志，接口仍返回 code:0（CDN 挂了不该让用户改图失败）。
+//
+// 背景（2026-10-23 修）：此前 refreshCDN 只挂在上传接口，而上传用随机对象名、
+// 永不覆盖——真正会「同名换内容」的两条固定名路径反而一条都没接线。
+// 未启用 CDN（refresher=nil）不炸由 TestAssetLibrary 覆盖：它用本地驱动 + nil
+// refresher 走完整采用路径。
+func TestCDNRefreshOnOverwritePaths(t *testing.T) {
+	uploadDir, err := os.MkdirTemp("", "weichuan-upload-")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(uploadDir) })
+
+	cfg := config.Config{
+		UploadDir:     uploadDir,
+		UploadBaseURL: "http://final",
+		StorageDriver: "minio",
+		StoragePublic: true, // 公开桶：小程序码返回公开 URL（私有桶的签名 URL 不该交给 CDN 刷）
+		JWTKey:        "test-jwt-key",
+		AdminUser:     "admin",
+		AdminPass:     "admin123456",
+		WXAppID:       "wx-appid-for-test",
+		WXAppSecret:   "wx-secret-for-test",
+	}
+
+	// 小程序码要调微信外网接口：注入假生成器，只覆盖「生成 → 覆盖写 → 刷新」这条支线
+	origGen := getWXACode
+	getWXACode = func(wechat.Config, string, string) ([]byte, error) { return []byte("fake-jpeg"), nil }
+	t.Cleanup(func() { getWXACode = origGen })
+
+	ref := &fakeRefresher{}
+	r := buildEngine(t, newSeedDB(t), cfg, fakeUploader{}, ref)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	// 1. 素材采用：对象名固定，重复采用 = 覆盖写 → 必须让 CDN 边缘失效
+	_, body := c.do("POST", "/api/admin/assets/adopt", map[string]interface{}{"id": "icon-house"}, adminToken)
+	require.EqualValues(t, 0, body["code"])
+	require.Equal(t, []string{"http://final/library/icon-house.png"}, ref.urls,
+		"采用后应刷新刚覆盖写的对象（而非上传的随机名对象）")
+
+	// 2. 小程序码：对象名固定 wxacode/<staffID>.jpg，TTL 到期重生成 = 覆盖写
+	const staffID = 990001 // 偏僻 ID：小程序码缓存是进程级全局 map，避免与其它用例串扰
+	t.Cleanup(func() {
+		wxacodeMu.Lock()
+		delete(wxacodeCache, staffID)
+		wxacodeMu.Unlock()
+	})
+	_, body = c.do("GET", fmt.Sprintf("/api/wechat/wxacode?staffId=%d", staffID), nil, "")
+	require.EqualValues(t, 0, body["code"], "响应：%v", body)
+	require.Equal(t, fmt.Sprintf("http://final/wxacode/%d.jpg", staffID),
+		body["data"].(map[string]interface{})["url"])
+	require.Equal(t, []string{
+		"http://final/library/icon-house.png",
+		fmt.Sprintf("http://final/wxacode/%d.jpg", staffID),
+	}, ref.urls, "小程序码覆盖写后应刷新公开 URL")
+
+	// 3. 刷新失败不冒泡：接口仍返回成功
+	ref.err = errors.New("cdn down")
+	_, body = c.do("POST", "/api/admin/assets/adopt", map[string]interface{}{"id": "icon-house"}, adminToken)
+	require.EqualValues(t, 0, body["code"], "CDN 刷新失败不应让用户看到采用失败")
+	require.Equal(t, 3, ref.calls, "失败也算一次尝试（有 [WARN] 日志可查）")
 }
 
 // TestTokenRefresh 验证 refresh 端点（Body 流，小程序端）与令牌吊销：

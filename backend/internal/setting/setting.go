@@ -227,7 +227,13 @@ var registry = []def{
 		Desc:     "已上传文件对外访问的根地址（仅 minio / oss / s3 需要），必须是 http:// 或 https:// 开头的完整地址（例：https://cdn.example.com）。小程序和后台都用它拼出完整的图片链接，填错的话所有图片都会打不开；本地存储用相对地址，不经过这项。改完要重启服务才生效。"},
 	{Key: "cdn_enabled", Group: "storage", Type: "bool", Restart: true, EnvVar: "CDN_ENABLED",
 		Name: "启用 CDN 刷新",
-		Desc: "覆盖同名文件后是否自动刷新 CDN 缓存，让访客立刻看到新文件。要同时填好下面的 CDN 凭据才有用。改完要重启服务才生效。"},
+		// 「仅阿里云」必须写进这一项：三处子字段的 Desc 都写了阿里云，但总开关没写，
+		// 非阿里云 CDN（腾讯云 / Cloudflare / CloudFront / 七牛）的用户开了只会得到
+		// 一串失败的刷新日志（2026-10-23 核查）。CDNRefresher 是接口，后续加厂商
+		// 只需新增实现 + 改装配，界面文案再跟着改。
+		// 「覆盖同名文件」也要说准：普通上传的对象名是随机的、不会覆盖，真正会覆盖的
+		// 是素材采用与小程序码重生成这两条固定对象名的路径（2026-10-23 补接线）。
+		Desc: "覆盖同名文件后是否自动刷新 CDN 缓存，让访客立刻看到新文件（目前只支持阿里云 CDN，其它厂商留「关」即可）。要同时填好下面的 CDN 凭据才有用；刷新失败只记日志，不影响上传结果。改完要重启服务才生效。"},
 	{Key: "cdn_access_key_id", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ACCESS_KEY_ID",
 		Name: "CDN AccessKeyId",
 		Desc: "阿里云 CDN 刷新用的 AccessKeyId，可以和 OSS 的凭据相同。改完要重启服务才生效。"},

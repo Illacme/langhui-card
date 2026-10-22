@@ -154,9 +154,11 @@ func main() {
 	r.Static("/uploads", cfg.UploadDir)
 	handler.RegisterUpload(r, db, up, refresher)       // POST /api/admin/upload + /api/employee/upload
 	handler.RegisterStorage(r, db, up, refresher, cfg) // 直传预签名 / 私有桶签名 / CDN 刷新 / 本地私有文件流
-	handler.RegisterAssets(r, db, up)                  // 常用素材库（内嵌图标/封面/LOGO）：清单 / 采用 / 预览图
-	handler.RegisterWechat(r, cfg, up)                 // GET /api/wechat/wxacode（小程序码，按 staffId）
-	handler.RegisterSettings(r, db, cfg)               // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	// 刷新器往下传给「会覆盖同名对象」的两条路径（素材采用 / 小程序码重生成），
+	// 普通上传的对象名是随机的、永不覆盖，刷新对它本就无意义（见 handler.refreshCDN 注释）
+	handler.RegisterAssets(r, db, up, refresher)  // 常用素材库（内嵌图标/封面/LOGO）：清单 / 采用 / 预览图
+	handler.RegisterWechat(r, cfg, up, refresher) // GET /api/wechat/wxacode（小程序码，按 staffId）
+	handler.RegisterSettings(r, db, cfg)          // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 	// 首次配置状态查询（只读）：已配置时返回 configured=true；未配置时进程根本进不到这里
 	// （见开头 setup.Unconfigured 分支）。前端据此决定是否显示配置引导。
 	// /setup 别名：安装完成后还有人手动敲 /setup 时 302 回首页，不给裸 404。

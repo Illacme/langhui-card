@@ -25,10 +25,14 @@ import (
 //
 // 采用（adopt）而非直接引用素材库 URL 的原因：产物落进上传存储后，
 // URL / CDN / 下游消费（小程序 <image>）与普通上传零差异，不引入新的依赖域。
-func RegisterAssets(r *gin.Engine, db *gorm.DB, up storage.Uploader) {
+//
+// refresher 可选：采用路径是固定对象名（library/<素材ID>.<ext>），重复采用 = 覆盖写，
+// 这是全系统少数几个「同名不同内容」的场景（素材库升级换了图），覆盖后必须让 CDN
+// 边缘失效——2026-10-23 之前刷新只挂在上传接口（对象名随机、永不覆盖），等于没接线。
+func RegisterAssets(r *gin.Engine, db *gorm.DB, up storage.Uploader, refresher storage.CDNRefresher) {
 	r.GET("/api/assets/file/*path", assetFileHandler)
 	r.GET("/api/admin/assets/library", middleware.AuthMiddleware(db, "admin"), libraryListHandler)
-	r.POST("/api/admin/assets/adopt", middleware.AuthMiddleware(db, "admin"), assetAdoptHandler(up))
+	r.POST("/api/admin/assets/adopt", middleware.AuthMiddleware(db, "admin"), assetAdoptHandler(up, refresher))
 }
 
 // assetFileHandler 提供素材预览图（选择器缩略图 + 原图）。
@@ -87,7 +91,7 @@ func libraryListHandler(c *gin.Context) {
 }
 
 // assetAdoptHandler 采用素材：复制进上传存储并返回 URL。
-func assetAdoptHandler(up storage.Uploader) gin.HandlerFunc {
+func assetAdoptHandler(up storage.Uploader, refresher storage.CDNRefresher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
 			ID string `json:"id"`
@@ -113,6 +117,9 @@ func assetAdoptHandler(up storage.Uploader) gin.HandlerFunc {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "采用失败：" + err.Error()})
 			return
 		}
+		// 固定对象名 = 覆盖写：这里才是「同名可能被换成新内容」的场景（素材库升级换图），
+		// 必须让 CDN 边缘失效，否则已经采用过该素材的页面会继续拿到旧图
+		refreshCDN(refresher, url)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{
 			"url": url,
 			"item": gin.H{

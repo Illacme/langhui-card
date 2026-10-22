@@ -147,9 +147,9 @@ func main() {
 	r.Static("/uploads", cfg.UploadDir)
 	handler.RegisterUpload(r, db, up, refresher)
 	handler.RegisterStorage(r, db, up, refresher, cfg)
-	handler.RegisterAssets(r, db, up) // 常用素材库（内嵌图标/封面/LOGO）
-	handler.RegisterWechat(r, cfg, up)
-	handler.RegisterSettings(r, db, cfg) // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	handler.RegisterAssets(r, db, up, refresher)  // 常用素材库（内嵌图标/封面/LOGO）
+	handler.RegisterWechat(r, cfg, up, refresher) // 小程序码
+	handler.RegisterSettings(r, db, cfg)          // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
 	log.Printf("演示账号：平台超管 %s/%s；员工手机 13832603521 / 密码 weichuan123（高立新，业务经理）", cfg.AdminUser, cfg.AdminPass)
