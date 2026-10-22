@@ -84,4 +84,32 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
     const plain = mountRow({ key: 'brand_name', type: 'string' })
     expect(plain.find('.row-control input').attributes('placeholder')).toBe('未设置')
   })
+
+  it('行内校验错误：传了才显示，不传不占版面', () => {
+    // 配置向导在「下一步」前校验地址类项，错误显示在行内（主列表不传，靠后端拦）
+    const w = mountRow({ key: 'upload_base_url', type: 'string' }, 'cdn.example.com')
+    expect(w.find('.row-error').exists()).toBe(false)
+    const w2 = mount(SettingRow, {
+      props: {
+        item: { ...base, key: 'upload_base_url', type: 'string' },
+        modelValue: 'cdn.example.com',
+        error: '不是完整地址，应类似 https://cdn.example.com',
+      },
+      global: {
+        stubs: {
+          'el-select': { template: '<select><slot /></select>' },
+          'el-option': { template: '<option />' },
+          'el-input-number': { template: '<input type="number" />' },
+          'el-input': { template: '<input type="text" :placeholder="placeholder" />', props: ['placeholder'] },
+          'el-button': { template: '<button><slot /></button>' },
+          'el-tag': { template: '<span><slot /></span>' },
+          'el-tooltip': {
+            template: '<span class="el-tooltip"><slot /><span class="el-tooltip__content">{{ content }}</span></span>',
+            props: ['content', 'placement'],
+          },
+        },
+      },
+    })
+    expect(w2.find('.row-error').text()).toContain('不是完整地址')
+  })
 })

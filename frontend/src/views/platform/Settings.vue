@@ -224,14 +224,53 @@
         >
       </div>
       <div class="wizard-blurb">{{ currentStep.blurb }}</div>
+      <!-- 快速开始预设：只出现在第 1 步。「这是什么部署」是开始配之前要先回答的
+           问题——选好模式，存储与上传限制落到推荐值，后面每一步仍可改。
+           放在第 1 步而不是存储步：先定调子再看明细，符合「从粗到细」的认知顺序。 -->
+      <div v-if="currentStep.key === 'brand'" class="wizard-preset">
+        <span class="wizard-preset-label">快速开始：</span>
+        <el-button
+          size="small"
+          :type="activePreset === 'demo' ? 'primary' : 'default'"
+          @click="applyPreset('demo')"
+        >
+          演示模式
+        </el-button>
+        <el-button
+          size="small"
+          :type="activePreset === 'prod' ? 'primary' : 'default'"
+          @click="applyPreset('prod')"
+        >
+          生产模式
+        </el-button>
+        <el-button v-if="presetNote" size="small" text type="primary" @click="wizardJumpToKey('storage_driver')">
+          去「存储与上传」步
+        </el-button>
+        <span v-if="presetNote" class="wizard-preset-note">{{ presetNote }}</span>
+      </div>
       <div class="wizard-body">
+        <template v-for="g in currentGroups" :key="g.label">
+          <div class="wizard-group-title">{{ g.label }}</div>
+          <SettingRow
+            v-for="item in g.items"
+            :key="item.key"
+            :item="item"
+            :model-value="draft[item.key]"
+            :focus="depState(item.key).focus"
+            :dim="depState(item.key).dim"
+            :error="currentStepErrors[item.key]"
+            @change="setVal"
+            @clear="clearSecret"
+          />
+        </template>
         <SettingRow
-          v-for="item in currentVisible"
+          v-for="item in currentUngrouped"
           :key="item.key"
           :item="item"
           :model-value="draft[item.key]"
           :focus="depState(item.key).focus"
           :dim="depState(item.key).dim"
+          :error="currentStepErrors[item.key]"
           @change="setVal"
           @clear="clearSecret"
         />
@@ -297,6 +336,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { getSettings, updateSettings, type SettingItem } from '@/api/settings'
 import { useSettingsStore } from '@/store/settings'
 import SettingRow from '@/components/SettingRow.vue'
+import { clearWizardDraft, loadWizardDraft, saveWizardDraft } from '@/utils/wizardDraft'
 
 // 分组展示顺序与中文名；与后端 setting.registry 的 group 字段对应。
 // 未登记的分组兜底显示在最后，避免后端新增分组后前端丢项。
@@ -333,6 +373,21 @@ const draft = reactive<Record<string, string>>({})
 // 敏感项点「清除」= 显式提交空串（回退环境变量）。它与「没动过」不是一回事，
 // 因为两者在输入框里都是空值，必须单独记一笔才能正确生成提交载荷。
 const cleared = reactive<Record<string, boolean>>({})
+// 草稿改动即暂存到 localStorage：刷新 / 误关标签页后回来接着改，不用从头填。
+// 主列表与配置向导共用 draft，两边都受益；保存成功（save）与登出（auth store）会清掉。
+// 只暂存「未保存的中间态」——保存成功 / 重置后草稿回到干净态，此时必须清而不是
+// 再写一遍（否则下次进页面会恢复出一份「已保存过」的旧改动，白让人以为有未存修改）。
+watch(
+  [draft, cleared],
+  () => {
+    if (changedKeys.value.length === 0) {
+      clearWizardDraft()
+      return
+    }
+    saveWizardDraft(draft, cleared)
+  },
+  { deep: true },
+)
 const loading = ref(true)
 const saving = ref(false)
 // 保存后「需重启才生效」的项（中文名）：常驻提示到用户手动关掉。
@@ -661,6 +716,10 @@ interface WizardStep {
   blurb: string
   /** 候选 key；条件显隐的按 depState 过滤，后端缺省的（旧版本）自动跳过 */
   keys: string[]
+  /** 步内小组：项多的步骤再按「在配什么」分堆，小标题让人不用逐行读描述。
+      小组 key 应是 keys 的子集；未归组的 key 平铺在小组之后。
+      整组被 depState 置灰时连标题一起隐藏（见 currentGroups） */
+  groups?: { label: string; keys: string[] }[]
 }
 const WIZARD_STEPS: WizardStep[] = [
   {
@@ -683,12 +742,32 @@ const WIZARD_STEPS: WizardStep[] = [
       'storage_use_ssl',
       'upload_base_url',
     ],
+    groups: [
+      // local 与云存储两套互斥的配置混在一屏，最容易看串；
+      // 按「东西放哪」和「外面怎么访问到」分开，各配各的
+      { label: '存储位置', keys: ['storage_driver', 'upload_dir'] },
+      {
+        label: '访问方式',
+        keys: [
+          'storage_endpoint',
+          'storage_bucket',
+          'storage_access_key',
+          'storage_secret_key',
+          'storage_use_ssl',
+          'upload_base_url',
+        ],
+      },
+    ],
   },
   {
     key: 'limits',
     title: '上传限制',
     blurb: '限制单文件大小与允许的类型，防止撑爆存储。默认值已可用，按需调整。',
     keys: ['upload_max_mb', 'upload_allow_ext', 'upload_video_max_mb'],
+    groups: [
+      { label: '大小上限', keys: ['upload_max_mb', 'upload_video_max_mb'] },
+      { label: '允许类型', keys: ['upload_allow_ext'] },
+    ],
   },
   {
     key: 'wechat',
@@ -701,6 +780,10 @@ const WIZARD_STEPS: WizardStep[] = [
     title: '小程序接入',
     blurb: '小程序端冷启动第一个请求打到哪。必须是小程序能访问到的公网 https 地址，填错小程序直接连不上。',
     keys: ['miniprogram_base_url', 'pinned_company_id'],
+    groups: [
+      { label: '接入地址', keys: ['miniprogram_base_url'] },
+      { label: '独立版锁定（可选）', keys: ['pinned_company_id'] },
+    ],
   },
   {
     key: 'final',
@@ -734,6 +817,27 @@ let wizardClearedSnapshot: Record<string, boolean> = {}
 
 const currentStep = computed(() => WIZARD_STEPS[wizardStep.value])
 const currentVisible = computed(() => stepVisible(currentStep.value))
+// 步内小组：groups 元数据 + depState 过滤（整组被置灰则连标题一起收起）。
+// 与 stepVisible 用同一套过滤条件，保证「标题下出现的行为」与 chips 计数一致。
+const currentGroups = computed(() => {
+  const groups = currentStep.value.groups
+  if (!groups) return []
+  return groups
+    .map((g) => ({
+      label: g.label,
+      items: g.keys
+        .map((k) => items.value.find((i) => i.key === k))
+        .filter((it): it is SettingItem => !!it && !it.readOnly && !depState(it.key).dim),
+    }))
+    .filter((g) => g.items.length > 0)
+})
+// 未归组的项（无 groups 的步骤 / 元数据没覆盖的 key）：平铺在小组之后，不丢项
+const currentUngrouped = computed(() => {
+  const s = currentStep.value
+  if (!s.groups) return currentVisible.value
+  const grouped = new Set(s.groups.flatMap((g) => g.keys))
+  return currentVisible.value.filter((it) => !grouped.has(it.key))
+})
 const isLastStep = computed(() => wizardStep.value === WIZARD_STEPS.length - 1)
 const wizardRestartKeys = computed(() =>
   changedKeys.value
@@ -758,6 +862,57 @@ function wizardJumpToKey(key: string) {
   const idx = WIZARD_STEPS.findIndex((s) => s.keys.includes(key))
   if (idx >= 0) wizardStep.value = idx
 }
+
+// ---- 向导内联校验 ----
+// 地址类项填错的表现最远（图片全打不开 / 小程序连不上），且后台保存时的校验
+// 只告诉你「哪一项不合法」，不告诉你「在向导哪一步」。所以在「下一步 / 完成」
+// 之前就按后端 validate.go 的同一条规则先拦一道：当场指出错误、就地改。
+// miniprogram_base_url 比后端更严一档（要求 https）：微信小程序官方只收 https，
+// http:// 能过后端校验但连不上，提示语里说清原因。
+const URL_RULES: Record<string, { httpsOnly?: boolean; example: string }> = {
+  upload_base_url: { example: 'https://cdn.example.com' },
+  miniprogram_base_url: { httpsOnly: true, example: 'https://mp.example.com' },
+}
+function validateUrlValue(key: string, value: string): string {
+  const rule = URL_RULES[key]
+  if (!rule) return ''
+  const s = (value ?? '').trim()
+  // 留空 = 回退环境变量 / 内置缺省，合法（与后端 httpURLOrEmpty 一致）
+  if (!s) return ''
+  let u: URL
+  try {
+    u = new URL(s)
+  } catch {
+    return `不是完整地址，应类似 ${rule.example}`
+  }
+  if (!u.hostname) return `缺少域名或 IP，应类似 ${rule.example}`
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+    return `只支持 http:// 或 https:// 开头的完整地址（例 ${rule.example}）`
+  }
+  if (rule.httpsOnly && u.protocol !== 'https:') {
+    return `微信小程序只支持 https 地址，http:// 会导致小程序连不上（例 ${rule.example}）`
+  }
+  return ''
+}
+// 某一步可见项里的地址错误（含中文名，提示语直接说「哪一项」）
+function stepErrors(i: number): { key: string; name: string; msg: string }[] {
+  return stepVisible(WIZARD_STEPS[i])
+    .map((it) => ({
+      key: it.key,
+      name: it.name || it.key,
+      msg: validateUrlValue(it.key, draft[it.key] ?? ''),
+    }))
+    .filter((x) => !!x.msg)
+}
+// 当前步的行内错误：随草稿实时重算——用户一改成合法值，错误立即消失
+const currentStepErrors = computed<Record<string, string>>(() => {
+  const errs: Record<string, string> = {}
+  currentVisible.value.forEach((it) => {
+    const msg = validateUrlValue(it.key, draft[it.key] ?? '')
+    if (msg) errs[it.key] = msg
+  })
+  return errs
+})
 function wizardSeen(): boolean {
   try {
     return !!localStorage.getItem(WIZARD_SEEN_KEY)
@@ -773,6 +928,43 @@ function markWizardSeen() {
     // 写不进只影响「不再自动弹」，向导仍可手动打开，静默跳过即可
   }
 }
+// ---- 快速开始预设 ----
+// 第一次部署的人面对 8 个存储项无从下手：演示要能尽快跑起来，生产要安全。
+// 一键填入推荐组合，之后每一步里仍可改——预设只是起点，不是锁定。
+// 上传限制的「默认值」与后端 registry 缺省一致（前端没有缺省值接口，属镜像值，
+// 后端改缺省时这里要同步）；且只在「没设过」时填：用户显式改过的值不被预设覆盖。
+const PRESET_LIMIT_DEFAULTS: Record<string, string> = {
+  upload_max_mb: '10',
+  upload_video_max_mb: '100',
+  upload_allow_ext: 'png,jpg,jpeg,gif,webp,mp4',
+}
+const presetNote = ref('')
+const activePreset = computed(() => {
+  if (draft.storage_driver === 'minio') return 'prod'
+  if (draft.storage_driver === 'local' && draft.upload_dir === './data/uploads') return 'demo'
+  return ''
+})
+function applyPreset(mode: 'demo' | 'prod') {
+  Object.entries(PRESET_LIMIT_DEFAULTS).forEach(([k, v]) => {
+    // 只填空项：后端还没有这一项（旧版本）或用户没设过时才填推荐值
+    if (items.value.some((x) => x.key === k) && !draft[k]) setVal(k, v)
+  })
+  if (mode === 'demo') {
+    setVal('storage_driver', 'local')
+    setVal('upload_dir', './data/uploads')
+    // local 走同源 /uploads 访问，外部基址留空即可；显式清掉旧值，
+    // 避免上一套 CDN 域名残留，把图片继续指到已经不存在的地方
+    setVal('upload_base_url', '')
+    presetNote.value =
+      '已按演示模式填入：存储=local、目录=./data/uploads、上传限制=默认值（你改过的保持原样）。local 下文件经同源 /uploads 访问，不需要外部基址。'
+  } else {
+    setVal('storage_driver', 'minio')
+    setVal('storage_use_ssl', 'true')
+    presetNote.value =
+      '已按生产模式填入：存储=minio、连接走 HTTPS。存储端点、桶名、AccessKey / SecretKey、文件访问基址需按你的对象存储手动填写——到下一步逐项确认。'
+  }
+}
+
 function openWizard() {
   wizardSnapshot = { ...draft }
   wizardClearedSnapshot = { ...cleared }
@@ -783,6 +975,12 @@ function prevStep() {
   if (wizardStep.value > 0) wizardStep.value--
 }
 function nextStep() {
+  // 地址类填错当场拦住：不让错误值被带到后面步骤（保存时才发现就晚了）
+  const errs = stepErrors(wizardStep.value)
+  if (errs.length > 0) {
+    ElMessage.warning(`「${errs[0].name}」${errs[0].msg}，请修正后再进入下一步`)
+    return
+  }
   if (wizardStep.value < WIZARD_STEPS.length - 1) wizardStep.value++
 }
 function wizardCancel() {
@@ -793,6 +991,17 @@ function wizardCancel() {
 }
 async function wizardFinish() {
   markWizardSeen()
+  // 全步骤兜底：步骤条允许自由跳转，用户可能没逐步走过，
+  // 前面步骤里填错的地址项在这里统一拦下——直接保存会被后端拒绝，
+  // 那时错误信息指不回向导的某一步，不如现在跳回去就地改
+  for (let i = 0; i < WIZARD_STEPS.length - 1; i++) {
+    const errs = stepErrors(i)
+    if (errs.length > 0) {
+      wizardStep.value = i
+      ElMessage.warning(`「${errs[0].name}」${errs[0].msg}，请修正后再完成`)
+      return
+    }
+  }
   // 一步没改就直接关：不让「完成」按钮制造一次空保存的等待
   if (!dirty.value) {
     wizardOpen.value = false
@@ -831,6 +1040,21 @@ async function load() {
         draft[it.key] = original[it.key]
         cleared[it.key] = false
       })
+      // 恢复上次未保存的草稿（刷新 / 误关页面不丢）。只认当前后端还认的 key——
+      // 旧版本删掉的配置项不复活；值与原值相同的项不计入提示，避免「什么都没改却弹通知」。
+      const stored = loadWizardDraft()
+      if (stored) {
+        let restored = 0
+        items.value.forEach((it) => {
+          if (!(it.key in stored.draft)) return
+          draft[it.key] = stored.draft[it.key]
+          if (it.key in stored.cleared) cleared[it.key] = !!stored.cleared[it.key]
+          if (draft[it.key] !== original[it.key] || cleared[it.key]) restored++
+        })
+        if (restored > 0) {
+          ElMessage.info(`已恢复上次未保存的 ${restored} 项改动，可继续编辑；不需要可点「重置」还原`)
+        }
+      }
       // 全新部署（一项都没就绪、也没主动关过向导）自动拉起向导：
       // 否则用户第一次打开设置页，看到的只是一片空输入框，不知道从哪开始。
       if (readyCount.value === 0 && !wizardSeen()) {
@@ -889,6 +1113,8 @@ async function save(): Promise<boolean> {
     if (payload.brand_name !== undefined) {
       settings.setBrandName(payload.brand_name || '')
     }
+    // 保存成功 = 暂存的草稿已落地，再留着下次会恢复出一份「已保存过」的旧改动
+    clearWizardDraft()
     const restart = r?.data?.restartKeys || []
     if (restart.length > 0) {
       // 详情交给常驻提示条（含重启命令），toast 只负责让人立刻注意到
@@ -1366,9 +1592,50 @@ onMounted(load)
   line-height: 1.6;
   margin-bottom: 8px;
 }
+/* 快速开始预设条：浅灰底把自己和步骤内容分开，按钮 + 说明同一行不抢焦点 */
+.wizard-preset {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #f5f7fa;
+  border-radius: 6px;
+}
+.wizard-preset-label {
+  font-size: 12px;
+  color: #606266;
+}
+.wizard-preset-note {
+  flex-basis: 100%;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.6;
+}
 .wizard-body {
   max-height: 46vh;
   overflow-y: auto;
+}
+/* 步内小组标题：一步里项多时按「在配什么」再分堆。小标题 + 尾部细线，
+   分组一眼可辨又不加大视觉重量（与步骤 chips 的轻量风格一致） */
+.wizard-group-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+  margin: 14px 0 2px;
+}
+.wizard-body > .wizard-group-title:first-child {
+  margin-top: 0;
+}
+.wizard-group-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #ebeef5;
 }
 .wizard-final {
   margin-top: 10px;

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { AdminProfile } from '@/api/auth'
+import { clearWizardDraft } from '@/utils/wizardDraft'
 
 // 后台登录态。PC 后台改用 httpOnly Cookie 鉴权后，令牌由浏览器持有、JS 不可读，
 // 故这里只保存非敏感信息：用户名 + 登录标记 + 租户身份，用于路由守卫与界面展示。
@@ -66,6 +67,9 @@ export const useAuthStore = defineStore('auth', {
       localStorage.removeItem('admin_company_short_name')
       localStorage.removeItem('admin_is_platform')
       localStorage.removeItem('admin_independent_lock')
+      // 系统设置 / 配置向导的未保存草稿随会话一起清：换人登录不该看到
+      // 上一个人留在输入框里的半截值（其中可能含刚键入还没保存的密钥）
+      clearWizardDraft()
     },
     persist() {
       localStorage.setItem('admin_user', this.username)

@@ -87,4 +87,16 @@ describe('useAuthStore 登录态', () => {
     expect(s.companyShortName).toBe('')
     expect(localStorage.getItem('admin_company_short_name')).toBeNull()
   })
+
+  it('logout：清空系统设置 / 配置向导的未保存草稿', () => {
+    // 换人登录不该看到上一个人留在输入框里的半截值（可能含未保存的密钥）
+    localStorage.setItem(
+      'settings_wizard_draft',
+      JSON.stringify({ v: 1, draft: { brand_name: '上个人的草稿' }, cleared: {} }),
+    )
+    const s = useAuthStore()
+    s.setAuth('admin')
+    s.logout()
+    expect(localStorage.getItem('settings_wizard_draft')).toBeNull()
+  })
 })

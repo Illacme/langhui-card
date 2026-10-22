@@ -41,6 +41,9 @@
           </template>
         </span>
       </div>
+      <!-- 行内校验错误：配置向导在「下一步 / 完成」前校验地址类项，当场指出错误。
+           主列表不传（保存时由后端逐条校验并弹提示），故这里默认不占版面 -->
+      <div v-if="error" class="row-error">{{ error }}</div>
     </div>
 
     <div class="row-control">
@@ -121,6 +124,8 @@ const props = defineProps<{
   focus?: boolean
   /** 依赖联动：当前选项下暂不需要（置灰） */
   dim?: boolean
+  /** 行内校验错误文案（配置向导用；主列表不传） */
+  error?: string
 }>()
 
 const emit = defineEmits<{
@@ -245,6 +250,14 @@ const numVal = computed(() => {
 .env-hint {
   margin-left: 6px;
   color: #c0c4cc;
+}
+/* 行内校验错误：紧贴说明下方，红色小字。不放大字号、不加图标——
+   向导的目标是「改完就能过」，错误提示只需要被看见，不需要被强调 */
+.row-error {
+  margin-top: 4px;
+  color: #f56c6c;
+  font-size: 12px;
+  line-height: 1.6;
 }
 .row-control {
   flex: none;

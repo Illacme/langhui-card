@@ -191,6 +191,12 @@ function dialogButton(w: any, text: string) {
   expect(b, `向导中未找到按钮: ${text}`).toBeTruthy()
   return b!
 }
+// 非抛出版本：断言向导中某行「不在场」（被 depState 置灰隐藏时用）
+function dialogRowExists(w: any, key: string) {
+  return dialogOf(w)
+    .findAll('.row')
+    .some((x: any) => x.text().includes(key))
+}
 function wizardEntryButton(w: any) {
   return w.findAll('button.el-button').find((b: any) => b.text().includes('配置向导'))!
 }
@@ -574,6 +580,173 @@ describe('Settings 系统设置', () => {
     expect(updateSettings).not.toHaveBeenCalled()
   })
 
+  // ---- P1：快速开始预设 ----
+  it('快速开始预设：演示 / 生产一键填入推荐值，只出现在第 1 步', async () => {
+    // upload_max_mb 置空：验证「没设过才填」的分支；已有值的 upload_allow_ext 应保持原样
+    vi.mocked(getSettings).mockImplementationOnce(async () => ({
+      code: 0,
+      data: items.map((it) => (it.key === 'upload_max_mb' ? { ...it, value: '', configured: false } : it)),
+    }) as any)
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    // 默认落在第 2 步（存储）：预设条不出现——已经看着存储项了，不需要再问一遍
+    expect(dialogOf(w).find('.wizard-preset').exists()).toBe(false)
+
+    // 回第 1 步：预设条出现
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('品牌与身份'))!
+      .trigger('click')
+    await nextTick()
+    const preset = dialogOf(w).find('.wizard-preset')
+    expect(preset.exists()).toBe(true)
+    const presetBtn = (text: string) =>
+      preset.findAllComponents({ name: 'ElButton' }).find((b: any) => b.text() === text)!
+
+    // 演示模式：目录与上传限制落推荐值；已设过值的项不被覆盖
+    await presetBtn('演示模式').trigger('click')
+    await nextTick()
+    // 说明还留在第 1 步（预设条是第 1 步专属），讲清填了什么、什么保持原样
+    expect(dialogOf(w).text()).toContain('已按演示模式填入')
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('上传限制'))!
+      .trigger('click')
+    await nextTick()
+    expect((dialogRow(w, 'upload_max_mb').find('input.el-input-number').element as HTMLInputElement).value).toBe('10')
+    expect((dialogRow(w, 'upload_allow_ext').find('input.el-input').element as HTMLInputElement).value).toBe('png,jpg')
+
+    // 预设条里直接跳到存储步，验证生产模式的填入结果
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('品牌与身份'))!
+      .trigger('click')
+    await nextTick()
+    const preset2 = dialogOf(w).find('.wizard-preset')
+    const jumpBtn = preset2.findAll('button.el-button').find((b: any) => b.text() === '去「存储与上传」步')
+    expect(jumpBtn, '填入后应出现跳转按钮').toBeTruthy()
+    await preset2
+      .findAllComponents({ name: 'ElButton' })
+      .find((b: any) => b.text() === '生产模式')!
+      .trigger('click')
+    await nextTick()
+    // 当前模式高亮：生产模式按钮变主色
+    expect(
+      preset2.findAllComponents({ name: 'ElButton' }).find((b: any) => b.text() === '生产模式')!.props('type'),
+    ).toBe('primary')
+    expect(dialogOf(w).text()).toContain('需按你的对象存储手动填写')
+
+    await jumpBtn!.trigger('click')
+    await nextTick()
+    expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
+    // 生产模式：minio + HTTPS 开
+    expect((dialogRow(w, 'storage_driver').find('input.el-input').element as HTMLInputElement).value).toBe('minio')
+    expect(dialogRow(w, 'storage_use_ssl').find('select.el-select').element.value).toBe('true')
+  })
+
+  // ---- P2：向导内联格式校验 ----
+  it('向导内联校验：地址不合法不放行下一步，行内即时给出错误', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    // 第 2 步（存储）：upload_base_url 填一个不带协议的地址
+    await dialogRow(w, 'upload_base_url').find('input.el-input').setValue('cdn.example.com')
+    await nextTick()
+    // 行内错误即时出现（不用等点下一步），指出该填成什么样
+    expect(dialogRow(w, 'upload_base_url').text()).toContain('不是完整地址')
+
+    // 点下一步：被拦住，仍在第 2 步，并说明是哪一项
+    await dialogButton(w, '下一步').trigger('click')
+    await nextTick()
+    expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
+    expect(vi.mocked(ElMessage.warning).mock.calls[0][0]).toContain('文件访问基址')
+
+    // 改成合法地址：错误消失、放行
+    await dialogRow(w, 'upload_base_url').find('input.el-input').setValue('https://cdn.example.com')
+    await nextTick()
+    expect(dialogRow(w, 'upload_base_url').text()).not.toContain('不是完整地址')
+    await dialogButton(w, '下一步').trigger('click')
+    await nextTick()
+    expect(dialogOf(w).text()).toContain('第 3 步 / 共 6 步')
+  })
+
+  it('向导内联校验：小程序基址只收 https；「完成」前全步骤兜底', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    // 去小程序步，填 http:// 地址：后端只校验前缀能过，但小程序连不上，这里更严一档
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('小程序接入'))!
+      .trigger('click')
+    await nextTick()
+    await dialogRow(w, 'miniprogram_base_url').find('input.el-input').setValue('http://mp.example.com')
+    await nextTick()
+    expect(dialogRow(w, 'miniprogram_base_url').text()).toContain('只支持 https')
+
+    // 步骤条允许自由跳转：直接跳到安全确认步，再点「保存并完成」
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('安全确认'))!
+      .trigger('click')
+    await nextTick()
+    await dialogButton(w, '保存并完成').trigger('click')
+    await nextTick()
+    // 被全步骤校验兜住：跳回出错步骤、不提交、对话框不关
+    expect(dialogOf(w).text()).toContain('第 5 步 / 共 6 步')
+    expect(updateSettings).not.toHaveBeenCalled()
+    expect(w.find('.el-dialog').exists()).toBe(true)
+
+    // 改成 https：校验放过，正常提交
+    await dialogRow(w, 'miniprogram_base_url').find('input.el-input').setValue('https://mp.example.com')
+    await nextTick()
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('安全确认'))!
+      .trigger('click')
+    await nextTick()
+    await dialogButton(w, '保存并完成').trigger('click')
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
+    expect(updateSettings).toHaveBeenCalledWith({ miniprogram_base_url: 'https://mp.example.com' })
+  })
+
+  // ---- P1：草稿暂存（刷新不丢） ----
+  it('草稿暂存：刷新后恢复上次未保存的改动，可继续编辑', async () => {
+    // 模拟「上次改到一半刷新了页面」：localStorage 里留着未保存草稿。
+    // setup() 会先 clear，所以这里在挂载前重新种入
+    localStorage.setItem(
+      'settings_wizard_draft',
+      JSON.stringify({ v: 1, draft: { brand_name: '改到一半的品牌' }, cleared: {} }),
+    )
+    setActivePinia(createPinia())
+    const w = mount(Settings, mountOpts)
+    await vi.waitFor(() => expect(getSettings).toHaveBeenCalled())
+    await nextTick()
+    // 草稿值回到输入框（而不是服务端原值），保存按钮可用
+    expect((textInputOf(w, 'brand_name').element as HTMLInputElement).value).toBe('改到一半的品牌')
+    expect(saveButton(w).attributes('disabled')).toBeUndefined()
+    // 明确告知恢复了几项，避免「没改过却显示有变更」的困惑
+    expect(
+      vi.mocked(ElMessage.info).mock.calls.some((c: any[]) => String(c[0]).includes('已恢复上次未保存的 1 项改动')),
+    ).toBe(true)
+    // 暂存里没有的 key 不受影响
+    expect((textInputOf(w, 'miniprogram_base_url').element as HTMLInputElement).value).toBe('')
+  })
+
+  it('草稿暂存：改动即写入；保存成功后清除，不恢复出已保存过的旧改动', async () => {
+    const { w } = await setup()
+    await textInputOf(w, 'brand_name').setValue('暂存测试')
+    await nextTick()
+    const raw = JSON.parse(localStorage.getItem('settings_wizard_draft')!)
+    expect(raw.draft.brand_name).toBe('暂存测试')
+
+    await saveButton(w).trigger('click')
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
+    // 保存成功 = 草稿已落地，暂存必须清除（含 watch 在微任务里的兜底清除）
+    await vi.waitFor(() => expect(localStorage.getItem('settings_wizard_draft')).toBeNull())
+  })
+
   it('向导无改动时「完成」直接关闭，不发起空保存', async () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
@@ -652,6 +825,53 @@ describe('Settings 系统设置', () => {
     // local 驱动下可见项：storage_driver（已配）/ upload_dir / upload_base_url（未配）
     expect(chip!.find('.wizard-stepchip-count').text()).toBe('2')
     expect(dialogOf(w).text()).toContain('本步 2 项待配置')
+  })
+
+  it('步内小组标题：项多的步骤按主题分堆，无分组的步骤不渲染', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    // 默认落在存储步：存储位置 / 访问方式两组
+    expect(dialogOf(w).findAll('.wizard-group-title').map((t: any) => t.text())).toEqual([
+      '存储位置',
+      '访问方式',
+    ])
+    // local 下：本地上传目录在「存储位置」组可见；云凭据被置灰，整组不出现
+    expect(dialogRow(w, 'upload_dir').exists()).toBe(true)
+    expect(dialogRowExists(w, 'storage_endpoint')).toBe(false)
+
+    // 上传限制步：大小上限 / 允许类型
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('上传限制'))!
+      .trigger('click')
+    await nextTick()
+    expect(dialogOf(w).findAll('.wizard-group-title').map((t: any) => t.text())).toEqual([
+      '大小上限',
+      '允许类型',
+    ])
+    expect(dialogRow(w, 'upload_max_mb').exists()).toBe(true)
+    expect(dialogRow(w, 'upload_allow_ext').exists()).toBe(true)
+
+    // 小程序步：接入地址 / 独立版锁定（可选）
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('小程序接入'))!
+      .trigger('click')
+    await nextTick()
+    expect(dialogOf(w).findAll('.wizard-group-title').map((t: any) => t.text())).toEqual([
+      '接入地址',
+      '独立版锁定（可选）',
+    ])
+
+    // 无 groups 元数据的步骤（品牌 / 微信）保持平铺，不画小标题
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('微信凭据'))!
+      .trigger('click')
+    await nextTick()
+    expect(dialogOf(w).findAll('.wizard-group-title')).toHaveLength(0)
+    expect(dialogRow(w, 'wx_appid').exists()).toBe(true)
   })
 
   it('格式关键项给示例占位与悬浮说明徽标', async () => {
