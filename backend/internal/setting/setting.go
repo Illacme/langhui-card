@@ -58,6 +58,11 @@ type def struct {
 	ReadOnly bool
 	// EnvVar：对应环境变量名。界面据此提示改法；未设置时回退该环境变量。
 	EnvVar string
+	// Options 枚举候选值（可选）：界面据此渲染下拉而不是文本框，
+	// 与 Validate 的 oneOf 同源——写在一处旁边，改值时一起改，
+	// 避免出现「下拉能选、保存被拒」或反之（2026-10-22 用户实测：
+	// storage_driver 有 oneOf 校验却渲染成文本框，填错只能靠保存时报错）。
+	Options []string
 	// Validate 业务校验（可选）：**类型之外**的取值约束（上下限 / 枚举 / URL 前缀 /
 	// 租户是否存在）。只给「填错会造成大面积故障或把自己锁住」的项加，不做普遍校验——
 	// 处处拦截会让运营改个配置处处碰壁，不如让它自愈（见 validate.go 的包注释）。
@@ -82,7 +87,10 @@ type Item struct {
 	Restart    bool   `json:"restart"`
 	ReadOnly   bool   `json:"readOnly"`
 	EnvVar     string `json:"envVar"`
-	Configured bool   `json:"configured"` // 是否有有效值（库值 / 环境变量 / 进程内缺省）
+	// Options 枚举候选值（仅枚举项有）：界面据此渲染下拉。omitempty 保证
+	// 旧客户端（不认这个字段）与大多数项（无候选值）的响应形状不变。
+	Options    []string `json:"options,omitempty"`
+	Configured bool     `json:"configured"` // 是否有有效值（库值 / 环境变量 / 进程内缺省）
 }
 
 // registry 全量「可后台配置项」清单：新增可配置项只在此追加一行即可。
@@ -169,6 +177,7 @@ var registry = []def{
 	// 因此允许在界面维护；留空则回退同名环境变量。
 	{Key: "storage_driver", Group: "storage", Type: "string", Restart: true, EnvVar: "STORAGE_DRIVER",
 		Name:     "存储方式",
+		Options:  []string{"local", "minio", "oss"},
 		Validate: oneOf("local", "minio", "oss"),
 		Desc:     "图片和视频存到哪里：local=服务器本地磁盘，minio=MinIO 或 S3 兼容存储，oss=阿里云 OSS。留空则使用部署环境里配置的值。改完要重启服务才生效。"},
 	{Key: "storage_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ENDPOINT",
@@ -555,6 +564,7 @@ func All() []Item {
 			Key: d.Key, Name: d.Name, Group: d.Group, Type: d.Type,
 			Description: d.Desc,
 			Secret:      d.Secret, Restart: d.Restart, ReadOnly: d.ReadOnly, EnvVar: d.EnvVar,
+			Options:     d.Options,
 		}
 		it.Configured = configured(d, stored)
 		if d.Secret {

@@ -1932,6 +1932,7 @@ paths:
         - restart：保存后需重启进程才生效（云存储 / CDN 客户端在启动时构造）
         - readOnly：只读项（db_dsn / jwt_key / cookie_*），PUT 会被拒绝
         - envVar：对应环境变量名（留空时回退它）
+        - options：枚举候选值（仅枚举项有，如 storage_driver），界面据此渲染下拉
         - configured：当前是否已有有效值
       tags: [设置]
       responses:
@@ -2746,6 +2747,11 @@ components:
         envVar:
           type: string
           description: 对应环境变量名；留空时回退它
+        options:
+          type: array
+          items:
+            type: string
+          description: 枚举候选值（仅枚举项有，如 storage_driver 的 local/minio/oss）；界面据此渲染下拉，缺失时按文本框渲染
         configured:
           type: boolean
 

@@ -25,7 +25,9 @@ function mountRow(item: Record<string, unknown>, modelValue = '') {
     props: { item: { ...base, ...item }, modelValue },
     global: {
       stubs: {
-        'el-select': { template: '<select><slot /></select>' },
+        // stub 要渲染 placeholder：三态下拉的空值态靠它显示「未设置（…）」而不是
+// Element Plus 通用「请选择」（EP 2.14 hasModelValue 对空串为 false，见组件注释）
+'el-select': { template: '<select :placeholder="placeholder"><slot /></select>', props: ['placeholder'] },
         'el-option': { template: '<option />' },
         'el-input-number': { template: '<input type="number" />' },
         // stub 要渲染 placeholder：示例占位符是「填什么格式」的引导，断言它就得看得见
@@ -46,6 +48,17 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
   it('bool 行只渲染一个控件（三态下拉）', () => {
     const w = mountRow({ type: 'bool' })
     expect(w.find('.row-control').findAll('select, input')).toHaveLength(1)
+  })
+
+  it('三态下拉空值态显示「未设置（…）」而不是通用「请选择」', () => {
+    // EP 2.14：hasModelValue 对空串为 false，不显式传 placeholder 会回落「请选择」，
+    // 看着像必选项，与「留空=回退环境变量/缺省值」相反。bool 与枚举两条分支都要守。
+    const withEnv = mountRow({ type: 'bool', envVar: 'CDN_ENABLED' })
+    expect(withEnv.find('.row-control select').attributes('placeholder')).toBe('未设置（用部署环境的值）')
+    const noEnv = mountRow({ type: 'bool' })
+    expect(noEnv.find('.row-control select').attributes('placeholder')).toBe('未设置（用缺省值）')
+    const enumRow = mountRow({ type: 'string', options: ['local', 'minio', 'oss'], envVar: 'STORAGE_DRIVER' })
+    expect(enumRow.find('.row-control select').attributes('placeholder')).toBe('未设置（用部署环境的值）')
   })
 
   it('int 行只渲染一个控件（数字框）', () => {
@@ -85,6 +98,21 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
     expect(plain.find('.row-control input').attributes('placeholder')).toBe('未设置')
   })
 
+  it('枚举项渲染为三态下拉：未设置 + 后端下发的候选值', () => {
+    // storage_driver 后端有 oneOf 校验 + Options 候选：界面必须渲染下拉而不是
+    // 文本框——候选值就摆在后端却让人手打，填错只能等保存时报错
+    // （2026-10-22 用户实测：「存储方式还是填写字符串的方式，怎么没有下拉」）
+    const w = mountRow({ key: 'storage_driver', type: 'string', options: ['local', 'minio', 'oss'] })
+    expect(w.find('.row-control select').exists()).toBe(true)
+    expect(w.find('.row-control input').exists()).toBe(false)
+    // 未设置（回退环境变量）+ 3 个候选
+    expect(w.findAll('.row-control option')).toHaveLength(4)
+    // 未登记 options 的普通字符串项仍是文本框
+    const plain = mountRow({ key: 'brand_name', type: 'string' })
+    expect(plain.find('.row-control select').exists()).toBe(false)
+    expect(plain.find('.row-control input').exists()).toBe(true)
+  })
+
   it('行内校验错误：传了才显示，不传不占版面', () => {
     // 配置向导在「下一步」前校验地址类项，错误显示在行内（主列表不传，靠后端拦）
     const w = mountRow({ key: 'upload_base_url', type: 'string' }, 'cdn.example.com')
@@ -97,7 +125,9 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
       },
       global: {
         stubs: {
-          'el-select': { template: '<select><slot /></select>' },
+          // stub 要渲染 placeholder：三态下拉的空值态靠它显示「未设置（…）」而不是
+// Element Plus 通用「请选择」（EP 2.14 hasModelValue 对空串为 false，见组件注释）
+'el-select': { template: '<select :placeholder="placeholder"><slot /></select>', props: ['placeholder'] },
           'el-option': { template: '<option />' },
           'el-input-number': { template: '<input type="number" />' },
           'el-input': { template: '<input type="text" :placeholder="placeholder" />', props: ['placeholder'] },

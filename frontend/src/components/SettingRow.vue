@@ -48,10 +48,14 @@
 
     <div class="row-control">
       <!-- 开关用三态：未设置（跟随环境变量）/ 开 / 关。
-           后端以「空串 = 未在界面设置」表达回退环境变量，两态开关表达不了。 -->
+           后端以「空串 = 未在界面设置」表达回退环境变量，两态开关表达不了。
+           placeholder 必须绑成未设置文案：Element Plus 2.14 的 hasModelValue 对
+           空串为 false，不传 placeholder 会回落通用「请选择」，看着像必选项，
+           与「留空=回退环境变量/缺省值」的语义相反（2026-10-22 全量核查发现）。 -->
       <el-select
         v-if="item.type === 'bool'"
         :model-value="modelValue"
+        :placeholder="unsetLabel"
         :disabled="item.readOnly"
         @change="(v: any) => emit('change', item.key, String(v ?? ''))"
       >
@@ -61,6 +65,20 @@
         <el-option :label="unsetLabel" value="" />
         <el-option label="开" value="true" />
         <el-option label="关" value="false" />
+      </el-select>
+      <!-- 枚举项（后端 registry 登记了 Options，与 oneOf 校验同源）：同样三态下拉。
+           渲染成文本框是缺陷——候选值就摆在后端却让人手打，填错只能等保存时报错；
+           且「存储方式」这类项手打 local/minio/oss 毫无意义（2026-10-22 用户实测反馈）。
+           placeholder 同 bool：空值态要显示「未设置（…）」而不是「请选择」。 -->
+      <el-select
+        v-else-if="item.options && item.options.length"
+        :model-value="modelValue"
+        :placeholder="unsetLabel"
+        :disabled="item.readOnly"
+        @change="(v: any) => emit('change', item.key, String(v ?? ''))"
+      >
+        <el-option :label="unsetLabel" value="" />
+        <el-option v-for="opt in item.options" :key="opt" :label="optionLabel(opt)" :value="opt" />
       </el-select>
       <!-- 整数：上传上限 / 缓存小时 / 锁定租户 -->
       <el-input-number
@@ -139,9 +157,22 @@ function typeLabel(t: string) {
 
 // 有安全下限的整数项：界面先拦一道（后端也会拒绝，但能在选数时就提示更直观）。
 // 例如上传上限填 0 会让所有上传失败，报错还指向文件而不是配置。
-const INT_MIN: Record<string, number> = { upload_max_mb: 1 }
+// 与后端 intRange 的下限对齐：图片 1~1024、视频 1~2048（视频漏了 min 会让
+// 界面允许 0，保存才被后端拒——2026-10-22 全量核查时发现）。
+const INT_MIN: Record<string, number> = { upload_max_mb: 1, upload_video_max_mb: 1 }
 function minOf(item: SettingItem) {
   return INT_MIN[item.key] ?? 0
+}
+
+// 枚举候选的展示文案：值本身（local / minio / oss）对运营不够直白，
+// 补一括号说明；未登记的组合原样显示值（后端新增候选时界面不留空白）。
+const OPTION_LABELS: Record<string, string> = {
+  'storage_driver|local': 'local（服务器本地磁盘）',
+  'storage_driver|minio': 'minio（MinIO / S3 兼容存储）',
+  'storage_driver|oss': 'oss（阿里云 OSS）',
+}
+function optionLabel(opt: string): string {
+  return OPTION_LABELS[`${props.item.key}|${opt}`] || opt
 }
 
 // 格式易错项的悬浮说明：只放「填错的后果当场发现不了」的项（地址类）。

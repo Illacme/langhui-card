@@ -37,7 +37,7 @@ const items: SettingItem[] = [
   { key: 'login_rate_limit_per_min', name: '登录尝试频率限制', group: 'auth', type: 'int', value: '10', description: '登录限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'cdn_enabled', name: '启用 CDN 刷新', group: 'storage', type: 'bool', value: '', description: 'CDN 刷新', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENABLED', configured: false },
   { key: 'cdn_access_key_id', name: 'CDN AccessKeyId', group: 'storage', type: 'string', value: '', description: 'CDN AK', secret: false, restart: true, readOnly: false, envVar: 'CDN_ACCESS_KEY_ID', configured: false },
-  { key: 'storage_driver', name: '存储方式', group: 'storage', type: 'string', value: 'local', description: '存储驱动', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_DRIVER', configured: true },
+  { key: 'storage_driver', name: '存储方式', group: 'storage', type: 'string', value: 'local', description: '存储驱动', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_DRIVER', options: ['local', 'minio', 'oss'], configured: true },
   { key: 'storage_endpoint', name: '存储服务端点', group: 'storage', type: 'string', value: '', description: '对象存储端点', secret: false, restart: true, readOnly: false, envVar: 'MINIO_ENDPOINT', configured: false },
   { key: 'storage_bucket', name: '存储空间名称', group: 'storage', type: 'string', value: '', description: '存储桶', secret: false, restart: true, readOnly: false, envVar: 'MINIO_BUCKET', configured: false },
   { key: 'storage_access_key', name: '存储 AccessKey', group: 'storage', type: 'string', value: '', description: '存储 AK', secret: false, restart: true, readOnly: false, envVar: 'MINIO_ACCESS_KEY', configured: false },
@@ -330,7 +330,7 @@ describe('Settings 系统设置', () => {
       data: { restartKeys: ['storage_driver'] },
     }) as any)
     const { w } = await setup()
-    await textInputOf(w, 'storage_driver').setValue('minio')
+    await selectOf(w, 'storage_driver').setValue('minio')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(w.find('.restart-alert').exists()).toBe(true))
     const t = w.find('.restart-alert').text()
@@ -377,7 +377,7 @@ describe('Settings 系统设置', () => {
       data: { restartKeys: ['storage_driver'] },
     }))
     const { w } = await setup()
-    await textInputOf(w, 'storage_driver').setValue('oss')
+    await selectOf(w, 'storage_driver').setValue('oss')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
     expect(vi.mocked(ElMessage.warning).mock.calls[0][0]).toContain('1 项需重启服务后才生效')
@@ -419,8 +419,21 @@ describe('Settings 系统设置', () => {
   it('有安全下限的整数项：上传上限最小为 1，界面就选不到 0', async () => {
     const { w } = await setup()
     expect(numberComponentOf(w, 'upload_max_mb').props('min')).toBe(1)
+    // 视频上限同样有下限 1（后端 intRange(1,2048)）：2026-10-22 全量核查时补上，
+    // 此前界面允许 0，保存才被后端拒
+    expect(numberComponentOf(w, 'upload_video_max_mb').props('min')).toBe(1)
     // 其它整数项（如小程序码 TTL）仍允许 0：后端有回落逻辑，不该在界面硬拦
     expect(numberComponentOf(w, 'wxacode_ttl_hours').props('min')).toBe(0)
+  })
+
+  it('枚举项渲染为下拉：存储方式带 local / minio / oss 候选，不再手打字符串', async () => {
+    const { w } = await setup()
+    const row = rowOf(w, 'storage_driver')
+    // 后端 oneOf 校验的候选值通过 options 下发：界面渲染三态下拉
+    // （未设置 + 3 候选），而不是文本框——手打候选值毫无意义，填错只能等保存时报错
+    expect(row.find('input.el-input').exists()).toBe(false)
+    expect(row.find('select.el-select').exists()).toBe(true)
+    expect(row.findAll('option')).toHaveLength(4)
   })
 
   // ---- P0：商业产品可读性（中文名 / 分组导语 / 上线就绪面板）----
@@ -550,7 +563,7 @@ describe('Settings 系统设置', () => {
     expect(rowExists(w, 'wx_appsecret')).toBe(false)
 
     // 切到 minio：云凭据转亮出现（待配置），本地上传目录不再占版面
-    await textInputOf(w, 'storage_driver').setValue('minio')
+    await selectOf(w, 'storage_driver').setValue('minio')
     await nextTick()
     expect(rowOf(w, 'storage_endpoint').text()).toContain('待配置')
     expect(rowExists(w, 'upload_dir')).toBe(false)
@@ -637,7 +650,7 @@ describe('Settings 系统设置', () => {
     expect(dialogOf(w).text()).not.toContain('storage_endpoint')
 
     // 向导内切 minio：端点转亮出现、目录隐藏——联动在向导里同样生效
-    await dialogRow(w, 'storage_driver').find('input.el-input').setValue('minio')
+    await dialogRow(w, 'storage_driver').find('select.el-select').setValue('minio')
     await nextTick()
     expect(dialogRow(w, 'storage_endpoint').text()).toContain('待配置')
     expect(dialogOf(w).text()).not.toContain('upload_dir')
@@ -722,7 +735,7 @@ describe('Settings 系统设置', () => {
     await nextTick()
     expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
     // 生产模式：minio + HTTPS 开
-    expect((dialogRow(w, 'storage_driver').find('input.el-input').element as HTMLInputElement).value).toBe('minio')
+    expect((dialogRow(w, 'storage_driver').find('select.el-select').element as HTMLSelectElement).value).toBe('minio')
     expect(dialogRow(w, 'storage_use_ssl').find('select.el-select').element.value).toBe('true')
   })
 
@@ -1071,7 +1084,7 @@ describe('Settings 系统设置', () => {
   it('破坏性更改二次确认：存储方式变更弹确认，取消则不提交、草稿保留', async () => {
     vi.mocked(ElMessageBox.confirm).mockRejectedValueOnce('cancel')
     const { w } = await setup()
-    await textInputOf(w, 'storage_driver').setValue('minio')
+    await selectOf(w, 'storage_driver').setValue('minio')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(ElMessageBox.confirm).toHaveBeenCalledTimes(1))
     const [msg, title] = vi.mocked(ElMessageBox.confirm).mock.calls[0]
@@ -1085,7 +1098,7 @@ describe('Settings 系统设置', () => {
 
   it('破坏性确认通过后正常提交（确认即保存）', async () => {
     const { w } = await setup()
-    await textInputOf(w, 'storage_driver').setValue('oss')
+    await selectOf(w, 'storage_driver').setValue('oss')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
     expect(updateSettings).toHaveBeenCalledWith({ storage_driver: 'oss' })
@@ -1119,7 +1132,7 @@ describe('Settings 系统设置', () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
     await nextTick()
-    await dialogRow(w, 'storage_driver').find('input.el-input').setValue('minio')
+    await dialogRow(w, 'storage_driver').find('select.el-select').setValue('minio')
     await nextTick()
     for (let i = 0; i < 4; i++) {
       await dialogButton(w, '下一步').trigger('click')

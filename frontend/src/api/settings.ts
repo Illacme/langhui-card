@@ -20,6 +20,9 @@ export interface SettingItem {
   readOnly: boolean
   /** 对应环境变量名（未设置时回退它，界面也据此提示改法） */
   envVar: string
+  /** 枚举候选值（仅枚举项有，如 storage_driver 的 local/minio/oss）；
+      界面据此渲染下拉而非文本框，与后端 oneOf 校验同源 */
+  options?: string[]
   /** 当前是否已有有效值（库值或环境变量） */
   configured: boolean
 }
