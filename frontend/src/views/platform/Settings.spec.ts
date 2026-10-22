@@ -54,7 +54,22 @@ const ElCard = defineComponent({
   name: 'ElCard',
   template: `<div class="el-card"><div class="el-card__header"><slot name="header" /></div><slot /></div>`,
 })
-const ElAlert = defineComponent({ name: 'ElAlert', template: `<div class="el-alert"><slot /></div>` })
+// 渲染 title 与关闭按钮：真实 el-alert 会消费这两个 prop，
+// stub 不渲染的话「待重启提示条」这类靠 title 传达的信息就断言不到。
+const ElAlert = defineComponent({
+  name: 'ElAlert',
+  props: {
+    type: String,
+    title: String,
+    description: String,
+    // 必须是 Boolean：模板里写无值属性 `closable` 时，只有声明为 Boolean 才会
+    // 得到 true，字符串类型会拿到空串、v-if 判假，关闭按钮就渲染不出来
+    closable: Boolean,
+    showIcon: Boolean,
+  },
+  emits: ['close'],
+  template: `<div class="el-alert"><div class="el-alert__title">{{ title }}</div><slot /><button v-if="closable" class="el-alert__close" @click="$emit('close')">×</button></div>`,
+})
 const ElTag = defineComponent({
   name: 'ElTag',
   props: ['size', 'effect', 'type'],
@@ -291,6 +306,36 @@ describe('Settings 系统设置', () => {
     expect(updateSettings).toHaveBeenCalledWith({ metrics_enabled: 'true' })
   })
 
+  it('保存含「需重启」项后给出常驻待重启提示（含重启命令），可手动关闭', async () => {
+    // 后端会点名哪些项需重启；这里模拟改了存储方式
+    vi.mocked(updateSettings).mockImplementationOnce(async () => ({
+      code: 0,
+      data: { restartKeys: ['storage_driver'] },
+    }) as any)
+    const { w } = await setup()
+    await textInputOf(w, 'storage_driver').setValue('minio')
+    await saveButton(w).trigger('click')
+    await vi.waitFor(() => expect(w.find('.restart-alert').exists()).toBe(true))
+    const t = w.find('.restart-alert').text()
+    // 显示中文名而不是 key，且给出可直接照做的重启命令
+    expect(t).toContain('存储方式')
+    expect(t).not.toContain('storage_driver')
+    expect(t).toContain('docker compose restart backend')
+    // 关掉后不再占用注意力
+    await w.find('.restart-alert .el-alert__close').trigger('click')
+    await nextTick()
+    expect(w.find('.restart-alert').exists()).toBe(false)
+  })
+
+  it('没有需重启项时不显示待重启提示', async () => {
+    const { w } = await setup()
+    // 必须改成与当前值不同的内容，否则 dirty=false、保存按钮是禁用的
+    await textInputOf(w, 'brand_name').setValue('朗汇机电')
+    await saveButton(w).trigger('click')
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
+    expect(w.find('.restart-alert').exists()).toBe(false)
+  })
+
   it('改整数项：以字符串提交，避免后端类型校验失败', async () => {
     const { w } = await setup()
     await numberInputOf(w, 'upload_max_mb').setValue('25')
@@ -318,8 +363,14 @@ describe('Settings 系统设置', () => {
     await textInputOf(w, 'storage_driver').setValue('oss')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
-    expect(vi.mocked(ElMessage.warning).mock.calls[0][0]).toContain('storage_driver')
+    expect(vi.mocked(ElMessage.warning).mock.calls[0][0]).toContain('1 项需重启服务后才生效')
     expect(vi.mocked(ElMessage.success)).not.toHaveBeenCalled()
+    // 具体是哪几项、怎么重启交给常驻提示条（toast 几秒就消失，说不完）
+    await nextTick()
+    const bar = w.find('.restart-alert')
+    expect(bar.exists()).toBe(true)
+    expect(bar.text()).toContain('存储方式')
+    expect(bar.text()).toContain('docker compose restart backend')
   })
 
   it('重置：把改动改回服务端原值，不再有变更', async () => {

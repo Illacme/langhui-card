@@ -49,6 +49,31 @@
       style="margin-bottom: 14px"
     />
 
+    <!-- 待重启提示：保存含「需重启」项后常驻显示。
+         只靠 toast 提示是不够的——它几秒就消失，人一走神就错过，
+         接下来就是「明明改了为什么不生效」的排查。这里常驻到用户手动关掉，
+         并直接给出重启命令（不同部署方式各一条），把「知道要重启」和
+         「知道怎么重启」一次给全。 -->
+    <el-alert
+      v-if="restartPending.length && !restartDismissed"
+      type="warning"
+      show-icon
+      closable
+      title="刚保存的改动里有需要重启才生效的项"
+      class="restart-alert"
+      @close="restartDismissed = true"
+    >
+      <div class="restart-body">
+        <div class="restart-keys">待生效：{{ restartPending.join('、') }}</div>
+        <div class="restart-cmd">
+          按你的部署方式重启服务，任选其一：
+          <code>docker compose restart backend</code>
+          <code>systemctl restart weichuan</code>
+          <code>kill -HUP &lt;进程号&gt;</code>
+        </div>
+      </div>
+    </el-alert>
+
     <!-- 上线就绪检查：默认收起成一条状态栏，点「查看详情」再展开清单。
          本页主任务是改配置，7 项清单常驻会把它推到屏幕外；但完全藏起来又丢掉
          「还差几项」这个一眼可见的信号——所以留一行摘要：未就绪时给出待处理数与归属，
@@ -265,6 +290,10 @@ const draft = reactive<Record<string, string>>({})
 const cleared = reactive<Record<string, boolean>>({})
 const loading = ref(true)
 const saving = ref(false)
+// 保存后「需重启才生效」的项（中文名）：常驻提示到用户手动关掉。
+// toast 几秒就消失，错过就会变成「改了为什么不生效」的排查。
+const restartPending = ref<string[]>([])
+const restartDismissed = ref(false)
 
 // 按分组聚合（已按后端返回顺序 stable，这里再套一层分组顺序）
 const groups = computed(() => {
@@ -801,7 +830,18 @@ async function save(): Promise<boolean> {
     }
     const restart = r?.data?.restartKeys || []
     if (restart.length > 0) {
-      ElMessage.warning(`已保存 ${savedCount} 项；${restart.length} 项需重启服务后生效：${restart.join('、')}`)
+      // 详情交给常驻提示条（含重启命令），toast 只负责让人立刻注意到
+      restartPending.value = restart.map((k: string) => items.value.find((i) => i.key === k)?.name || k)
+      restartDismissed.value = false
+      ElMessage.warning(`已保存 ${savedCount} 项；其中 ${restart.length} 项需重启服务后才生效`)
+      // 提示条在页面顶部，而保存按钮在吸顶头——用户很可能是滚到很下面的分组
+      // 才点的保存，不滚过去等于这条提示根本没人看到（实测提示条在视口外 2000px+）
+      nextTick(() => {
+        const el = document.querySelector('.restart-alert')
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      })
     } else {
       ElMessage.success(`已保存 ${savedCount} 项设置`)
     }
@@ -984,6 +1024,34 @@ onMounted(load)
   color: #fff;
   background: #409eff;
   border-color: #409eff;
+}
+/* 待重启提示条：常驻至用户关闭，命令可直接选中复制 */
+.restart-alert {
+  margin-bottom: 14px;
+}
+.restart-body {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #606266;
+}
+.restart-keys {
+  font-weight: 600;
+  color: #303133;
+}
+.restart-cmd {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.restart-cmd code {
+  font-size: 12px;
+  color: #303133;
+  background: #f5f7fa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 2px 8px;
 }
 /* 上线就绪：常驻摘要条（默认） + 点「查看详情」展开的清单卡片 */
 .ready-bar {
