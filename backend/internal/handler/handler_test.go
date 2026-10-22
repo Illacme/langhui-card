@@ -1287,7 +1287,9 @@ func TestMultiTenantIsolation(t *testing.T) {
 	require.Len(t, body["data"].([]interface{}), 0, "企业管理员不应看到别家员工")
 
 	_, body = comp2.doWithCookie("POST", "/api/admin/employees/"+fmt.Sprint(weichuanStaff)+"/disable", nil)
-	require.EqualValues(t, 0, body["code"]) // 接口不报错，但按租户条件为空操作
+	// 现在越权禁用会明确报「未找到」（RowsAffected==0），而不是像从前那样回 ok 假装成功——
+	// 静默成功的代价是管理员无从察觉自己的操作压根没生效。隔离本身不变：员工仍是 enabled。
+	require.EqualValues(t, 1, body["code"])
 	_, body = plat.doWithCookie("GET", "/api/admin/employees", nil)
 	emps := body["data"].([]interface{})
 	require.Equal(t, "enabled", emps[0].(map[string]interface{})["status"], "越权禁用不应生效")

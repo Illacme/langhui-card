@@ -3,12 +3,14 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"weichuan/internal/config"
+	"weichuan/internal/middleware"
 	"weichuan/internal/setting"
 	"weichuan/internal/storage"
 	"weichuan/internal/wechat"
@@ -23,10 +25,52 @@ var (
 	wxacodeCache = map[int64]wxacodeEntry{}
 )
 
+// wxacodeCacheMax 小程序码缓存条数上限。
+// staffId 可被枚举，而每条缓存 miss 都会真调微信接口 + 写一次对象存储：
+// 没有上限时，扫一段 staffId 就能把缓存撑成一张越来越大的表（同时也放大微信配额消耗）。
+// 限流是第一道闸，容量上限是纵深防御——两者都不是「防止正常使用」，正常员工量远达不到这个数。
+const wxacodeCacheMax = 4096
+
 type wxacodeEntry struct {
 	key       string    // 对象键，如 wxacode/12.jpg
 	publicURL string    // 公开形态 URL（BaseURL/key），公开桶或本地私有兜底用
 	expAt     time.Time // 二维码内容过期时间（按 cfg.WxacodeTTL）
+}
+
+// wxacodePut 写入缓存并在接近上限时先淘汰：先清已过期的，仍满则按 expAt 淘汰最早的一半。
+// 调用方不持锁（本函数内部加锁）。
+func wxacodePut(staffID int64, e wxacodeEntry) {
+	wxacodeMu.Lock()
+	defer wxacodeMu.Unlock()
+	if _, exists := wxacodeCache[staffID]; !exists && len(wxacodeCache) >= wxacodeCacheMax {
+		wxacodeEvictLocked()
+	}
+	wxacodeCache[staffID] = e
+}
+
+// wxacodeEvictLocked 淘汰：先删已过期的；删完仍满则删掉 expAt 最早的一半。
+// 调用方必须已持有 wxacodeMu。
+func wxacodeEvictLocked() {
+	now := time.Now()
+	for id, e := range wxacodeCache {
+		if now.After(e.expAt) {
+			delete(wxacodeCache, id)
+		}
+	}
+	if len(wxacodeCache) < wxacodeCacheMax {
+		return
+	}
+	// 按过期时间排序取最早的一半：保留离过期最远的（最可能还被用到的）那一半
+	ids := make([]int64, 0, len(wxacodeCache))
+	for id := range wxacodeCache {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return wxacodeCache[ids[i]].expAt.Before(wxacodeCache[ids[j]].expAt)
+	})
+	for _, id := range ids[:len(ids)/2] {
+		delete(wxacodeCache, id)
+	}
 }
 
 // getWXACode 小程序码生成器的间接层：生产指向 wechat.GetWXACodeUnlimit。
@@ -66,7 +110,17 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader, refre
 		c.JSON(http.StatusOK, gin.H{"code": 0, "openid": openid})
 	})
 
-	r.GET("/api/wechat/wxacode", func(c *gin.Context) {
+	// 小程序码是**公开**接口（访客扫码看名片就要取，不能挂鉴权），
+	// 但一次 cache miss = 一次真实微信接口调用（有配额）+ 一次对象存储写入，
+	// staffId 又是可枚举的整数——没有闸门时，一个脚本就能打光微信配额并撑爆内存缓存。
+	// 所以按客户端 IP 限流：正常分享点开远达不到这个频率，撞线的只有扫号行为
+	// （不同 staffId 也走同一个桶——扫号正是靠换 staffId 放大调用量的）。
+	wxacodeLimiter := middleware.NewRateLimiter(func() int {
+		return setting.GetInt("wxacode_rate_limit_per_min", 30)
+	}, 30, time.Minute).
+		WithMessage("小程序码生成过于频繁，请稍后再试")
+
+	r.GET("/api/wechat/wxacode", wxacodeLimiter.Handler(), func(c *gin.Context) {
 		// 未配置凭据时降级为明确错误：放在请求期判定（而非注册期一次性判定），
 		// 这样后台补上 AppID 后立刻可用，无需重启进程。
 		wc := wcOf()
@@ -112,9 +166,7 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader, refre
 			return
 		}
 		e = wxacodeEntry{key: key, publicURL: publicURL, expAt: time.Now().Add(wxacodeTTL(cfg))}
-		wxacodeMu.Lock()
-		wxacodeCache[staffID] = e
-		wxacodeMu.Unlock()
+		wxacodePut(staffID, e)
 		// 固定对象名的覆盖写：刷新的是公开形态 URL（私有桶下返回的短期签名 URL 每次都变，
 		// 交给 CDN 刷也没有意义；私有桶本身也不该被 CDN 缓存）
 		refreshCDN(refresher, e.publicURL)

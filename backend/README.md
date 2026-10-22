@@ -281,9 +281,9 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码；企业管理员落本企业，平台超管可用 ?companyId= 指定） |
 | PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码；按租户隔离） |
 | GET  | /api/admin/stats | admin | 名片统计（汇总 + 按员工，零数据员工补 0；按租户隔离） |
-| POST | /api/admin/employees/:id/disable | admin | 停用账号（按租户隔离，越权为空操作） |
-| POST | /api/admin/employees/:id/enable | admin | 启用账号（按租户隔离） |
-| POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码；按租户隔离） |
+| POST | /api/admin/employees/:id/disable | admin | 停用账号（按租户隔离；目标不存在/越权返回 code=1「未找到」，不再假装成功；记审计 employee.status） |
+| POST | /api/admin/employees/:id/enable | admin | 启用账号（同上，含审计） |
+| POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码；按租户隔离；目标不存在返回 code=1；记审计 employee.reset_password） |
 | PUT  | /api/admin/password | admin | 修改自己密码 |
 
 ### 企业内容管理（管理员登录，按租户隔离）
@@ -376,6 +376,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   - `TestTokenRefresh` / `TestCookieAuth` / `TestSingleDeviceRevocation`：分别覆盖 refresh 换发与账号级吊销、PC 端 httpOnly Cookie 鉴权与登出、单设备精确吊销（会话黑名单）。
   - `TestAssetLibrary`（`internal/handler/assets_test.go`）：素材库匿名 401、**分页（翻页不重复 / size 与上限 / 非法页码回落与末页夹取 / 分类与关键字过滤 / 无命中空结果）**、**视觉调性（五档清单 / 调性过滤生效 / styleCounts 排除 style 自身 / 分类+调性组合 / 图标只落 clean 一档 / 调性中文名可搜）**、采用落盘（含首页背景 JPEG）、预览图公开 + immutable、封面与背景缩略图、未知素材/空参/路径穿越 404。
   - `TestAPIFlowMySQL`（生产契约 parity）：设置 `TEST_MYSQL_DSN` 后，连真实 MySQL、应用 `migrations/*.sql`，再跑与 SQLite **完全相同的断言**，用以校验 AutoMigrate 与生产建表 SQL 行为一致。
+  - `internal/handler/hardening_test.go`（P0 加固守门）：专治「静默失败」——摘掉修复必须红。覆盖：登出写不进黑名单必须报 `code:1`（`TestLogoutReportsRevokeFailure`，另有 `TestLogoutSucceedsNormally` 作对照）、密码生成取不到随机数必须报错而不能 panic（`TestGenPasswordEntropyFailure` / `TestGenPasswordRejectsAtAPI`）、小程序码按 IP 限流挡扫号（`TestWXACodeRateLimitedPerIP`）、小程序码缓存到上限要淘汰（`TestWXACodeCacheEvictsAtCap`）、启停员工留审计且目标不存在要报「未找到」（`TestEmployeeStatusAuditAndNotFound`）。
+  - `internal/storage/storage_test.go:TestRandNameEntropyFailure`：守门「熵源读取失败必须报错」——从前忽略错误会让每次上传都叫同一个名字，后上传的静默覆盖先上传的。
 - 运行：
   ```bash
   cd backend

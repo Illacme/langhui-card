@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"errors"
 	"mime/multipart"
 	"net/http/httptest"
 	"testing"
@@ -73,11 +74,28 @@ func TestSniffExt(t *testing.T) {
 func TestRandName(t *testing.T) {
 	seen := make(map[string]bool)
 	for i := 0; i < 1000; i++ {
-		name := RandName("png")
+		name, err := RandName("png")
+		require.NoError(t, err)
 		require.True(t, len(name) > 4 && name[len(name)-4:] == ".png")
 		require.False(t, seen[name], "RandName 出现重复: %s", name)
 		seen[name] = true
 	}
 	// 无扩展名时不应带点
-	require.NotContains(t, RandName(""), ".")
+	noExt, err := RandName("")
+	require.NoError(t, err)
+	require.NotContains(t, noExt, ".")
+}
+
+// TestRandNameEntropyFailure 守门「熵源读取失败必须报错，而不是产出全零名字」。
+// 从前写成 `_, _ = rand.Read(b)`：失败时 b 保持全零，于是每一次上传都叫同一个名字，
+// 后上传的静默覆盖先上传的——日志里干干净净，现场只表现为「图片莫名变成别人的」。
+func TestRandNameEntropyFailure(t *testing.T) {
+	orig := randRead
+	randRead = func([]byte) (int, error) { return 0, errors.New("entropy exhausted") }
+	defer func() { randRead = orig }()
+
+	name, err := RandName("png")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "生成随机文件名失败")
+	require.Empty(t, name)
 }

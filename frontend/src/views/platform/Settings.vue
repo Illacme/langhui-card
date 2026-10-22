@@ -428,7 +428,7 @@ const GROUP_ITEM_ORDER: Record<string, string[]> = {
     'cdn_endpoint',
   ],
   upload: ['upload_max_mb', 'upload_video_max_mb', 'upload_allow_ext', 'presign_put_ttl_minutes', 'sign_get_ttl_minutes'],
-  wechat: ['wx_appid', 'wx_appsecret', 'wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'],
+  wechat: ['wx_appid', 'wx_appsecret', 'wxacode_ttl_hours', 'wxacode_sign_ttl_minutes', 'wxacode_rate_limit_per_min'],
 }
 
 // 组内分区：项多的组按「在配什么」再分堆，小标题让人不用逐行读描述。
@@ -447,7 +447,7 @@ const GROUP_SECTIONS: Record<string, { label: string; keys: string[] }[]> = {
   ],
   wechat: [
     { label: '小程序凭据', keys: ['wx_appid', 'wx_appsecret'] },
-    { label: '小程序码缓存', keys: ['wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'] },
+    { label: '小程序码', keys: ['wxacode_ttl_hours', 'wxacode_sign_ttl_minutes', 'wxacode_rate_limit_per_min'] },
   ],
 }
 
@@ -970,10 +970,10 @@ const WIZARD_STEPS: WizardStep[] = [
     key: 'wechat',
     title: '微信与小程序码',
     blurb: '小程序码与微信登录依赖微信 AppID / AppSecret。没有微信业务可先跳过，相关功能不可用而已。',
-    keys: ['wx_appid', 'wx_appsecret', 'wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'],
+    keys: ['wx_appid', 'wx_appsecret', 'wxacode_ttl_hours', 'wxacode_sign_ttl_minutes', 'wxacode_rate_limit_per_min'],
     groups: [
       { label: '小程序凭据', keys: ['wx_appid', 'wx_appsecret'] },
-      { label: '小程序码缓存', keys: ['wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'] },
+      { label: '小程序码', keys: ['wxacode_ttl_hours', 'wxacode_sign_ttl_minutes', 'wxacode_rate_limit_per_min'] },
     ],
   },
   {

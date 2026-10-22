@@ -54,7 +54,10 @@ func (o *OssUploader) Save(fh *multipart.FileHeader) (string, error) {
 	defer src.Close()
 
 	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fh.Filename), "."))
-	name := RandName(ext)
+	name, err := RandName(ext)
+	if err != nil {
+		return "", err
+	}
 	// 对象名直接用 name：URL 为 BaseURL/name，与本地驱动（静态路由 /uploads -> Dir，文件落 Dir/name）形态一致
 	if err := o.Bucket.PutObject(name, src, oss.ContentType(fh.Header.Get("Content-Type"))); err != nil {
 		return "", fmt.Errorf("oss put: %w", err)

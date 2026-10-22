@@ -44,7 +44,11 @@ func presignHandler(up storage.Uploader) gin.HandlerFunc {
 		}
 		ext := strings.TrimPrefix(c.Query("ext"), ".")
 		contentType := c.Query("contentType")
-		key := storage.RandName(ext)
+		key, err := storage.RandName(ext)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+			return
+		}
 		// 签名时长取系统设置（后台「系统设置 → 上传」可改，即时生效）；
 		// 下限 1 分钟——设成 0 会让前端一拿链接就过期，等于直传功能整体失效。
 		ttl := signTTL("presign_put_ttl_minutes", 15)

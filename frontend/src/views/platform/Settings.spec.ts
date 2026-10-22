@@ -33,6 +33,7 @@ const items: SettingItem[] = [
   { key: 'wx_appsecret', name: '小程序 AppSecret', group: 'wechat', type: 'string', value: '******', description: 'AppSecret（敏感）', secret: true, restart: false, readOnly: false, envVar: 'WX_APPSECRET', configured: true },
   { key: 'wxacode_ttl_hours', name: '小程序码缓存时长', group: 'wechat', type: 'int', value: '720', description: '小程序码 TTL', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'wxacode_sign_ttl_minutes', name: '小程序码签名链接有效期', group: 'wechat', type: 'int', value: '60', description: '小程序码签名时效', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'wxacode_rate_limit_per_min', name: '小程序码生成频率限制', group: 'wechat', type: 'int', value: '30', description: '小程序码限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'access_token_ttl_minutes', name: '登录凭证有效期', group: 'auth', type: 'int', value: '15', description: 'access 有效期', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'login_rate_limit_per_min', name: '登录尝试频率限制', group: 'auth', type: 'int', value: '10', description: '登录限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'cdn_enabled', name: '启用 CDN 刷新', group: 'storage', type: 'bool', value: '', description: 'CDN 刷新', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENABLED', configured: false },
@@ -730,8 +731,8 @@ describe('Settings 系统设置', () => {
     expect(rowExists(w, 'cdn_access_key_id')).toBe(false)
     // 上传组：大小与类型 / 临时链接有效期（主列表与向导 steps 同结构）
     expect(subs('上传')).toEqual(['大小与类型', '临时链接有效期'])
-    // 微信组：凭据 / 小程序码缓存
-    expect(subs('微信')).toEqual(['小程序凭据', '小程序码缓存'])
+    // 微信组：凭据 / 小程序码（缓存时长 + 签名时效 + 生成限流）
+    expect(subs('微信')).toEqual(['小程序凭据', '小程序码'])
     // 无分区元数据的组（通用 / 小程序 / 令牌 / 只读 / 开关）不画小标题
     expect(subs('通用')).toEqual([])
     expect(subs('小程序')).toEqual([])
@@ -1087,10 +1088,11 @@ describe('Settings 系统设置', () => {
     await nextTick()
     expect(dialogOf(w).findAll('.wizard-group-title').map((t: any) => t.text())).toEqual([
       '小程序凭据',
-      '小程序码缓存',
+      '小程序码',
     ])
     expect(dialogRow(w, 'wxacode_ttl_hours').exists()).toBe(true)
     expect(dialogRow(w, 'wxacode_sign_ttl_minutes').exists()).toBe(true)
+    expect(dialogRow(w, 'wxacode_rate_limit_per_min').exists()).toBe(true)
     // AppID 未填：AppSecret 置灰不出现（填了 AppID 才需要配 Secret）
     expect(dialogRowExists(w, 'wx_appsecret')).toBe(false)
 

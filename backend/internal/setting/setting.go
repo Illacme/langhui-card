@@ -152,6 +152,13 @@ var registry = []def{
 	{Key: "wxacode_sign_ttl_minutes", Group: "wechat", Type: "int", Value: "60",
 		Name: "小程序码签名链接有效期",
 		Desc: "私有存储里小程序码的临时访问链接能用多久（分钟）。填 0 或负数会回到默认 60 分钟。"},
+	{Key: "wxacode_rate_limit_per_min", Group: "wechat", Type: "int", Value: "30",
+		Name: "小程序码生成频率限制",
+		// 为什么要有这一项：小程序码接口是公开的（访客扫码看名片就要取，不能挂鉴权），
+		// 而每次生成都会真调微信接口（有配额）+ 写一次对象存储，staffId 又是可枚举的。
+		// 按客户端 IP 计数（不区分 staffId）：扫号正是靠换 staffId 放大调用量的，
+		// 若按 staffId 分桶，每个 id 各请求一次就绕过去了。
+		Desc: "同一个 IP 每分钟最多生成几次小程序码，防止有人批量扫号把微信配额打光。正常分享点开远达不到这个频率。填 0 或负数会回到默认 30 次——不会把这道防护关掉。"},
 	{Key: "wx_appid", Group: "wechat", Type: "string", EnvVar: "WX_APPID",
 		Name: "小程序 AppID",
 		Desc: "微信小程序的 AppID，用来生成小程序码和做微信登录。留空则使用部署环境里配置的值（环境变量 WX_APPID 或配置文件）。"},

@@ -1871,7 +1871,12 @@ paths:
     get:
       tags: [存储]
       summary: 生成员工小程序码（wxacodeunlimit，scene=staffId=N）
-      description: 磁盘 / 对象存储缓存；未配置 WX_APPID/WX_APPSECRET 时 code=1。
+      description: >-
+        磁盘 / 对象存储缓存；未配置 WX_APPID/WX_APPSECRET 时 code=1。
+        本接口公开（访客扫码看名片就要取，因此不挂鉴权），但一次缓存未命中 = 一次真实
+        微信接口调用 + 一次对象存储写入，staffId 又是可枚举的整数，故按客户端 IP 限流
+        （阈值取系统设置 wxacode_rate_limit_per_min，默认 30 次/分钟，不区分 staffId——
+        扫号正是靠换 staffId 放大调用量的），超限返回 code=429。
       parameters:
         - name: staffId
           in: query

@@ -3,6 +3,7 @@ package handler
 import (
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -164,8 +165,16 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "已处理"})
 			return
 		}
-		pwd := genPassword()
-		hash, _ := auth.HashPassword(pwd)
+		pwd, err := genPassword()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+			return
+		}
+		hash, err := auth.HashPassword(pwd)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码加密失败"})
+			return
+		}
 		emp := model.Employee{CompanyID: a.CompanyID, Name: a.Name, Phone: a.Phone, Phone2: a.Phone2, Email: a.Email, Title: a.Title, Landline: a.Landline, Avatar: a.Avatar, OpenID: a.OpenID, Nickname: a.Nickname, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		a.Status = "approved"
@@ -289,8 +298,16 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "目标企业不存在或已停用"})
 			return
 		}
-		pwd := genPassword()
-		hash, _ := auth.HashPassword(pwd)
+		pwd, err := genPassword()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+			return
+		}
+		hash, err := auth.HashPassword(pwd)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码加密失败"})
+			return
+		}
 		emp := model.Employee{CompanyID: cid, Name: req.Name, Phone: req.Phone, Phone2: req.Phone2, Email: req.Email, Title: req.Title, Landline: req.Landline, Avatar: req.Avatar, PasswordHash: hash, Status: "enabled"}
 		db.Create(&emp)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "staffId": emp.StaffID, "initialPassword": pwd})
@@ -366,28 +383,72 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	// 启用 / 禁用（禁用同时自增安全戳 → 该员工在线会话立即失效；按租户）
 	r.POST("/api/admin/employees/:id/disable", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
+		// RowsAffected 必须查：从前不查，禁用一个不存在的 / 别家租户的员工也回 ok，
+		// 管理员无从察觉操作压根没生效（更新的 Error 同样不能丢）
+		res := db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{"status": "disabled", "token_version": gorm.Expr("token_version + 1")})
+		if res.Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": res.Error.Error()})
+			return
+		}
+		if res.RowsAffected == 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
+			return
+		}
+		// 启停员工是特权动作：从前这里不记审计，改自己密码反倒记了，日志里看不出谁动了谁
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionEmployeeStatus, TargetType: "employee", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"status": "disabled"},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 	r.POST("/api/admin/employees/:id/enable", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
+		res := db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
 			Updates(map[string]interface{}{"status": "enabled", "token_version": gorm.Expr("token_version + 1")})
+		if res.Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": res.Error.Error()})
+			return
+		}
+		if res.RowsAffected == 0 {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
+			return
+		}
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionEmployeeStatus, TargetType: "employee", TargetID: strconv.FormatInt(id, 10),
+			Detail: map[string]any{"status": "enabled"},
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
 	// 重置密码（返回新初始密码；按租户）
 	r.POST("/api/admin/employees/:id/reset-password", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		id, _ := strconv.ParseInt(c.Param("id"), 10, 64)
-		pwd := genPassword()
-		hash, _ := auth.HashPassword(pwd)
+		pwd, err := genPassword()
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+			return
+		}
+		hash, err := auth.HashPassword(pwd)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "密码加密失败"})
+			return
+		}
 		// 重置密码同时自增安全戳 → 该员工所有旧会话立即失效
-		if db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
-			Updates(map[string]interface{}{"password_hash": hash, "token_version": gorm.Expr("token_version + 1")}).RowsAffected == 0 {
+		res := db.Model(&model.Employee{}).Where("staff_id = ?", id).Scopes(scopeCond(c)).
+			Updates(map[string]interface{}{"password_hash": hash, "token_version": gorm.Expr("token_version + 1")})
+		if res.Error != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": res.Error.Error()})
+			return
+		}
+		if res.RowsAffected == 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "未找到"})
 			return
 		}
+		// 重置他人密码是特权动作，必须留痕（从前只记「改自己密码」，这条漏了）
+		audit.Record(db, c, audit.Entry{
+			Action: audit.ActionEmployeeReset, TargetType: "employee", TargetID: strconv.FormatInt(id, 10),
+		})
 		c.JSON(http.StatusOK, gin.H{"code": 0, "initialPassword": pwd})
 	})
 
@@ -477,13 +538,24 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	})
 }
 
-// genPassword 生成 8 位随机密码（字母+数字）
-func genPassword() string {
+// genPassword 生成 8 位随机密码（字母+数字）。
+//
+// crypto/rand 取值失败**必须回传错误**：从前写成 `n, _ := rand.Int(...)`，
+// 失败时 n 是 nil，下一行 n.Int64() 直接 panic 把进程打挂——
+// 一次密码生成失败不该让整个服务挂掉，更不该给员工发一个可预测的密码。
+// randInt 随机源的间接层：唯一目的是可测——crypto/rand 正常不会失败，
+// 不注入就覆盖不到「失败时该怎么办」这条支线（从前忽略错误会直接 panic）。
+var randInt = rand.Int
+
+func genPassword() (string, error) {
 	const chars = "abcdefghijkmnpqrstuvwxyz23456789"
 	b := make([]byte, 8)
 	for i := range b {
-		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		n, err := randInt(rand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			return "", fmt.Errorf("生成随机密码失败: %w", err)
+		}
 		b[i] = chars[n.Int64()]
 	}
-	return string(b)
+	return string(b), nil
 }

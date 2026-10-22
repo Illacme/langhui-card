@@ -50,7 +50,10 @@ func (m *MinioUploader) Save(fh *multipart.FileHeader) (string, error) {
 	defer src.Close()
 
 	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fh.Filename), "."))
-	name := RandName(ext)
+	name, err := RandName(ext)
+	if err != nil {
+		return "", err
+	}
 	// 对象名直接用 name：URL 为 BaseURL/name，与本地驱动（静态路由 /uploads -> Dir，文件落 Dir/name）形态一致
 	if _, err := m.Client.PutObject(context.Background(), m.Bucket, name, src, fh.Size, minio.PutObjectOptions{
 		ContentType: fh.Header.Get("Content-Type"),

@@ -58,7 +58,10 @@ func (l *LocalUploader) Save(fh *multipart.FileHeader) (string, error) {
 	defer src.Close()
 
 	ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(fh.Filename), "."))
-	name := RandName(ext)
+	name, err := RandName(ext)
+	if err != nil {
+		return "", err
+	}
 	dst := filepath.Join(l.Dir, name)
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return "", err
@@ -144,12 +147,23 @@ func sniffExt(ext string, head []byte) bool {
 	}
 }
 
-// RandName 生成 16 字节随机名 + 扩展名（避免依赖 uuid），供各驱动与预签名场景复用
-func RandName(ext string) string {
+// randRead 熵源读取的间接层：唯一目的是可测——crypto/rand 正常情况下不会失败，
+// 不注入就永远覆盖不到「失败时该怎么办」这条支线。
+var randRead = rand.Read
+
+// RandName 生成 16 字节随机名 + 扩展名（避免依赖 uuid），供各驱动与预签名场景复用。
+//
+// 熵源读取失败**必须回传错误**：crypto/rand.Read 失败时 b 保持全零，
+// 若像从前那样 `_, _ = rand.Read(b)` 忽略错误，所有上传会拿到同一个文件名
+// → 后上传的静默覆盖先上传的，且现场看不出任何异常。宁可让这一次上传失败。
+func RandName(ext string) (string, error) {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	if ext == "" {
-		return hex.EncodeToString(b)
+	if _, err := randRead(b); err != nil {
+		return "", fmt.Errorf("生成随机文件名失败: %w", err)
 	}
-	return hex.EncodeToString(b) + "." + ext
+	name := hex.EncodeToString(b)
+	if ext == "" {
+		return name, nil
+	}
+	return name + "." + ext, nil
 }

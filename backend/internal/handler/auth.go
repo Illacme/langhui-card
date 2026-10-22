@@ -205,15 +205,27 @@ func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 	// 只失效当前设备：同一账号的其他登录不受影响（那需要改密 / 禁用，走 token_version 账号级吊销）。
 	// 不挂鉴权中间件：access 过期后客户端仍需能调本接口清 Cookie / 收尾会话。
 	r.POST("/api/logout", func(c *gin.Context) {
-		revokeCurrentSession(c, db)
+		// 吊销失败必须让调用方知道：从前吞掉错误照样回 ok，
+		// 用户以为已登出，refresh token 却仍能续期——整套「登出吊销 sid」的保证形同虚设。
+		if err := revokeCurrentSession(c, db); err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "登出失败，请重试：" + err.Error()})
+			return
+		}
 		clearAuthCookies(c, cfg)
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 }
 
-// revokeCurrentSession 从 Bearer / Cookie 中解析当前会话并写入黑名单。
-// 解析失败（无 token / token 无效）时静默跳过：登出始终成功，清 Cookie 由调用方保证。
-func revokeCurrentSession(c *gin.Context, db *gorm.DB) {
+// revokeSession 吊销会话的间接层：唯一目的是可测——把「写黑名单失败」这条支线
+// 放进单测（生产只有数据库故障才会走到，不注入就永远覆盖不到）。
+var revokeSession = repository.RevokeSession
+
+// revokeCurrentSession 从 Bearer / Cookie 中解析当前会话并写入黑名单，失败时回传错误。
+//
+// 「无 token / token 已失效」不算失败（无需吊销，静默跳过）：那种情况下本来就没有
+// 有效会话，登出天然成立。只有「解析出有效 sid 却写不进黑名单」才报错——
+// 那时必须让用户知道登出没成功，而不是给他一个假的 ok。
+func revokeCurrentSession(c *gin.Context, db *gorm.DB) error {
 	// 优先解析 access（Bearer 或 access_token Cookie）；access 过期 / 缺失时
 	// 退而解析 refresh_token Cookie，保证「access 已过期但 refresh 仍有效」时登出也能吊销会话。
 	raw := middleware.ExtractToken(c)
@@ -223,16 +235,16 @@ func revokeCurrentSession(c *gin.Context, db *gorm.DB) {
 		}
 	}
 	if raw == "" {
-		return
+		return nil
 	}
 	claims, err := auth.ParseToken(raw)
 	if err != nil || claims.SID == "" {
-		return
+		return nil
 	}
 	if claims.Typ != "access" && claims.Typ != "refresh" {
-		return
+		return nil
 	}
-	_ = repository.RevokeSession(db, claims.SID, claims.Role, claims.StaffID, sessionExpiry(c, claims))
+	return revokeSession(db, claims.SID, claims.Role, claims.StaffID, sessionExpiry(c, claims))
 }
 
 // sessionExpiry 估算黑名单记录的过期时间：优先取 refresh 令牌的过期时间
