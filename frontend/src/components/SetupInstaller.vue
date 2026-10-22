@@ -79,10 +79,19 @@
         <details class="si-adv">
           <summary>高级选项（可选）</summary>
           <div class="si-grid">
-            <label class="wide">JWT 密钥（留空由服务端自动生成）<el-input v-model="form.jwtKey" autocomplete="off" /></label>
+            <label class="wide">JWT 密钥（留空自动生成）<el-input v-model="form.jwtKey" autocomplete="off" /></label>
+            <p class="si-tip">
+              <b>作用</b>：登录凭证的签名密钥——服务端用它给每次登录签发的身份凭证盖章，并校验凭证没有被伪造，是后台登录安全的核心。
+              <b>建议</b>：留空即可，服务端会自动生成 32 字节随机密钥；手动填写需至少 16 位，且不能用内置缺省值（缺省值随公开文档泄漏，用它会直接拒绝启动）。
+              <b>注意</b>：安装后更换它，所有人已登录的状态立即失效，需重新登录。
+            </p>
             <el-checkbox v-model="form.cookieSecure" class="si-chk">
-              Cookie 强制 HTTPS（站点启用 https 后再勾选）
+              Cookie 强制 HTTPS
             </el-checkbox>
+            <p class="si-tip">
+              <b>作用</b>：给登录 Cookie 加 Secure 标记，浏览器只在 HTTPS 连接下发送它，防止登录凭证在 http 明文传输中被窃取。
+              <b>建议</b>：站点正式上线（启用 HTTPS）后勾选；本地 http 环境先不要勾——浏览器将不再发送 Cookie，会导致登录不上。
+            </p>
           </div>
         </details>
 

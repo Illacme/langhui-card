@@ -208,4 +208,14 @@ describe('SetupInstaller', () => {
     expect(w.text()).toContain('手动配置（不使用安装向导）')
     expect(w.text()).toContain('DB_DSN=sqlite:///data/weichuan.db')
   })
+
+  it('高级选项带 JWT 密钥与 Cookie 强制 HTTPS 的作用说明', () => {
+    const w = mountInstaller()
+    // details 内容常驻 DOM（jsdom 不做原生折叠隐藏），text() 可直接断言
+    expect(w.text()).toContain('登录凭证的签名密钥')
+    expect(w.text()).toContain('至少 16 位')
+    expect(w.text()).toContain('所有人已登录的状态立即失效')
+    expect(w.text()).toContain('给登录 Cookie 加 Secure 标记')
+    expect(w.text()).toContain('浏览器将不再发送 Cookie')
+  })
 })
