@@ -3,11 +3,13 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"weichuan/internal/config"
 	"weichuan/internal/dbopen"
 	"weichuan/internal/handler"
 	"weichuan/internal/middleware"
+	"weichuan/internal/migrate"
 	"weichuan/internal/model"
 	"weichuan/internal/repository"
 	"weichuan/internal/setting"
@@ -15,8 +17,35 @@ import (
 	"weichuan/internal/storage"
 )
 
+// usage 子命令说明。`server` 不带参数即正常起服务，带参数则是运维子命令。
+const usage = `用法：
+  server            正常启动服务（默认）
+  server migrate    应用待执行的数据库迁移后退出（不启服务）
+  server help       显示本说明
+
+迁移默认在启动时自动补齐（仅 MySQL；AUTO_MIGRATE=0 关闭），
+migrate 子命令用于把它拆成发布流水线里的独立一步。
+`
+
 func main() {
 	cfg := config.Load()
+
+	// 运维子命令：先于「未配置模式」判定处理——migrate 需要在没有服务监听的
+	// 情况下连库，也被 InsecureGates 之外的场景使用（如升级脚本）。
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "migrate":
+			runMigrate(cfg)
+			return
+		case "help", "-h", "--help":
+			log.Print(usage)
+			return
+		default:
+			log.Printf("[FATAL] 未知子命令 %q", os.Args[1])
+			log.Print(usage)
+			os.Exit(2)
+		}
+	}
 
 	// 首次部署引导：连库必需的 DB_DSN 根本没提供时，不再直接 Fatal
 	// （运维只看到一行日志、不知道下一步做什么），而是以免数据库方式起来，
@@ -85,6 +114,31 @@ func main() {
 			"备份请用 VACUUM INTO 取在线一致性快照（详见 docs/deploy-runbook.md）")
 	}
 
+	// MySQL 升级自动补齐迁移：compose 的 initdb.d 只在卷为空时执行，存量库
+	// 升级后新增的迁移必须有人应用——历史上这一步靠人工跑 SQL（runbook §4），
+	// 漏了的表现是「表结构落后一个版本、报错却看不出原因」。这里按记账表只做
+	// 增量，幂等且带多副本锁；AUTO_MIGRATE=0 可交回发布流水线（配 `server migrate`）。
+	//
+	// 失败不 Fatal 是刻意的：迁移失败时服务仍能让管理员进后台查日志、也保留了
+	// 「改完重启自愈」的入口；而另一种常见失败——多副本抢锁超时——本就该跳过
+	// （另一个副本正在做），为此直接退出反而会把整站打挂。代价是必须靠日志
+	// 暴露，故这里用 [MIGRATE][FATAL] 前缀并写进 runbook 的排查清单。
+	if driver == dbopen.DriverMySQL && cfg.AutoMigrate {
+		applied, err := migrate.ApplyWithReport(db)
+		switch {
+		case err == nil && len(applied) > 0:
+			log.Printf("[MIGRATE] 已应用 %d 个迁移：%s", len(applied), strings.Join(applied, ", "))
+		case err == nil:
+			log.Printf("[MIGRATE] 数据库已是最新（无待应用迁移）")
+		default:
+			log.Printf("[MIGRATE][FATAL] 应用数据库迁移失败：%v", err)
+			log.Printf("[MIGRATE][FATAL] 服务继续启动，但表结构可能与本版本不一致："+
+				"请按上面的错误处理；或设 AUTO_MIGRATE=0 后手工执行 `%s migrate`", os.Args[0])
+		}
+	} else if driver == dbopen.DriverMySQL {
+		log.Printf("[MIGRATE] AUTO_MIGRATE=0：跳过自动迁移，请自行确认表结构与本版本匹配")
+	}
+
 	handler.SeedAdmin(db, cfg) // 首启动若 admin 表为空则创建初始超管
 
 	// 系统设置：建表 + seed 缺省值 + 载入内存缓存（后台「系统设置」界面维护运行参数）
@@ -110,13 +164,17 @@ func main() {
 		return m
 	}
 
-	// 机会性清理过期的会话黑名单行（expires_at 已过的吊销记录，令牌自身也已过期）。
-	// 生产可按需另配定时任务：DELETE FROM revoked_sessions WHERE expires_at < NOW();
+	// 清理过期的会话黑名单行（expires_at 已过的吊销记录，令牌自身也已过期）：
+	// 启动时先清一次（把上次停机期间到期的行补掉），再挂后台定期清理——
+	// 只清一次的话，长期不重启的实例里这张表会一直堆积（详见该函数注释）。
+	// 间隔由 REVOKED_PURGE_MINUTES 控制，默认 6 小时。
 	if n, err := repository.PurgeExpiredSessions(db); err != nil {
 		log.Printf("[WARN] purge expired revoked sessions: %v", err)
 	} else if n > 0 {
 		log.Printf("[INFO] purged %d expired revoked sessions", n)
 	}
+	stopPurge := repository.StartExpiredSessionPurge(db, cfg.RevokedPurgeInterval)
+	defer stopPurge()
 
 	r := handler.New(db)
 	// 可观测性：请求 ID + 访问日志（方法/路径/状态/耗时/IP，5xx 单独前缀便于告警匹配）
@@ -150,9 +208,9 @@ func main() {
 	var refresher storage.CDNRefresher
 	if cfg.CDNEnabled {
 		rf, err := storage.NewCDNRefresher(storage.CDNConfig{
-			Provider:         cfg.CDNProvider,
-			AccessKeyID:      cfg.CDNAccessKeyID,
-			AccessKeySecret:  cfg.CDNAccessKeySecret,
+			Provider:        cfg.CDNProvider,
+			AccessKeyID:     cfg.CDNAccessKeyID,
+			AccessKeySecret: cfg.CDNAccessKeySecret,
 			Endpoint:        cfg.CDNEndpoint,
 			ResourceID:      cfg.CDNResourceID,
 		})
@@ -184,6 +242,39 @@ func main() {
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// runMigrate `server migrate`：应用待执行迁移后退出，不启服务、不监听端口。
+// 用途：把「应用迁移」从启动流程里拆出来单独跑——发布流水线希望在起新版本
+// 之前先确认迁移成功，或部署设了 AUTO_MIGRATE=0、由人工择时执行。
+// 与启动时自动迁移走同一条代码路径（migrate.ApplyWithReport），只是失败即
+// os.Exit(1)：这里是运维显式发起的动作，退出码必须能进流水线判断。
+func runMigrate(cfg config.Config) {
+	// 用 Resolved 而不是 cfg.DBDSN：后者有内置缺省值，未配置的部署会拿着
+	// 缺省 DSN 去连一个根本不存在的库，报出来的错会把人带偏。
+	if config.Resolved("DB_DSN") == "" {
+		log.Fatal("[MIGRATE] DB_DSN 未配置，无法迁移：请先完成安装向导，或用 DB_DSN=... server migrate 显式指定")
+	}
+	db, driver, err := dbopen.Open(cfg.DBDSN)
+	if err != nil {
+		// 不打印 DSN 原文（含数据库口令）
+		log.Printf("[MIGRATE] 连接数据库失败（driver=%s）：%v", driver, err)
+		log.Fatal("[MIGRATE] 排查顺序：库是否已启动 / 地址端口是否可达 / 账号口令与库名是否正确（日志不打印 DSN）")
+	}
+	if driver == dbopen.DriverSQLite {
+		log.Print("[MIGRATE] SQLite 部署无需手工迁移：表由服务启动时按模型 AutoMigrate 维护")
+		return
+	}
+	applied, err := migrate.ApplyWithReport(db)
+	if err != nil {
+		log.Printf("[MIGRATE] 应用数据库迁移失败：%v", err)
+		log.Fatal("[MIGRATE] 迁移未完成：请按上面的错误处理后再启动服务（未应用的迁移不会记为已应用）")
+	}
+	if len(applied) == 0 {
+		log.Print("[MIGRATE] 数据库已是最新（无待应用迁移）")
+		return
+	}
+	log.Printf("[MIGRATE] 已应用 %d 个迁移：%s", len(applied), strings.Join(applied, ", "))
 }
 
 // newUploaderWithFallback 构造存储实现；失败时降级为本地磁盘并打印醒目告警。

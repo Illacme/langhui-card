@@ -308,12 +308,56 @@ SQLite 形态不用给，MySQL 形态必须给），服务起来会进入「未�
   用安装时填的管理员口令（或 `.env` 的 `ADMIN_USER/ADMIN_PASS`）登录 PC 后台，**立即改密码**
 - [ ] `docker compose ps` 里 backend 是 healthy（安装期间判据放宽为「进程活着」，装完恢复按 `db` 判）
 - [ ] 表结构齐全（MySQL 形态）：`docker exec -i weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" weichuan -e "show tables;"` —— 应包含 `revoked_sessions`（0005）等全部迁移产物（复数表名：`employees`/`admins`/`company_infos`…）；SQLite 形态可跳过此项（`AutoMigrate` 自动建表，库在 `data_data` 卷里）
+- [ ] `docker compose logs backend | grep MIGRATE`：期望是「已应用 N 个迁移」或「数据库已是最新」，**不能**出现 `[MIGRATE][FATAL]`（详见 §4）
+- [ ] 迁移记账表已建立（MySQL 形态）：`SELECT COUNT(*) FROM schema_migrations;` 与 `backend/migrations/*.sql` 数量一致
 - [ ] 上传一张图片（公司信息/封面），确认返回 URL 可访问（`uploads_data` 卷已挂载）
 
 
-## 4. 存量数据库手动应用迁移（仅「数据库已存在」时）
+## 4. 数据库迁移（升级时）
 
-compose 的自动迁移只在 `mysql_data` 卷**为空**（首启）时执行。对已有数据库：
+### 默认路径：启动时自动补齐（不用手工跑）
+
+从本版起，**MySQL 部署在启动时自动应用「尚未应用」的迁移**，无需人工干预：
+
+- 已应用过的迁移记在 `schema_migrations` 表（version + applied_at），重复启动不会重放；
+- 只做增量，且每条语句幂等（已存在的列/表报 `1060 / 1050 / 1062` 一律忽略），
+  存量库首次被接管时重放全部迁移也安全（随后补记版本）；
+- 多副本同时启动用 MySQL `GET_LOCK` 串行化，抢不到锁的副本跳过（另一个正在做）；
+- SQLite 部署不适用本节：表由服务启动时按模型 `AutoMigrate` 维护。
+
+启动日志三种形态：
+
+```text
+[MIGRATE] 数据库已是最新（无待应用迁移）          ← 常态
+[MIGRATE] 已应用 2 个迁移：0018_phone2.sql, …      ← 升级生效了
+[MIGRATE][FATAL] 应用数据库迁移失败：…             ← 必须处理（服务仍会起来，但表结构可能落后）
+```
+
+> 迁移失败**不终止启动**是刻意的：管理员还能进后台查日志、也保留了修完重启自愈的入口。
+> 代价是必须靠日志暴露——请把 `[MIGRATE][FATAL]` 加进日志告警的匹配词。
+
+### 想自己掌控：拆成流水线里的一步
+
+```bash
+# 关闭启动自动迁移（环境变量 / .env）
+AUTO_MIGRATE=0
+
+# 单独跑一步（不启服务、不监听端口，退出码可直接进流水线判断）
+docker exec weichuan-backend /app/server migrate
+# → [MIGRATE] 已应用 N 个迁移：…
+# → [MIGRATE] 数据库已是最新（无待应用迁移）
+```
+
+迁移状态随时可查：
+
+```bash
+docker exec -i weichuan-mysql mysql -uroot -p"$MYSQL_ROOT_PASSWORD" weichuan \
+  -e "SELECT version, applied_at FROM schema_migrations ORDER BY version;"
+```
+
+### 仍要手工执行的场景（回滚 / 排障）
+
+compose 的 `initdb.d` 自动建表只在 `mysql_data` 卷**为空**（首启）时执行。对已存在的数据库：
 
 ```bash
 for f in backend/migrations/000*.sql; do
@@ -322,8 +366,7 @@ done
 ```
 
 迁移向后兼容、只增不改；若报 `1060 Duplicate column` / `1050 table already exists`，说明该变更已应用过，可忽略。**执行前先 `mysqldump` 备份**。
-
-> SQLite 形态不适用本节：没有手工迁移，表由服务启动时 `AutoMigrate` 自动建（见「无 Docker 部署」路径 D）。
+手工执行后记得把对应版本写进 `schema_migrations`，否则启动时还会再跑一遍（幂等，但会重复产生可忽略的报错）。
 
 ## 5. HTTPS（生产必须，小程序合法域名的前提）
 
@@ -376,15 +419,22 @@ TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:13306)/weichuan_test?charset=utf8mb4&par
 # 每天凌晨 3 点全量备份（mysqldump → gzip → 保留 7 天）
 0 3 * * * cd /path/to/repo && scripts/backup.sh >> /var/log/weichuan-backup.log 2>&1
 
-# 每分钟告警检查（healthz / 5xx / 备份新鲜度，webhook 换成实际机器人地址）
+# 每分钟告警检查（healthz 本地探活 / 5xx / 备份新鲜度 / 外部拨测，webhook 换成实际机器人地址）
 * * * * * cd /path/to/repo && ALERT_WEBHOOK="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxx" \
   HEALTH_URL=http://127.0.0.1:8080/healthz \
+  EXTERNAL_URL=https://你的域名/healthz \
   LOG_FILE="$(docker inspect -f '{{.LogPath}}' weichuan-backend)" \
   BACKUP_DIR=/path/to/repo/backups \
   scripts/alert_check.sh >> /var/log/weichuan-alert.log 2>&1
 ```
 
-建议再补一条外部拨测（UptimeRobot 免费档即可）盯 `https://你的域名/healthz`——它覆盖「服务器外部不可达」这一本机探活看不到的场景，是投入产出比最高的一条。
+`EXTERNAL_URL` 是**外部拨测**（R4）：从对外域名访问 `/healthz`，覆盖本地探活看不到的
+那一半故障——域名没解析、443 没放行、证书过期、反代 upstream 挂了。同时校验响应耗时
+（`EXTERNAL_MAX_MS`，默认 2000ms）与证书剩余有效期（`CERT_MIN_DAYS`，默认 14 天）。
+不填该项则 R4 跳过（已用 UptimeRobot 之类外部拨测服务的部署可以不填，避免重复）。
+
+> 外部拨测只从「本机之外」发起，仍可能漏掉「机房出口正常、某运营商不通」这类区域性故障。
+> 真要盯全国可用性，还是需要多地拨测服务；本脚本的定位是「没有监控基建也能跑起来的最小闭环」。
 
 ## 8. 小程序侧切换（提审前）
 
@@ -409,5 +459,7 @@ TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:13306)/weichuan_test?charset=utf8mb4&par
 | backend 反复重启 | 已配置模式下多是数据库连不上：`docker compose logs backend` 看 DB_DSN 与实际库状态（SQLite 形态确认 `data_data` 卷还在；MySQL 形态确认启动时带了 `--profile mysql`）。安装模式（未配置）下 backend 健康判据已放宽为「进程活着」，不属于此项 |
 | 登录后立刻 401 循环 | `COOKIE_SECURE` 与协议不匹配——http 访问却设了 `true`（或反之） |
 | 上传报 413 | 请求体超限：`frontend/nginx.conf` 已设 50m；前置 Caddy 默认不限 |
-| 小程序码接口 code=1 | 未配 `WX_APPID/WX_APPSECRET`，联调期属预期 |
+| 小程序码接口 code=1 | 未配 `WX_APPID/WX_APPSECRET`，联调期属预期；配了仍失败多为凭据不配对或调用 IP 不在白名单（`PREFLIGHT_WX_LIVE=1 scripts/preflight.sh` 可直接问微信接口） |
+| 启动日志出现 `[MIGRATE][FATAL]` | 迁移没应用完（表结构落后于代码版本）。看上面的报错处理，或 `AUTO_MIGRATE=0` + `docker exec weichuan-backend /app/server migrate` 单独跑（详见 §4）。服务不会因此终止，但功能可能报错 |
+| 版本升级后功能报错、表缺列 | 同上一行：确认 `schema_migrations` 里有没有最新那个迁移文件（§4 有查询 SQL） |
 | 视频号块空白 | 测试号 / 未绑视频号 / 模拟器——需真机 + 绑定视频号的正式 AppID |

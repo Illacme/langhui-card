@@ -1,14 +1,20 @@
 // Package migrate 按序应用 backend/migrations/*.sql（MySQL 方言）。
 //
-// 两个使用方：
+// 三个使用方：
 //   - 安装向导（internal/setup/install.go）的 MySQL 分支：表结构归迁移脚本管，
 //     与 cmd/server 对 MySQL 不跑 AutoMigrate 的策略一致；
+//   - cmd/server 启动：MySQL 部署「升级」时自动补齐待应用迁移（见 AutoMigrate 说明）；
 //   - 测试（handler_test 的 MySQL parity）：与生产同一条代码路径。
+//
+// 版本记账：已应用的迁移文件名记在 schema_migrations 表，重复启动不会重放。
+// 该表是**本工具的元数据**，不占 migrations/ 目录的业务序号——否则「手工 apply
+// 目录里的 .sql」与「程序记账」会互相干扰，且它的建表语句要早于 0001 才有用。
 //
 // 幂等性：建表用 IF NOT EXISTS；对已存在的对象，ALTER/INSERT 会报
 // "Duplicate column" / "already exists" / "Duplicate entry"（1060/1050/1062），
-// 这些错误一律忽略——与 docs/deploy-runbook.md §4「存量数据库手动应用迁移」
-// 的容错说明一致。因此对「compose initdb.d 已应用过」的库重复执行也安全。
+// 这些错误一律忽略——与 docs/deploy-runbook.md「存量数据库应用迁移」
+// 的容错说明一致。因此首次接管的存量库（记账表为空、业务表已存在）重放
+// 全部迁移也安全：命中 Duplicate 即跳过，随后补记版本。
 //
 // 为什么切分语句只按 ";"：migrations 里只有 DDL/DML，无存储过程 / 触发器 /
 // 含分号的字符串字面量（企业名等中文数据不含分号）。若将来加入这类语句，
@@ -17,20 +23,37 @@ package migrate
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
 
+// 记账表与并发锁：多副本同时启动时若都跑迁移，会互相撞 DDL 与记账 INSERT，
+// 故 MySQL 侧先取一个命名锁（GET_LOCK），拿不到的副本直接跳过——另一个副本
+// 正在做，跳过不会丢迁移（下次启动仍会补）。SQLite 没有 GET_LOCK，也本就
+// 不支持多副本（见 cmd/server 启动日志提示），跳过加锁直接执行。
+// 记账与并发锁用到的常量（见包注释）。
+// nowFunc 抽成变量是为了单测可断言 applied_at，也避免依赖真实时钟。
+var nowFunc = time.Now
+
+const (
+	migrationsTable = "schema_migrations"
+	lockName        = "weichuan_migrate"
+	lockTimeoutSec  = 10
+)
+
 // ignoredErrs 已应用过的迁移语句报的错（见包注释）：
-//   1060 Duplicate column name  —— ALTER ADD COLUMN 列已存在
-//   1050 Table already exists   —— CREATE TABLE（有 IF NOT EXISTS，双保险）
-//   1061 Duplicate key name     —— ALTER ADD INDEX 索引已存在
-//   1062 Duplicate entry        —— 固定主键的种子 INSERT 重复执行
+//
+//	1060 Duplicate column name  —— ALTER ADD COLUMN 列已存在
+//	1050 Table already exists   —— CREATE TABLE（有 IF NOT EXISTS，双保险）
+//	1061 Duplicate key name     —— ALTER ADD INDEX 索引已存在
+//	1062 Duplicate entry        —— 固定主键的种子 INSERT 重复执行
 var ignoredErrs = []string{"Duplicate column", "already exists", "Duplicate key name", "Duplicate entry"}
 
 // migrationsDir 定位 migrations 目录：按优先级逐个候选，第一个「存在且有 .sql」的胜出。
@@ -39,6 +62,7 @@ var ignoredErrs = []string{"Duplicate column", "already exists", "Duplicate key 
 //     -trimpath 构建时 runtime.Caller 只剩相对路径，也只有这条能找到）；
 //  3. runtime.Caller 推导的源码树路径（dev / go test：源码树在，编译期绝对路径可用）；
 //  4. CWD 下的 migrations/（在 backend/ 目录里直接跑二进制）。
+//
 // 背景：曾只用 runtime.Caller，容器里它返回**编译期**路径 /src/migrations（运行期不存在），
 // MySQL 形态安装直接报「读取 migrations 目录失败」——「从未跑起来」的又一形态。
 func migrationsDir() (string, error) {
@@ -74,15 +98,22 @@ func hasSQLFiles(dir string) bool {
 	return false
 }
 
-// Apply 按文件名顺序执行 migrations 目录下全部 *.sql。
+// Apply 按文件名顺序执行 migrations 目录下尚未记录的 *.sql，并记录版本。
 func Apply(db *gorm.DB) error {
+	_, err := ApplyWithReport(db)
+	return err
+}
+
+// ApplyWithReport 与 Apply 相同，但返回**本次真正应用**的迁移文件名
+// （已应用过的不会出现在列表里），供启动日志与 `server migrate` 子命令回显。
+func ApplyWithReport(db *gorm.DB) ([]string, error) {
 	dir, err := migrationsDir()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("读取 migrations 目录失败：%v", err)
+		return nil, fmt.Errorf("读取 migrations 目录失败：%v", err)
 	}
 	var files []string
 	for _, e := range entries {
@@ -92,29 +123,127 @@ func Apply(db *gorm.DB) error {
 		files = append(files, e.Name())
 	}
 	if len(files) == 0 {
-		return fmt.Errorf("migrations 目录 %s 下没有 .sql 文件", dir)
+		return nil, fmt.Errorf("migrations 目录 %s 下没有 .sql 文件", dir)
 	}
-	sort.Strings(files) // 0001 → 0018 按序应用
+	sort.Strings(files) // 0001 → 0019 按序应用
 
-	for _, name := range files {
-		raw, err := os.ReadFile(filepath.Join(dir, name))
-		if err != nil {
-			return fmt.Errorf("读取 %s 失败：%v", name, err)
-		}
-		for _, stmt := range strings.Split(string(raw), ";") {
-			s := strings.TrimSpace(stmt)
-			if s == "" || isCommentOnly(s) {
+	done, err := appliedVersions(db)
+	if err != nil {
+		return nil, err
+	}
+
+	var applied []string
+	run := func() error {
+		for _, name := range files {
+			if done[name] {
 				continue
 			}
-			if err := db.Exec(s).Error; err != nil {
-				if isIgnored(err) {
-					continue
-				}
-				return fmt.Errorf("应用 %s 失败：%v", name, err)
+			if err := applyFile(db, dir, name); err != nil {
+				return err
 			}
+			if err := recordVersion(db, name); err != nil {
+				return err
+			}
+			applied = append(applied, name)
+		}
+		return nil
+	}
+	// MySQL 多副本并发保护；SQLite（无 GET_LOCK、也不支持多副本）直接执行
+	if err := withMySQLLock(db, run); err != nil {
+		return applied, err
+	}
+	return applied, nil
+}
+
+// applyFile 执行单个迁移文件的全部语句；任一句失败（非可忽略错误）即中止，
+// 调用方据此不记录该版本——下次启动会重试，而不是把半个迁移记成已完成。
+func applyFile(db *gorm.DB, dir, name string) error {
+	raw, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		return fmt.Errorf("读取 %s 失败：%v", name, err)
+	}
+	for _, stmt := range strings.Split(string(raw), ";") {
+		s := strings.TrimSpace(stmt)
+		if s == "" || isCommentOnly(s) {
+			continue
+		}
+		if err := db.Exec(s).Error; err != nil {
+			if isIgnored(err) {
+				continue
+			}
+			return fmt.Errorf("应用 %s 失败：%v", name, err)
 		}
 	}
 	return nil
+}
+
+// appliedVersions 确保记账表存在并返回已应用的版本集合。
+// 表不存在时先建（IF NOT EXISTS）——这是「存量库首次被本工具接管」的常态，
+// 返回空集合，随后按幂等重放并补记版本。
+func appliedVersions(db *gorm.DB) (map[string]bool, error) {
+	create := "CREATE TABLE IF NOT EXISTS " + migrationsTable + " (" +
+		"version VARCHAR(64) NOT NULL PRIMARY KEY, " +
+		"applied_at DATETIME NOT NULL" +
+		")"
+	// ENGINE / CHARSET 是 MySQL 方言，SQLite 不认；记账表建表要两种形态都能执行
+	// （生产只有 MySQL，但单测用 WEICHUAN_MIGRATIONS_DIR + SQLite 就能覆盖记账逻辑，
+	//  不必依赖真实 MySQL）
+	if isMySQL(db) {
+		create += " ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+	}
+	if err := db.Exec(create).Error; err != nil {
+		return nil, fmt.Errorf("创建迁移记账表失败：%v", err)
+	}
+	type row struct {
+		Version string
+	}
+	var rows []row
+	if err := db.Raw("SELECT version FROM " + migrationsTable).Scan(&rows).Error; err != nil {
+		return nil, fmt.Errorf("读取迁移记账表失败：%v", err)
+	}
+	done := make(map[string]bool, len(rows))
+	for _, r := range rows {
+		done[r.Version] = true
+	}
+	return done, nil
+}
+
+// recordVersion 把一个迁移文件记为已应用（重复执行靠 Duplicate entry 忽略）。
+func recordVersion(db *gorm.DB, version string) error {
+	err := db.Exec("INSERT INTO "+migrationsTable+" (version, applied_at) VALUES (?, ?)",
+		version, nowFunc()).Error
+	if err != nil && !isIgnored(err) {
+		return fmt.Errorf("记录迁移版本 %s 失败：%v", version, err)
+	}
+	return nil
+}
+
+// isMySQL 是否 MySQL 方言（决定记账表 DDL 形态与是否加迁移锁）。
+func isMySQL(db *gorm.DB) bool {
+	return db != nil && db.Dialector != nil && db.Dialector.Name() == "mysql"
+}
+
+// withMySQLLock 在 MySQL 上用 GET_LOCK 串行化迁移；非 MySQL（SQLite）直接执行 fn。
+// 拿不到锁时返回错误：另一个副本正在迁移，本副本跳过即可（下次启动仍会补齐）。
+func withMySQLLock(db *gorm.DB, fn func() error) error {
+	if !isMySQL(db) {
+		return fn()
+	}
+	var got int
+	if err := db.Raw("SELECT GET_LOCK(?, ?)", lockName, lockTimeoutSec).Scan(&got).Error; err != nil {
+		return fmt.Errorf("获取迁移锁失败：%v", err)
+	}
+	if got != 1 {
+		return fmt.Errorf("获取迁移锁超时（%ds）：另一实例正在应用迁移", lockTimeoutSec)
+	}
+	defer func() {
+		// 释放失败不致命：GET_LOCK 是连接级的，连接关闭时自动释放；
+		// 但连接池可能复用这条连接，所以仍然显式释放，失败要留痕
+		if err := db.Exec("SELECT RELEASE_LOCK(?)", lockName).Error; err != nil {
+			log.Printf("[WARN] 释放迁移锁失败（连接关闭后会自动释放）：%v", err)
+		}
+	}()
+	return fn()
 }
 
 // isCommentOnly 整段都是注释行（-- 开头）时没有可执行语句。

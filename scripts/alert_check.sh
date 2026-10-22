@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────
-# 最小告警检查（零第三方依赖，三条规则，配 crontab 每分钟运行）：
+# 最小告警检查（零第三方依赖，四条规则，配 crontab 每分钟运行）：
 #   R1 healthz    ：本地探活 GET /healthz，非 2xx / 超时即告警
 #   R2 5xx        ：访问日志新增 [ACCESS-5XX] 行即告警（附请求 ID 便于排查）
 #   R3 备份新鲜度 ：backups/ 最新备份文件年龄超阈值即告警
 #                   （backup.sh 失败时不落新文件，本规则可兜底捕获）
+#   R4 外部拨测   ：从本机之外访问对外地址（EXTERNAL_URL）：非 2xx / 耗时超阈值 /
+#                   证书临近过期即告警。R1 是本机视角，看不出反代、证书、防火墙
+#                   这类「本机全绿、用户全挂」的故障，R4 补的就是这一半
 #
 # 定位：不替代 Prometheus/Alertmanager，而是「没有监控基建也能跑起来」
 # 的最小闭环；规则是纯增量，随时可平滑迁到标准监控栈。
@@ -13,6 +16,7 @@
 #   scripts/alert_check.sh
 #   ALERT_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx \
 #     HEALTH_URL=http://127.0.0.1:8080/healthz \
+#     EXTERNAL_URL=https://card.example.com/healthz \
 #     LOG_FILE=/var/log/weichuan/access.log \
 #     BACKUP_DIR=./backups scripts/alert_check.sh
 #
@@ -26,9 +30,13 @@
 #   ALERT_WEBHOOK    机器人 webhook（企业微信 / 钉钉，msgtype=text 同格式；
 #                    飞书格式不同需自行调整 -d 负载）；未配置时告警打到 stderr
 #   ALERT_COOLDOWN   同一规则两次告警的最小间隔（秒），默认 1800（防轰炸）
+#   EXTERNAL_URL     外部拨测地址（对外 https 基址 + /healthz），默认空=跳过 R4
+#   EXTERNAL_MAX_MS  外部拨测耗时阈值（毫秒），默认 2000
+#   CERT_MIN_DAYS    证书剩余有效期告警阈值（天），默认 14
 #
 # 平台：Linux（GNU coreutils）；BSD/macOS 的 stat/date 差异已在 file_mtime 内兼容。
-# 依赖：bash、curl（探活与 webhook 推送）、grep/tail/wc。
+# 依赖：bash、curl（探活 / 外部拨测 / webhook 推送）、grep/tail/wc、awk（耗时取整）、
+# openssl（仅证书有效期，缺失则跳过该子项）。
 # ─────────────────────────────────────────────────────────────
 set -uo pipefail
 
@@ -39,6 +47,9 @@ BACKUP_MAX_HOURS="${BACKUP_MAX_HOURS:-26}"
 STATE_DIR="${STATE_DIR:-/var/tmp/weichuan-alert}"
 ALERT_WEBHOOK="${ALERT_WEBHOOK:-}"
 ALERT_COOLDOWN="${ALERT_COOLDOWN:-1800}"
+EXTERNAL_URL="${EXTERNAL_URL:-}"
+EXTERNAL_MAX_MS="${EXTERNAL_MAX_MS:-2000}"
+CERT_MIN_DAYS="${CERT_MIN_DAYS:-14}"
 
 command -v curl >/dev/null 2>&1 || { echo "[alert_check] 需要 curl（探活与 webhook 推送）" >&2; exit 1; }
 mkdir -p "$STATE_DIR"
@@ -65,7 +76,7 @@ send_alert() {
     if ! curl -fsS -m 10 -X POST "$ALERT_WEBHOOK" \
         -H 'Content-Type: application/json' \
         -d "{\"msgtype\":\"text\",\"text\":{\"content\":\"$text\"}}" >/dev/null 2>&1; then
-      echo "$text（webhook 发送失败，降级为本行输出）" >&2
+      echo "${text}（webhook 发送失败，降级为本行输出）" >&2
     fi
   else
     echo "$text" >&2
@@ -132,7 +143,85 @@ check_backup() {
   fi
 }
 
+# ── R4: 外部拨测（R1 看不到的那一半：反代 / 证书 / 防火墙）──
+# 从本机 curl 127.0.0.1 永远 200，而用户侧可能是「域名没解析 / 443 没放行 /
+# 证书过期 / 反代 upstream 挂了」——这些只有从对外地址访问才暴露。
+# 未配 EXTERNAL_URL 时跳过（很多部署用 UptimeRobot 之类的外部服务代劳，不重复造）。
+check_external() {
+  if [ -z "$EXTERNAL_URL" ]; then
+    echo "[alert_check] 未设置 EXTERNAL_URL，跳过 R4（建议填对外 https 地址 + /healthz）" >&2
+    return 0
+  fi
+  local out code ms
+  out="$(curl -sS -o /dev/null -m 10 -w '%{http_code} %{time_total}' "$EXTERNAL_URL" 2>/dev/null)" || out=""
+  if [ -z "$out" ]; then
+    # 无响应时直接返回：此时证书必然也取不到，再报一条 cert 只是重复噪音
+    send_alert external "外部拨测 $EXTERNAL_URL 无响应（域名不可达 / 防火墙未放行 / 反代故障）"
+    return 0
+  fi
+  code="${out%% *}"
+  ms="$(printf '%s' "${out#* }" | awk '{printf "%d", $1 * 1000}')"
+  case "$code" in
+    2??) ;;
+    *) send_alert external "外部拨测 $EXTERNAL_URL 返回 HTTP ${code}（期望 2xx）：反代或后端异常" ;;
+  esac
+  if [ -n "${ms:-}" ] && [ "$ms" -gt "$EXTERNAL_MAX_MS" ] 2>/dev/null; then
+    send_alert external_slow "外部拨测 $EXTERNAL_URL 耗时 ${ms}ms > ${EXTERNAL_MAX_MS}ms：链路变慢，先查后端与带宽"
+  fi
+
+  # 证书：只有 https 才查；openssl 缺失则跳过（不因缺工具让整条规则失效）
+  case "$EXTERNAL_URL" in
+    https://*) ;;
+    *) return 0 ;;
+  esac
+  command -v openssl >/dev/null 2>&1 || return 0
+  local hp host secs crc
+  hp="$(printf '%s' "$EXTERNAL_URL" | sed -e 's#^https://##' -e 's#/.*$##')"
+  host="${hp%%:*}"
+  [ "$hp" = "$host" ] && hp="$host:443"
+  secs=$((CERT_MIN_DAYS * 86400))
+  crc=0
+  cert_probe "$hp" "$host" "$secs" || crc=$?
+  case "$crc" in
+    0) ;;
+    2) send_alert cert "取不到 ${host} 的证书（443 未开放 / 域名不可达 / SNI 不匹配）" 21600 ;;
+    *)
+      if cert_probe "$hp" "$host" 0; then
+        send_alert cert "${host} 的证书将在 ${CERT_MIN_DAYS} 天内过期（已配自动续期可忽略）" 21600
+      else
+        send_alert cert "${host} 的证书已过期：所有 https 请求失败，小程序正式版不可用"
+      fi
+      ;;
+  esac
+}
+
+# cert_probe <host:port> <servername> <checkend_seconds>
+# 退出码：0=在 N 秒后仍未过期 / 1=已过期或即将过期 / 2=没拿到证书。
+# 与 preflight.sh 的 cert_check 同源（两份脚本刻意不互相 source，避免依赖目录结构）。
+cert_probe() {
+  local hp="$1" sn="$2" end="$3" tmp pid i rc
+  tmp="${STATE_DIR}/cert-${sn}-$$"
+  ( printf '' | openssl s_client -servername "$sn" -connect "$hp" ) >"$tmp" 2>/dev/null &
+  pid=$!
+  i=0
+  while [ "$i" -lt 100 ]; do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+    i=$((i + 1))
+  done
+  kill "$pid" 2>/dev/null
+  wait "$pid" 2>/dev/null
+  # 与 preflight.sh 同理：拿不到证书要和「已过期」区分开
+  grep -q "BEGIN CERTIFICATE" "$tmp" 2>/dev/null || { rm -f "$tmp"; return 2; }
+  openssl x509 -noout -checkend "$end" <"$tmp" >/dev/null 2>&1
+  rc=$?
+  rm -f "$tmp"
+  if [ "$rc" -ne 0 ] && [ "$end" != "0" ]; then rc=1; fi
+  return $rc
+}
+
 check_healthz
 check_5xx
 check_backup
+check_external
 exit 0

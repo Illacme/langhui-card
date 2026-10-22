@@ -62,10 +62,37 @@ backend/
 | `file:/var/lib/weichuan/weichuan.db` | SQLite | 同上，URI 写法 |
 | `/var/lib/weichuan/weichuan.db` | SQLite | 裸路径兜底（仅认 `.db` / `.sqlite` / `.sqlite3` 结尾） |
 
-> 用 MySQL 时先建库并导入迁移；用 SQLite 时**不要**执行 `migrations/*.sql`
+> 用 MySQL 时首次部署要建库并导入迁移；**升级则不用手工跑**——服务启动会按
+> `schema_migrations` 记账表自动补齐未应用的迁移（详见下节）。用 SQLite 时
+> **不要**执行 `migrations/*.sql`
 > （那些是 MySQL 方言，`ENGINE=InnoDB` / `AUTO_INCREMENT` / 反引号 SQLite 都不认）。
 > SQLite 的适用边界（单机单进程、库文件必须在本地磁盘、备份用 `VACUUM INTO`）
 > 见仓库根 `docs/deploy-runbook.md`「路径 D：SQLite 单机生产」。
+
+### 数据库迁移（MySQL）
+
+`migrations/*.sql` 是 MySQL 方言，由 `internal/migrate` 按文件名顺序应用，已应用的记录
+在 `schema_migrations(version, applied_at)`。两个入口用的是同一条代码路径：
+
+| 场景 | 怎么做 |
+|---|---|
+| 首次部署（空库） | 安装向导的 MySQL 分支（或手工 `mysql < migrations/*.sql`） |
+| 版本升级（存量库） | **启动时自动补齐**——只做增量，幂等；多副本用 `GET_LOCK` 串行化 |
+| 想自己掌控 | `AUTO_MIGRATE=0` 关闭自动迁移，改跑 `./server migrate`（不启服务，退出码可进流水线） |
+
+- 幂等性：语句重复执行报的 `1060 Duplicate column` / `1050 already exists` /
+  `1062 Duplicate entry` 一律忽略，因此存量库首次被接管时重放全部迁移也安全。
+- 失败不记账：某个迁移失败时**不会**把它记成已应用，下次启动会重试；启动日志打
+  `[MIGRATE][FATAL]` 且不终止服务（保留「进后台查日志、修完重启自愈」的入口），
+  代价是这条日志必须被看见——请把它纳入日志告警匹配词。
+- SQLite 部署不适用：表由启动时按模型 `AutoMigrate` 维护（`./server migrate` 会直接说明）。
+
+```bash
+# 手工跑一次（不启服务）
+DB_DSN='root:pw@tcp(127.0.0.1:3306)/weichuan?charset=utf8mb4&parseTime=true' ./server migrate
+# 查看已应用版本
+mysql -u root -p weichuan -e "SELECT version, applied_at FROM schema_migrations ORDER BY version;"
+```
 
 ```bash
 # 1. 建库并导入全部迁移（含 7 分类种子 / 审核流表 / 软删除 / token_version / 会话黑名单 / 多租户 company_id）——仅 MySQL 需要
@@ -364,7 +391,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 ### 已知待加固项（需流程 / 基建配合，未在本仓库落地）
 - 小程序码 / access_token 等内存缓存多实例不共享，水平扩展需引入 Redis。
-- **最小告警已落地**：仓库根 `scripts/alert_check.sh` 消费 `[ACCESS-5XX]` 访问日志与 `/healthz`（healthz 探活 / 5xx / 备份新鲜度三条规则，零依赖，配 crontab 即可运行，配置见《运维与部署》「最小告警（零依赖）」）；待运维侧按需扩展完整监控栈（Prometheus + Alertmanager）、外部拨测与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
+- **最小告警已落地**：仓库根 `scripts/alert_check.sh` 消费 `[ACCESS-5XX]` 访问日志与 `/healthz`（healthz 本地探活 / 5xx / 备份新鲜度 / **外部拨测**四条规则，零依赖，配 crontab 即可运行，配置见《运维与部署》「最小告警（零依赖）」）；待运维侧按需扩展完整监控栈（Prometheus + Alertmanager）、多地拨测（本脚本的外部拨测仍是单点视角）与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
 
 ## 自动化接口测试
 接口层（`/api/*`）已配套 `httptest` 集成测试，覆盖读接口、登录鉴权、审核流、员工管理、分类/项目强校验、业务服务、企业内容、文件上传与存储增强、小程序码等全部主路径，并对「本地驱动不支持预签名→code:1」「CDN 未配置→code:1」「分类下有项目/锁定→删除拦截 code=1」等回退分支做了断言。
@@ -398,8 +425,14 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - `internal/storage/oss_test.go`：用 `httptest` 起假 OSS 服务（`oss.ForcePathStyle(true)` 才能打 IP:PORT 端点），覆盖上传 / 预签名 / 签名 / 删除与构造期 fail-fast（空 endpoint/bucket 直接报错，不拖到上传才失败）。
 - `internal/storage/storage_test.go`：`checkFile` 扩展名白名单 + 文件头魔法字节嗅探的各类型合法 / 伪造场景。
 - `internal/middleware/observability_test.go`：RequestID 透传 / 生成、AccessLog 前缀（5xx 走 `[ACCESS-5XX]`）、Metrics 计数与 Prometheus 文本格式。
+- `internal/migrate/apply_bookkeeping_test.go`（迁移记账）：用临时 SQLite + 自制
+  `WEICHUAN_MIGRATIONS_DIR` 覆盖「只应用未记录的版本」「失败不记账（否则会留下
+  一个没人知道的表结构缺口）」「存量库重放报重复要忽略」「applied_at 落库」，
+  不必依赖真实 MySQL 就能守住升级自动迁移的核心语义。
+- `internal/repository/session_test.go`（会话黑名单）：清理只删过期行、未过期的吊销
+  记录必须留着；后台定期清理（默认 6h，`REVOKED_PURGE_MINUTES` 可配）会在到期后清掉
+  且 `stop()` 后不再继续（防 goroutine 泄漏）；interval≤0 回退默认间隔而不是 0 间隔死循环。
 - `internal/middleware/ratelimit_test.go`：登录限流计数与 IP 隔离。
-- `internal/repository/session.go`（黑名单读写 / 清理）无独立单测，由 handler 集成测试 `TestSingleDeviceRevocation` 覆盖其完整链路。
 
 CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
   - `backend`（**默认必跑，零外部依赖**）：`go build` + `go vet` + `go test ./...`。
@@ -455,15 +488,18 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 > 开发态 `cmd/devserver` 用 SQLite 临时库（每次启动全新、自动 seed），本就无需备份；生产走 `cmd/server`，用本脚本。若生产用的是 SQLite 单机（路径 D），备份改用 `VACUUM INTO` 取在线一致性快照，不要用 `cp`。
 
 ### 4. 最小告警（零依赖）
-`scripts/alert_check.sh` 三条规则，配 crontab **每分钟**运行：
+`scripts/alert_check.sh` 四条规则，配 crontab **每分钟**运行：
 - **R1 healthz**：`GET /healthz` 非 2xx/超时即告警（依赖第 1 节的真实探针，DB 宕机也能捕获）
 - **R2 5xx**：扫描日志文件新增 `[ACCESS-5XX]`（依赖第 2 节的日志落盘）
 - **R3 备份新鲜度**：`backups/` 最新备份超 `BACKUP_MAX_HOURS`(默认 26h) 即告警（backup.sh 失败时无新文件，本规则兜底）
+- **R4 外部拨测**：从对外地址（`EXTERNAL_URL`）访问 `/healthz`——R1 是本机视角，看不出
+  域名没解析 / 443 未放行 / 反代 upstream 挂了 / 证书过期这类「本机全绿、用户全挂」的故障。
+  同时校验响应耗时（`EXTERNAL_MAX_MS`，默认 2000ms）与证书剩余有效期（`CERT_MIN_DAYS`，默认 14 天）
 ```bash
 # 每分钟检查（crontab）
-* * * * * cd /path/to/repo && scripts/alert_check.sh
+* * * * * cd /path/to/repo && EXTERNAL_URL=https://你的域名/healthz scripts/alert_check.sh
 ```
-配置（环境变量，均有默认值）：`HEALTH_URL` / `LOG_FILE` / `BACKUP_DIR` / `BACKUP_MAX_HOURS` / `STATE_DIR` / `ALERT_WEBHOOK`(企业微信/钉钉机器人，未配置则打到 stderr) / `ALERT_COOLDOWN`(默认 1800s 防轰炸)。本脚本不替代 Prometheus/Alertmanager，是"无监控基建也能跑"的最小闭环。
+配置（环境变量，均有默认值）：`HEALTH_URL` / `LOG_FILE` / `BACKUP_DIR` / `BACKUP_MAX_HOURS` / `STATE_DIR` / `ALERT_WEBHOOK`(企业微信/钉钉机器人，未配置则打到 stderr) / `ALERT_COOLDOWN`(默认 1800s 防轰炸) / `EXTERNAL_URL`(默认空=R4 跳过) / `EXTERNAL_MAX_MS` / `CERT_MIN_DAYS`。本脚本不替代 Prometheus/Alertmanager，是"无监控基建也能跑"的最小闭环；R4 仍是**单点**视角，区域性故障要靠多地拨测服务。
 
 ### 5. 指标（可选）
 `/metrics`（Prometheus 文本格式）默认关闭，**`METRICS_ENABLED=1`** 显式开启。生产建议仅内网/反代白名单可达，避免公网暴露流量规模。
@@ -478,7 +514,7 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 - 富文本中视频号块渲染：已落地 `rich-video` 组件 + `utils/richtext.ts` 鲁棒解析（见 miniprogram README）
 - 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
 - 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
-- 可观测性已落地：RequestID / AccessLog / Metrics + 黑名单过期清理 + 备份脚本（见「安全加固」与仓库根 `scripts/backup.sh`）
+- 可观测性已落地：RequestID / AccessLog / Metrics + 黑名单定期清理（启动时一次 + 后台每 6h）+ 备份脚本（见「安全加固」与仓库根 `scripts/backup.sh`）
 - 后续可按需补充：更多 CDN 厂商、上传进度/断点续传、多实例会话共享（Redis）、完整监控栈（Prometheus + Alertmanager）、PITR（binlog）等
 
 ## 说明

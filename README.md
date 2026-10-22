@@ -14,7 +14,7 @@
 | `miniprogram/` | 原生微信小程序前端（员工 / 访客侧） |
 | `backend/migrations/` | MySQL 建表与种子 SQL（含软删除迁移 `0003` 等） |
 | `docs/` | OpenAPI 3 接口规范（`openapi.yaml`）· 分支保护协作规范（`branch-protection.md`）· 生产上线 Runbook（`deploy-runbook.md`） |
-| `scripts/` | 运维脚本（`preflight.sh`：上线前配置自检；`backup.sh`：MySQL 逻辑备份 + 轮转；`alert_check.sh`：最小告警三规则） |
+| `scripts/` | 运维脚本（`preflight.sh`：上线前配置自检；`backup.sh`：MySQL 逻辑备份 + 轮转；`alert_check.sh`：最小告警四规则，含外部拨测） |
 | `*.md`（根目录） | 需求 / 架构 / 接口字段映射等中文文档 |
 
 ## 技术栈
@@ -169,7 +169,7 @@ git config core.hooksPath .githooks   # 每个克隆执行一次
 - JWT **双令牌 + 两级即时吊销**：access 15 分钟 / refresh 30 天，`POST /api/refresh` 静默续期；账号级走 `token_version` 安全戳（改密 / 禁用即时失效），会话级走 `revoked_sessions` 黑名单（**单设备精确吊销**，登出只失效当前设备）。
 - PC 管理后台 **httpOnly Cookie 鉴权**（`HttpOnly; SameSite=Lax`），token 不下发到 JS，防 XSS 窃取；小程序端走 Bearer 头。
 - **可观测性**：`X-Request-Id` 贯穿请求（响应头带回，便于报障定位）；每请求一行访问日志（方法/路径/状态/耗时/IP，5xx 单独 `[ACCESS-5XX]` 前缀供告警匹配）；`METRICS_ENABLED=1` 可选开启 `/metrics`（Prometheus 文本格式）。
-- **上线前自检已落地**：`scripts/preflight.sh`（零依赖静态检查：JWT 密钥 / 初始口令 / 小程序引导基址 / 存储凭据 / 上传基址 / Cookie / 数据库口令 / 服务探活，输出 PASS·WARN·FAIL·SKIP，有 FAIL 退出码 1；`PREFLIGHT_STRICT=1` 时 WARN 也算失败，便于接发布流水线）。与后端启动门槛是同一套判据的两道闸——门槛负责「跑不起来」，本脚本负责「跑起来之前先告诉你差哪几项」。
+- **上线前自检已落地**：`scripts/preflight.sh`（零依赖静态检查：JWT 密钥 / 初始口令 / 小程序引导基址 / 存储凭据 / 上传基址 / Cookie / 数据库口令 / 服务探活 / **微信凭据** / **对外 HTTPS 网关**（外部可达性 + 证书有效期），输出 PASS·WARN·FAIL·SKIP，有 FAIL 退出码 1；`PREFLIGHT_STRICT=1` 时 WARN 也算失败，便于接发布流水线）。与后端启动门槛是同一套判据的两道闸——门槛负责「跑不起来」，本脚本负责「跑起来之前先告诉你差哪几项」。
 - **运维脚本**：`scripts/backup.sh` 做 MySQL 逻辑备份（mysqldump → gzip → 按保留天数轮转，可入 crontab）。
 - **测试覆盖**：后端 httptest 集成（SQLite 零外部依赖 + 可选 MySQL parity）+ MinIO/OSS 假服务单测；前端含视图层组件测试；小程序纯逻辑测试经前端 Vitest 运行。
 - **操作审计**：后台写操作（改系统设置 / 管理员增删改 / 企业启停 / 改密码）与**登录失败**
@@ -185,7 +185,8 @@ git config core.hooksPath .githooks   # 每个克隆执行一次
 
 当前版本**已知边界**（需基建/流程配合，尚未在本仓库落地）：
 - 小程序码 / access_token 等内存缓存在多实例下不共享，水平扩展需引入 Redis。
-- **最小告警已落地**：`scripts/alert_check.sh`（healthz 探活 / 5xx / 备份新鲜度，零依赖，crontab 每分钟运行，详见《部署与联调》「最小告警配置」）；待运维侧按需扩展的是完整监控栈（Prometheus + Alertmanager）、外部拨测与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
+- **最小告警已落地**：`scripts/alert_check.sh`（healthz 本地探活 / 5xx / 备份新鲜度 / **外部拨测**（含证书临期），零依赖，crontab 每分钟运行，详见《部署与联调》「最小告警配置」）；待运维侧按需扩展的是完整监控栈（Prometheus + Alertmanager）、多地拨测（本脚本的外部拨测仍是单点视角）与 PITR（binlog 时间点恢复）；生产需 HTTPS 与反向代理。
+- **数据库迁移自动补齐**：MySQL 部署在启动时按 `schema_migrations` 记账表应用未执行的迁移（幂等、只做增量、多副本用 `GET_LOCK` 串行化）；也可 `AUTO_MIGRATE=0` + `server migrate` 拆成流水线里的一步，详见 `docs/deploy-runbook.md` §4。
 - 分类 / 业绩项目 / 业务服务列表未分页（数量有界且需整表拖拽排序）；其余管理端列表已服务端分页（见上）。
 
 ## 文档导航

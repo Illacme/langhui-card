@@ -35,7 +35,7 @@ type Config struct {
 	OssAccessKeyID     string
 	OssAccessKeySecret string
 	OssBucket          string
-	CDNEnabled bool // 是否启用 CDN 刷新（覆盖写后使边缘缓存失效）
+	CDNEnabled         bool // 是否启用 CDN 刷新（覆盖写后使边缘缓存失效）
 	// CDNProvider 厂商：aliyun / tencent / qiniu / cloudflare / cloudfront；
 	// 留空按 aliyun（既有部署没有这一项）
 	CDNProvider string
@@ -49,16 +49,23 @@ type Config struct {
 	CDNEndpoint string
 	// CDNResourceID 资源标识：Cloudflare 的 Zone ID / CloudFront 的 Distribution ID；
 	// AK/SK 三家不需要（它们按提交 URL 的域名自己定位加速域名）
-	CDNResourceID string
-	WXAppID       string // 小程序 AppID（小程序码用）
-	WXAppSecret        string // 小程序 AppSecret（小程序码用）
-	AdminUser          string // 初始超管用户名（首启动 seed 用）
-	AdminPass          string // 初始超管密码（首启动 seed 用，上线务必修改）
-	CookieSecure       bool   // 鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true；本地 http 需 false）
-	CookieDomain       string // 鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）
-	MetricsEnabled     bool   // 是否开放 GET /metrics（Prometheus 文本格式；默认关，避免公网暴露流量规模）
-	WxacodeTTLHours    int    // 小程序码缓存有效期（小时）
-	WxacodeTTL         time.Duration
+	CDNResourceID   string
+	WXAppID         string // 小程序 AppID（小程序码用）
+	WXAppSecret     string // 小程序 AppSecret（小程序码用）
+	AdminUser       string // 初始超管用户名（首启动 seed 用）
+	AdminPass       string // 初始超管密码（首启动 seed 用，上线务必修改）
+	CookieSecure    bool   // 鉴权 Cookie 是否加 Secure 标记（生产 HTTPS 设 true；本地 http 需 false）
+	CookieDomain    string // 鉴权 Cookie 作用域（默认空=仅当前主机；跨子域共享登录态时才设）
+	MetricsEnabled  bool   // 是否开放 GET /metrics（Prometheus 文本格式；默认关，避免公网暴露流量规模）
+	WxacodeTTLHours int    // 小程序码缓存有效期（小时）
+	WxacodeTTL      time.Duration
+	// AutoMigrate 启动时自动补齐未应用的数据库迁移（仅 MySQL；SQLite 走 AutoMigrate 建表）。
+	// 默认开——「升级后忘了跑迁移」是本项目升级事故的主要形态，而迁移幂等、
+	// 每次启动都只做增量。要完全自己掌控（如纳入发布流水线单独一步）设 AUTO_MIGRATE=0。
+	AutoMigrate bool
+	// RevokedPurgeInterval 过期会话黑名单（revoked_sessions）的定期清理间隔。
+	// 该表只按行存在判定吊销，过期行（refresh 令牌已自然失效）留着只会无限增长。
+	RevokedPurgeInterval time.Duration
 }
 
 func Load() Config {
@@ -96,6 +103,10 @@ func Load() Config {
 		MetricsEnabled:     parseBool(getEnv("METRICS_ENABLED", "false")),
 		WxacodeTTLHours:    ttlHours,
 		WxacodeTTL:         time.Duration(ttlHours) * time.Hour,
+		AutoMigrate:        parseBool(getEnv("AUTO_MIGRATE", "true")),
+		// 默认 6 小时：refresh token 最长 30 天，黑名单行要到那时才「过期」，
+		// 故清理频率无需高，只要保证长期运行的表不会无限增长即可（启动还会跑一次）
+		RevokedPurgeInterval: time.Duration(atoi(getEnv("REVOKED_PURGE_MINUTES", "360"), 360)) * time.Minute,
 	}
 }
 

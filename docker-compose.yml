@@ -60,8 +60,10 @@ services:
         exec /usr/local/bin/docker-entrypoint.sh mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_general_ci
     volumes:
       - mysql_data:/var/lib/mysql
-      # 首次启动自动执行建表（0001_init → 0005_revoked_sessions 按序全部应用）
-      # 注意：仅首启（mysql_data 为空）时执行；对已有数据库需手动执行新增迁移
+      # 首启（mysql_data 为空）时自动执行建表（0001_init → 最新，按序全部应用）。
+      # 存量库升级不用管这里：backend 启动时按 schema_migrations 记账表自动补齐
+      # 未应用的迁移（AUTO_MIGRATE=0 关闭，改由 `docker exec weichuan-backend \
+      # /app/server migrate` 手工跑），详见 docs/deploy-runbook.md §4。
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "3306:3306" # 仅本机调试用；生产建议删掉或绑 127.0.0.1，勿对公网开放

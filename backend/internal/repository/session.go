@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"log"
+	"sync"
 	"time"
 
 	"weichuan/internal/model"
@@ -62,4 +64,44 @@ func RevokeSession(db *gorm.DB, sid, userType string, userID int64, expiresAt ti
 func PurgeExpiredSessions(db *gorm.DB) (int64, error) {
 	res := db.Where("expires_at < ?", time.Now()).Delete(&model.RevokedSession{})
 	return res.RowsAffected, res.Error
+}
+
+// DefaultPurgeInterval 定期清理的默认间隔（6 小时）。见 StartExpiredSessionPurge。
+const DefaultPurgeInterval = 6 * time.Hour
+
+// StartExpiredSessionPurge 启动后台定期清理过期会话黑名单，返回停止函数。
+//
+// 为什么需要它：只靠启动时清一次的话，长期运行的实例（几个月不重启）里
+// revoked_sessions 会一直堆积——每次登出写一行，且要等该会话 refresh 令牌
+// 过期（最长 30 天）才可删。表增长本身不致命，但会让「登出后黑名单查询」
+// 与备份体积无谓变慢，属于典型的「上线时看不出来、半年后才烦人」的问题。
+//
+// 清理失败只记日志、不中断循环：下一次 tick 会重试，且失败不影响任何吊销语义
+// （黑名单行留着只会更保守，不会误放行）。interval <= 0 时回退默认间隔。
+func StartExpiredSessionPurge(db *gorm.DB, interval time.Duration) (stop func()) {
+	if interval <= 0 {
+		interval = DefaultPurgeInterval
+	}
+	ticker := time.NewTicker(interval)
+	done := make(chan struct{})
+	var once sync.Once
+	go func() {
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				n, err := PurgeExpiredSessions(db)
+				if err != nil {
+					log.Printf("[WARN] 定期清理过期会话黑名单失败（下次 tick 会重试，不影响吊销判定）：%v", err)
+					continue
+				}
+				if n > 0 {
+					log.Printf("[INFO] 定期清理过期会话黑名单 %d 行", n)
+				}
+			case <-done:
+				return
+			}
+		}
+	}()
+	return func() { once.Do(func() { close(done) }) }
 }
