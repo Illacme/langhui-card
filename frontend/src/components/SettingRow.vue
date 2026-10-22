@@ -64,8 +64,10 @@
       />
       <!-- 敏感文本：可写项用密码框（只显示掩码，留空不提交，可点「清除」）。
            只读项例外：后端给的是「可辨认预览」（保留结构与首尾、遮住中段），
-           用密码框会把预览变成圆点、反而什么都看不清，故用普通只读框原样显示。 -->
-      <div v-if="item.secret && !item.readOnly" class="secret-control">
+           用密码框会把预览变成圆点、反而什么都看不清，故用普通只读框原样显示。
+           注意 v-else-if：这里与上面 bool/int 同属一条分支链，
+           写成 v-if 会让开关/整数行再多渲染一个文本框（历史回归）。 -->
+      <div v-else-if="item.secret && !item.readOnly" class="secret-control">
         <el-input
           :model-value="modelValue"
           type="password"
