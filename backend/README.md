@@ -432,6 +432,24 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - `internal/repository/session_test.go`（会话黑名单）：清理只删过期行、未过期的吊销
   记录必须留着；后台定期清理（默认 6h，`REVOKED_PURGE_MINUTES` 可配）会在到期后清掉
   且 `stop()` 后不再继续（防 goroutine 泄漏）；interval≤0 回退默认间隔而不是 0 间隔死循环。
+- `internal/auth/jwt_test.go`（令牌签发与校验）：双令牌共享 sid（登出才能一次吊销整条链）、
+  access 寿命短于 refresh、refresh 复用 sid 不换会话；解析必须拒绝「篡改签名 / 他人密钥重签 /
+  `alg=none` 无签名令牌 / 已过期 / 垃圾串」；有效期由系统设置驱动且填 0 或负数回落缺省
+  （access 有效期 0 会让所有人一登录就掉线，连后台都进不去改回来）；熵源失效必须报错。
+- `internal/auth/password_test.go`：bcrypt 往返、同明文不同哈希（带盐）、大小写与尾随空格敏感、
+  非法哈希返回 false 而不 panic。
+- `internal/wechat/wechat_test.go`：用 httptest 假微信接口（`apiBase` 抽成变量注入）覆盖
+  jscode2session 成功/errcode/未配凭据、**access_token 缓存与过期重取**、小程序码成功 /
+  40001 刷新后重试一次 / 重试仍失败即放弃 / 非 token 类错误不重试、`isImage` 判定。
+  （写这组测试时发现 `refreshToken` 持锁调用 `GetAccessToken` 会**死锁**，已拆出无锁的
+  `accessToken` 修掉——见代码注释。）
+- `internal/audit/audit_test.go`：操作人姓名按 admin / employee 分别反查、租户落库、
+  未登录记 anonymous、Result 缺省为 success、Detail 以 JSON 落库、写库失败不 panic
+  （审计是旁路）、`db=nil` 静默返回；`DetailKeys` 敏感项脱敏（清空时记 changed/cleared）。
+- `internal/middleware/auth_test.go`（鉴权中间件每一条拒绝路径）：无令牌 401、非法令牌 401、
+  **refresh 令牌当 access 用 401**、token_version 过期 401、sid 在黑名单 401、角色不符 403、
+  企业管理员进平台接口 403；令牌来源 Authorization 头优先于 Cookie（Cookie 通道也要能放行，
+  PC 后台正是走 httpOnly Cookie）；`TokenVersion` 取不到用户必须报错（否则 vid=0 会放行已不存在的用户）。
 - `internal/middleware/ratelimit_test.go`：登录限流计数与 IP 隔离。
 
 CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：

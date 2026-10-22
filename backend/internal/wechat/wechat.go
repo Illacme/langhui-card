@@ -17,6 +17,11 @@ type Config struct {
 	AppSecret string
 }
 
+// apiBase 微信接口基址。抽成变量是为了单测能把流量导向 httptest——
+// 本包每个函数都是一次外网调用，不注入就只能「不测」或「打真接口」，
+// 两者都比不上把成功 / 失败 / errcode 重试这些支线在本地跑一遍。
+var apiBase = "https://api.weixin.qq.com"
+
 var (
 	tokenMu  sync.Mutex
 	token    string
@@ -34,8 +39,8 @@ func Code2Session(cfg Config, code string) (openid, sessionKey string, err error
 		return "", "", fmt.Errorf("缺少 js_code")
 	}
 	u := fmt.Sprintf(
-		"https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
-		url.QueryEscape(cfg.AppID), url.QueryEscape(cfg.AppSecret), url.QueryEscape(code),
+		"%s/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code",
+		apiBase, url.QueryEscape(cfg.AppID), url.QueryEscape(cfg.AppSecret), url.QueryEscape(code),
 	)
 	resp, err := http.Get(u)
 	if err != nil {
@@ -63,10 +68,24 @@ func Code2Session(cfg Config, code string) (openid, sessionKey string, err error
 func GetAccessToken(cfg Config) (string, error) {
 	tokenMu.Lock()
 	defer tokenMu.Unlock()
+	return accessToken(cfg)
+}
+
+// accessToken 取 token 的实做，**不带锁**（调用方必须已持有 tokenMu）。
+// 拆出来是因为 refreshToken 需要在同一个临界区里强制失效再重取：
+// 一旦它带着锁去调 GetAccessToken，后者的 Lock 会撞上自己持有的同一把锁
+// ——Go 的 mutex 不可重入，结果是永久死锁（小程序码接口在 40001 重试这条
+// 支线上会整个挂住，且之后所有请求都会跟着卡在锁上）。
+func accessToken(cfg Config) (string, error) {
 	if token != "" && time.Now().Before(tokenExp) {
 		return token, nil
 	}
-	u := fmt.Sprintf("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s", cfg.AppID, cfg.AppSecret)
+	// 与 Code2Session 同一条规矩：凭据没配就在本地报错，别带着空 appid 打外网
+	// （微信只会回一句「无效」，排查时看不出其实是自己没配）
+	if cfg.AppID == "" || cfg.AppSecret == "" {
+		return "", fmt.Errorf("未配置 WX_APPID / WX_APPSECRET")
+	}
+	u := fmt.Sprintf("%s/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s", apiBase, cfg.AppID, cfg.AppSecret)
 	resp, err := http.Get(u)
 	if err != nil {
 		return "", err
@@ -90,13 +109,14 @@ func GetAccessToken(cfg Config) (string, error) {
 	return token, nil
 }
 
-// refreshToken 强制失效并重新获取（token 过期时重试用）
+// refreshToken 强制失效并重新获取（token 过期时重试用）。
+// 与 GetAccessToken 共用同一把锁，故只调无锁的 accessToken（见其注释）。
 func refreshToken(cfg Config) (string, error) {
 	tokenMu.Lock()
 	defer tokenMu.Unlock()
 	token = ""
 	tokenExp = time.Time{}
-	return GetAccessToken(cfg)
+	return accessToken(cfg)
 }
 
 // GetWXACodeUnlimit 生成无数量限制的小程序码（scene 携带参数），返回图片二进制
@@ -109,7 +129,7 @@ func getWXACodeUnlimit(cfg Config, scene, page string, retry bool) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
-	url := "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=" + tk
+	url := apiBase + "/wxa/getwxacodeunlimit?access_token=" + tk
 	body, _ := json.Marshal(map[string]interface{}{
 		"scene":       scene,
 		"page":        page,

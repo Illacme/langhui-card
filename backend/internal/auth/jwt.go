@@ -124,10 +124,13 @@ func ParseToken(t string) (*Claims, error) {
 	return claims, nil
 }
 
+// randRead 抽成变量是为了让单测能覆盖「熵源失效」这条支线（真实环境下不可控）。
+var randRead = rand.Read
+
 // RandomJTI 生成 16 字节十六进制随机串，作为令牌唯一标识。
 func RandomJTI() (string, error) {
 	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := randRead(b); err != nil {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
