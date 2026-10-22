@@ -201,8 +201,10 @@ describe('SetupInstaller', () => {
     expect(w.text()).toContain('连接正常（mysql）')
   })
 
-  it('默认展示可复制的兜底配置文本', () => {
+  it('手动配置入口展开后可复制兜底配置文本', async () => {
     const w = mountInstaller()
+    await button(w, '手动配置（不使用安装向导）').trigger('click')
+    await nextTick()
     expect(w.text()).toContain('手动配置（不使用安装向导）')
     expect(w.text()).toContain('DB_DSN=sqlite:///data/weichuan.db')
   })

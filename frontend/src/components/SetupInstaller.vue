@@ -135,6 +135,9 @@
       <!-- ---------- 步骤 3：进度 ---------- -->
       <section v-show="step === 3 && !confirming" class="si-pane">
         <h2 class="si-h2">安装进度</h2>
+        <div class="si-progress-bar">
+          <div class="si-progress-fill" :style="{ width: progressPct + '%' }"></div>
+        </div>
         <ul class="si-psteps">
           <li :class="pClass(1)"><i></i><span>写入配置并初始化数据库</span></li>
           <li :class="pClass(2)"><i></i><span>重启服务并加载配置</span></li>
@@ -162,16 +165,23 @@
         </div>
       </div>
 
-      <!-- ---------- 手动配置兜底 ---------- -->
-      <details class="si-adv si-foot">
-        <summary>手动配置（不使用安装向导）</summary>
-        <p class="si-tip">
-          把下面内容写进 <code>.env</code>（与 <code>docker-compose.yml</code> 同级）后重启。
-          优先级：环境变量 &gt; <code>{{ configFile }}</code> &gt; 内置缺省值。
-        </p>
-        <pre class="si-pre"><code>{{ props.status.envText }}</code></pre>
-        <el-button size="small" @click="copyEnv">复制配置</el-button>
-      </details>
+      <!-- ---------- 手动配置兜底（二级入口，默认收起） ---------- -->
+      <div class="si-manual">
+        <el-button text class="si-manual-entry" @click="manualOpen = !manualOpen">
+          手动配置（不使用安装向导）
+          <span class="si-manual-caret" :class="{ open: manualOpen }" aria-hidden="true">▾</span>
+        </el-button>
+        <transition name="si-expand">
+          <div v-if="manualOpen" class="si-manual-panel">
+            <p class="si-tip">
+              把下面内容写进 <code>.env</code>（与 <code>docker-compose.yml</code> 同级）后重启。
+              优先级：环境变量 &gt; <code>{{ configFile }}</code> &gt; 内置缺省值。
+            </p>
+            <pre class="si-pre"><code>{{ props.status.envText }}</code></pre>
+            <el-button size="small" @click="copyEnv">复制配置</el-button>
+          </div>
+        </transition>
+      </div>
 
       <p class="si-note">
         安全说明：安装向导仅在首次配置前可用，安装一次后即关闭；不会覆盖已有数据的数据库；
@@ -203,6 +213,7 @@ const alertMsg = ref('')
 const alertType = ref<'success' | 'error'>('error')
 const progressTip = ref('')
 const showRecheck = ref(false)
+const manualOpen = ref(false)
 
 // 安装进度：0=未开始，1..3 已完成到哪一步；'fail' 记失败
 const done = ref(0)
@@ -226,6 +237,8 @@ const form = reactive({
 
 const configFile = computed(() => props.status.configFile || './data/runtime.env')
 const mysqlNote = computed(() => props.status.mysqlHint?.note || '')
+// 顶部进度条百分比：随已完成步数推进；全部完成（含倒计时进入登录页）done=3 → 100%
+const progressPct = computed(() => Math.round((done.value / 3) * 100))
 
 // 预览与服务端掩码口径一致：只用于给运维确认「填进去的是什么」，密码一律打星
 const dsnPreview = computed(() => {
@@ -392,8 +405,7 @@ function poll() {
       const s = await fetchSetupStatus()
       if (s.configured) {
         window.clearInterval(timer)
-        done.value = 2
-        running.value = 3
+        done.value = 3
         countdown()
       }
     } catch {
@@ -734,8 +746,40 @@ code {
 .si-adv > summary {
   margin-bottom: 0;
 }
-.si-foot {
+.si-manual {
   margin: 16px 24px 0;
+  padding-top: 14px;
+  border-top: 1px dashed #ebeef5;
+  text-align: center;
+}
+.si-manual-entry {
+  font-size: 12px;
+  color: #909399;
+}
+.si-manual-caret {
+  display: inline-block;
+  margin-left: 4px;
+  transition: transform 0.2s ease;
+}
+.si-manual-caret.open {
+  transform: rotate(180deg);
+}
+.si-manual-panel {
+  margin-top: 12px;
+  padding: 14px 16px;
+  background: #f5f7fa;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  text-align: left;
+}
+.si-expand-enter-active,
+.si-expand-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.si-expand-enter-from,
+.si-expand-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 .si-pre {
   background: #f5f7fa;
@@ -781,6 +825,19 @@ code {
 .si-confirm-list b {
   color: #303133;
 }
+.si-progress-bar {
+  height: 6px;
+  background: #ebeef5;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 4px 0 18px;
+}
+.si-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #409eff 0%, #67c23a 100%);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
 .si-psteps {
   list-style: none;
   margin: 0;
@@ -789,17 +846,26 @@ code {
 .si-psteps li {
   display: flex;
   align-items: center;
-  padding: 10px 0;
+  padding: 12px;
   font-size: 14px;
   color: #909399;
-  border-bottom: 1px dashed #f0f2f5;
+  border-radius: 8px;
+  transition: background 0.3s ease, color 0.3s ease;
 }
-.si-psteps li:last-child {
-  border-bottom: none;
+.si-psteps li + li {
+  margin-top: 6px;
 }
-.si-psteps li.run,
+.si-psteps li.run {
+  color: #303133;
+  background: #ecf5ff;
+}
 .si-psteps li.done {
   color: #303133;
+  background: #f0f9eb;
+}
+.si-psteps li.fail {
+  color: #303133;
+  background: #fef0f0;
 }
 .si-psteps i {
   display: inline-block;
@@ -826,6 +892,17 @@ code {
   border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+  animation: si-check 0.35s ease both;
+}
+@keyframes si-check {
+  from {
+    transform: rotate(45deg) scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(45deg) scale(1);
+    opacity: 1;
+  }
 }
 .si-psteps li.run i {
   border-color: #409eff;
