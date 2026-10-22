@@ -2,77 +2,79 @@
   <!-- 安装向导：首次部署时用表单完成「连库 → 建超管 → 写配置 → 自重启 → 进登录页」。
        与后端 /setup 内置页是同一套接口（/api/setup/test、/api/setup/install），
        区别只在外壳：后端页是纯静态自包含 HTML，前端页走 Element Plus 风格，
-       生产由 nginx 托管时运维看到的是这一页。 -->
-  <div class="si-wrap">
-    <div class="si-card">
-      <div class="si-brand">微传名片</div>
-      <h1 class="si-title">安装向导</h1>
-      <p class="si-lead">
-        首次部署需要两步：连接数据库、创建管理员账号。保存后服务会自动重启，随后即可登录使用。
-      </p>
+       生产由 nginx 托管时运维看到的是这一页。
+
+       呈现形态：整页背景衬底 + 居中 dialog 浮层（聚焦、不分散），内部「真分步」
+       —— 1 数据库 → 2 管理员 → 3 完成，每步一屏，比原「假三步长表单」认知负荷更低。 -->
+  <div class="si-root">
+    <div class="si-dialog" role="dialog" aria-label="安装向导">
+      <header class="si-head">
+        <div class="si-head-title">
+          <span class="si-logo">微</span>
+          <span>安装向导</span>
+        </div>
+        <span class="si-head-tag">首次部署</span>
+      </header>
 
       <ol class="si-steps">
-        <li :class="{ active: step >= 1 }"><b>1</b><span>数据库</span></li>
-        <li :class="{ active: step >= 2 }"><b>2</b><span>管理员账号</span></li>
-        <li :class="{ active: step >= 3 }"><b>3</b><span>完成</span></li>
+        <li :class="stepClass(1)"><b>{{ 1 < step ? '✓' : 1 }}</b><span>数据库</span></li>
+        <li :class="stepClass(2)"><b>{{ 2 < step ? '✓' : 2 }}</b><span>管理员</span></li>
+        <li :class="stepClass(3)"><b>{{ 3 < step ? '✓' : 3 }}</b><span>完成</span></li>
       </ol>
 
-      <!-- ---------- 表单 ---------- -->
-      <div v-show="stage === 'form'">
-        <section class="si-block">
-          <h2 class="si-h2">选择数据库</h2>
-          <div class="si-engines">
-            <div
-              class="si-engine"
-              :class="{ active: engine === 'mysql' }"
-              @click="engine = 'mysql'"
-            >
-              <b>MySQL</b>
-              <p>适合生产与多人使用。需要一台可访问的 MySQL 服务，docker compose 部署已内置。</p>
-            </div>
-            <div
-              class="si-engine"
-              :class="{ active: engine === 'sqlite' }"
-              @click="engine = 'sqlite'"
-            >
-              <b>SQLite</b>
-              <p>零依赖单机版，数据即一个文件。适合试用与小规模内部使用；不支持多副本并发写，请勿放在网络盘。</p>
-            </div>
+      <!-- ---------- 步骤 1：数据库 ---------- -->
+      <section v-show="step === 1 && !confirming" class="si-pane">
+        <h2 class="si-h2">选择数据库</h2>
+        <p class="si-lead">
+          先选一种数据库，再填写连接信息。SQLite 零依赖，适合试用；MySQL 适合生产环境。
+        </p>
+
+        <div class="si-engines">
+          <div
+            class="si-engine"
+            :class="{ active: engine === 'mysql' }"
+            role="radio"
+            :aria-checked="engine === 'mysql'"
+            @click="engine = 'mysql'"
+          >
+            <span v-if="engine === 'mysql'" class="si-engine-check" aria-hidden="true"></span>
+            <b>MySQL</b>
+            <p>适合生产与多人使用。需要一台可访问的 MySQL 服务，docker compose 部署已内置。</p>
           </div>
-
-          <div v-show="engine === 'mysql'" class="si-grid">
-            <label>主机<el-input v-model="form.dbHost" autocomplete="off" /></label>
-            <label>端口<el-input v-model="form.dbPort" autocomplete="off" /></label>
-            <label>库名<el-input v-model="form.dbName" autocomplete="off" /></label>
-            <label>用户名<el-input v-model="form.dbUser" autocomplete="off" /></label>
-            <label>密码<el-input v-model="form.dbPassword" type="password" show-password autocomplete="new-password" /></label>
-            <div></div>
-            <el-checkbox v-model="form.createDatabase" class="si-chk">
-              数据库不存在时自动创建
-            </el-checkbox>
-            <p v-if="mysqlNote" class="si-tip si-tip--hint">{{ mysqlNote }}</p>
+          <div
+            class="si-engine"
+            :class="{ active: engine === 'sqlite' }"
+            role="radio"
+            :aria-checked="engine === 'sqlite'"
+            @click="engine = 'sqlite'"
+          >
+            <span v-if="engine === 'sqlite'" class="si-engine-check" aria-hidden="true"></span>
+            <b>SQLite</b>
+            <p>零依赖单机版，数据即一个文件。适合试用与小规模内部使用；不支持多副本并发写，请勿放在网络盘。</p>
           </div>
+        </div>
 
-          <div v-show="engine === 'sqlite'" class="si-grid">
-            <label class="wide">数据文件路径<el-input v-model="form.sqlitePath" autocomplete="off" /></label>
-            <p class="si-tip">相对路径相对于服务进程的工作目录；目录不存在时会自动创建。</p>
-          </div>
+        <div v-show="engine === 'mysql'" class="si-grid">
+          <label>主机<el-input v-model="form.dbHost" autocomplete="off" /></label>
+          <label>端口<el-input v-model="form.dbPort" autocomplete="off" /></label>
+          <label>库名<el-input v-model="form.dbName" autocomplete="off" /></label>
+          <label>用户名<el-input v-model="form.dbUser" autocomplete="off" /></label>
+          <label class="wide">密码<el-input v-model="form.dbPassword" type="password" show-password autocomplete="new-password" /></label>
+          <el-checkbox v-model="form.createDatabase" class="si-chk">
+            数据库不存在时自动创建
+          </el-checkbox>
+          <p v-if="mysqlNote" class="si-tip si-tip--hint">{{ mysqlNote }}</p>
+        </div>
 
-          <p class="si-dsn">连接串预览：<code>{{ dsnPreview }}</code></p>
-        </section>
+        <div v-show="engine === 'sqlite'" class="si-grid">
+          <label class="wide">数据文件路径<el-input v-model="form.sqlitePath" autocomplete="off" /></label>
+          <p class="si-tip">相对路径相对于服务进程的工作目录；目录不存在时会自动创建。</p>
+        </div>
 
-        <section class="si-block">
-          <h2 class="si-h2">管理员账号</h2>
-          <div class="si-grid">
-            <label>用户名<el-input v-model="form.adminUser" autocomplete="off" /></label>
-            <label>密码<el-input v-model="form.adminPass" type="password" show-password autocomplete="new-password" /></label>
-            <label>确认密码<el-input v-model="form.adminPass2" type="password" show-password autocomplete="new-password" /></label>
-          </div>
-          <p class="si-tip">平台超管账号。登录后可在后台右上角「修改密码」随时更换。</p>
-        </section>
+        <p class="si-dsn">连接串预览：<code>{{ dsnPreview }}</code></p>
 
-        <details class="si-block si-details">
-          <summary>高级选项</summary>
+        <details class="si-adv">
+          <summary>高级选项（可选）</summary>
           <div class="si-grid">
             <label class="wide">JWT 密钥（留空由服务端自动生成）<el-input v-model="form.jwtKey" autocomplete="off" /></label>
             <el-checkbox v-model="form.cookieSecure" class="si-chk">
@@ -92,21 +94,46 @@
 
         <div class="si-actions">
           <el-button :loading="testing" @click="onTest">测试连接</el-button>
+          <el-button type="primary" @click="onNext">下一步</el-button>
+        </div>
+      </section>
+
+      <!-- ---------- 步骤 2：管理员 ---------- -->
+      <section v-show="step === 2 && !confirming" class="si-pane">
+        <h2 class="si-h2">管理员账号</h2>
+        <p class="si-lead">
+          创建平台超级管理员账号。登录后可在后台右上角「修改密码」随时更换。
+        </p>
+        <div class="si-grid">
+          <label>用户名<el-input v-model="form.adminUser" autocomplete="off" /></label>
+          <div class="si-field">
+            <label>密码<el-input v-model="form.adminPass" type="password" show-password autocomplete="new-password" /></label>
+            <div class="si-strength" :data-level="pwLevel">
+              <i v-for="i in 4" :key="i" :class="{ on: i <= pwLevel }" />
+              <span class="si-strength-text">{{ pwText }}</span>
+            </div>
+          </div>
+          <label class="wide">确认密码<el-input v-model="form.adminPass2" type="password" show-password autocomplete="new-password" /></label>
+        </div>
+        <p class="si-tip">建议 12 位以上，混合大小写字母、数字与符号；登录后可随时修改。</p>
+
+        <el-alert
+          v-if="alertMsg"
+          :type="alertType"
+          :title="alertMsg"
+          :closable="false"
+          show-icon
+          class="si-alert"
+        />
+
+        <div class="si-actions">
+          <el-button @click="step = 1">上一步</el-button>
           <el-button type="primary" :loading="installing" @click="onInstall">开始安装</el-button>
         </div>
+      </section>
 
-        <div v-if="confirming" class="si-confirm">
-          <p>确认按以下配置安装？目标数据库将被初始化，管理员账号按上面填写的内容创建。此操作只需一次。</p>
-          <p class="si-dsn"><code>{{ dsnPreview }}</code></p>
-          <div class="si-actions">
-            <el-button @click="confirming = false">取消</el-button>
-            <el-button type="danger" :loading="installing" @click="doInstall">确认安装</el-button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ---------- 进度 ---------- -->
-      <section v-show="stage === 'progress'" class="si-block">
+      <!-- ---------- 步骤 3：进度 ---------- -->
+      <section v-show="step === 3 && !confirming" class="si-pane">
         <h2 class="si-h2">安装进度</h2>
         <ul class="si-psteps">
           <li :class="pClass(1)"><i></i><span>写入配置并初始化数据库</span></li>
@@ -119,8 +146,24 @@
         </div>
       </section>
 
+      <!-- ---------- 确认（温和，非红色 danger） ---------- -->
+      <div v-if="confirming" class="si-confirm">
+        <h3 class="si-confirm-title">确认按以下配置安装？</h3>
+        <ul class="si-confirm-list">
+          <li>写入配置文件并初始化数据库</li>
+          <li>创建管理员账号 <b>{{ form.adminUser || 'admin' }}</b></li>
+          <li>重启服务并加载配置</li>
+          <li>完成后自动进入登录页</li>
+        </ul>
+        <p class="si-dsn"><code>{{ dsnPreview }}</code></p>
+        <div class="si-actions">
+          <el-button @click="confirming = false">取消</el-button>
+          <el-button type="primary" :loading="installing" @click="doInstall">确认安装</el-button>
+        </div>
+      </div>
+
       <!-- ---------- 手动配置兜底 ---------- -->
-      <details class="si-block si-details">
+      <details class="si-adv si-foot">
         <summary>手动配置（不使用安装向导）</summary>
         <p class="si-tip">
           把下面内容写进 <code>.env</code>（与 <code>docker-compose.yml</code> 同级）后重启。
@@ -152,7 +195,7 @@ import {
 const props = defineProps<{ status: SetupStatus }>()
 
 const engine = ref<'mysql' | 'sqlite'>('mysql')
-const stage = ref<'form' | 'progress'>('form')
+const step = ref<1 | 2 | 3>(1)
 const testing = ref(false)
 const installing = ref(false)
 const confirming = ref(false)
@@ -183,7 +226,6 @@ const form = reactive({
 
 const configFile = computed(() => props.status.configFile || './data/runtime.env')
 const mysqlNote = computed(() => props.status.mysqlHint?.note || '')
-const step = computed(() => (stage.value === 'progress' ? 3 : 1))
 
 // 预览与服务端掩码口径一致：只用于给运维确认「填进去的是什么」，密码一律打星
 const dsnPreview = computed(() => {
@@ -193,6 +235,25 @@ const dsnPreview = computed(() => {
   }
   return `sqlite://${form.sqlitePath}`
 })
+
+// 密码强度：长度 / 字母+数字 / 长度≥12 / 含特殊字符，四档
+const pwLevel = computed(() => {
+  const p = form.adminPass
+  if (!p) return 0
+  let s = 0
+  if (p.length >= 8) s++
+  if (/[A-Za-z]/.test(p) && /\d/.test(p)) s++
+  if (p.length >= 12) s++
+  if (/[^A-Za-z0-9]/.test(p)) s++
+  return Math.min(s, 4)
+})
+const pwText = computed(() => ['', '弱', '弱', '中', '强'][pwLevel.value] || '')
+
+function stepClass(n: number): string {
+  if (step.value === n) return 'active'
+  if (n < step.value) return 'done'
+  return ''
+}
 
 function payload(): InstallPayload {
   const base = {
@@ -225,8 +286,8 @@ function clearAlert() {
   alertMsg.value = ''
 }
 
-// 客户端预检与服务端同规则，只为少一次往返；真正的判据在服务端
-function precheck(): string {
+// 步骤 1 预检：只校验数据库侧，不过早暴露管理员规则
+function precheckStep1(): string {
   if (engine.value === 'mysql') {
     if (!form.dbHost.trim() || !form.dbUser.trim() || !form.dbName.trim()) {
       return '请填写完整的 MySQL 连接信息（主机、用户名、库名）'
@@ -234,14 +295,26 @@ function precheck(): string {
   } else if (!form.sqlitePath.trim()) {
     return '请填写 SQLite 数据文件路径'
   }
+  return ''
+}
+
+// 全量预检：与服务端同规则，只为少一次往返；真正的判据在服务端
+function precheck(): string {
+  const e = precheckStep1()
+  if (e) return e
+  if (!form.adminUser.trim()) return '请填写管理员用户名'
   if (form.adminPass.length < 8) return '管理员密码至少 8 位'
   if (form.adminPass !== form.adminPass2) return '两次输入的管理员密码不一致'
-  if (!form.adminUser.trim()) return '请填写管理员用户名'
   return ''
 }
 
 async function onTest() {
   clearAlert()
+  const err = precheckStep1()
+  if (err) {
+    setAlert('error', err)
+    return
+  }
   testing.value = true
   try {
     const r = await testConnection(payload())
@@ -251,6 +324,16 @@ async function onTest() {
   } finally {
     testing.value = false
   }
+}
+
+function onNext() {
+  clearAlert()
+  const err = precheckStep1()
+  if (err) {
+    setAlert('error', err)
+    return
+  }
+  step.value = 2
 }
 
 function onInstall() {
@@ -285,7 +368,7 @@ function pClass(n: number): string {
 }
 
 function startProgress(restarted: boolean) {
-  stage.value = 'progress'
+  step.value = 3
   done.value = 1
   if (restarted) {
     running.value = 2
@@ -375,52 +458,74 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.si-wrap {
+.si-root {
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 40px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
   box-sizing: border-box;
+  background: linear-gradient(160deg, #eef3f9 0%, #f7f9fc 100%);
 }
-.si-card {
-  max-width: 760px;
-  margin: 0 auto;
+.si-dialog {
+  width: 100%;
+  max-width: 680px;
   background: #fff;
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 28px 32px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
   color: #303133;
 }
-.si-brand {
-  font-size: 13px;
-  color: #909399;
-  letter-spacing: 0.5px;
+.si-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #eef0f3;
 }
-.si-title {
-  margin: 6px 0 8px;
-  font-size: 22px;
+.si-head-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
 }
-.si-lead {
-  margin: 0;
-  color: #606266;
+.si-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #409eff;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
   font-size: 14px;
-  line-height: 1.7;
+}
+.si-head-tag {
+  font-size: 12px;
+  color: #909399;
+  background: #f5f7fa;
+  border: 1px solid #ebeef5;
+  border-radius: 999px;
+  padding: 2px 10px;
 }
 .si-steps {
   list-style: none;
   display: flex;
-  gap: 10px;
-  margin: 18px 0;
-  padding: 0;
+  gap: 8px;
+  margin: 0;
+  padding: 16px 24px;
 }
 .si-steps li {
   flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #ebeef5;
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 10px;
   color: #909399;
   font-size: 13px;
 }
@@ -434,6 +539,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 12px;
+  font-weight: 600;
   flex: none;
 }
 .si-steps li.active {
@@ -444,41 +550,27 @@ onMounted(() => {
   background: #409eff;
   color: #fff;
 }
-.si-block {
-  border: 1px solid #ebeef5;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 16px;
+.si-steps li.done {
+  border-color: #c2e7b0;
+  color: #303133;
 }
-.si-block.si-details {
-  padding: 0;
+.si-steps li.done b {
+  background: #67c23a;
+  color: #fff;
 }
-.si-block.si-details summary {
-  cursor: pointer;
-  padding: 14px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  list-style: none;
-}
-.si-block.si-details summary::before {
-  content: '▸';
-  margin-right: 8px;
-  color: #909399;
-}
-.si-block.si-details[open] summary::before {
-  content: '▾';
-}
-.si-block.si-details > *:not(summary) {
-  margin-left: 20px;
-  margin-right: 20px;
-  margin-bottom: 14px;
-}
-.si-block.si-details > summary {
-  margin-bottom: 0;
+.si-pane {
+  padding: 4px 24px 8px;
 }
 .si-h2 {
-  margin: 0 0 14px;
-  font-size: 15px;
+  margin: 8px 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.si-lead {
+  margin: 0 0 16px;
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.7;
 }
 .si-engines {
   display: grid;
@@ -487,19 +579,22 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 .si-engine {
+  position: relative;
   border: 1px solid #ebeef5;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 14px 16px;
   cursor: pointer;
   background: #fff;
+  transition: border-color 0.15s, background 0.15s;
 }
 .si-engine:hover {
-  border-color: #c0d9f5;
+  border-color: #c6e2ff;
 }
 .si-engine b {
   display: block;
   font-size: 15px;
   margin-bottom: 6px;
+  font-weight: 600;
 }
 .si-engine p {
   margin: 0;
@@ -509,7 +604,28 @@ onMounted(() => {
 }
 .si-engine.active {
   border-color: #409eff;
+  background: #ecf5ff;
   box-shadow: 0 0 0 1px #409eff inset;
+}
+.si-engine-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #409eff;
+}
+.si-engine-check::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 3px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 .si-grid {
   display: grid;
@@ -526,6 +642,39 @@ onMounted(() => {
 }
 .si-grid .wide {
   grid-column: 1 / -1;
+}
+.si-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.si-strength {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.si-strength i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: #ebeef5;
+  transition: background 0.15s;
+}
+.si-strength i.on[data-level='1'],
+.si-strength i.on[data-level='2'] {
+  background: #f56c6c;
+}
+.si-strength[data-level='3'] i.on {
+  background: #409eff;
+}
+.si-strength[data-level='4'] i.on {
+  background: #67c23a;
+}
+.si-strength-text {
+  font-size: 12px;
+  color: #909399;
+  flex: none;
+  min-width: 18px;
 }
 .si-chk {
   grid-column: 1 / -1;
@@ -556,6 +705,38 @@ code {
   padding: 2px 8px;
   font-size: 12px;
 }
+.si-adv {
+  margin-top: 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 12px;
+  padding: 0;
+}
+.si-adv summary {
+  cursor: pointer;
+  padding: 14px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  list-style: none;
+}
+.si-adv summary::before {
+  content: '▸';
+  margin-right: 8px;
+  color: #909399;
+}
+.si-adv[open] summary::before {
+  content: '▾';
+}
+.si-adv > *:not(summary) {
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-bottom: 14px;
+}
+.si-adv > summary {
+  margin-bottom: 0;
+}
+.si-foot {
+  margin: 16px 24px 0;
+}
 .si-pre {
   background: #f5f7fa;
   border: 1px solid #ebeef5;
@@ -579,17 +760,26 @@ code {
   margin-top: 18px;
 }
 .si-confirm {
-  margin-top: 16px;
-  padding: 14px 16px;
-  border: 1px solid #fde2e2;
-  background: #fefafa;
-  border-radius: 8px;
+  margin: 16px 24px;
+  padding: 16px 18px;
+  border: 1px solid #d9ecff;
+  background: #f5f9ff;
+  border-radius: 12px;
 }
-.si-confirm p {
+.si-confirm-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.si-confirm-list {
   margin: 0 0 8px;
+  padding-left: 20px;
   font-size: 13px;
+  line-height: 1.9;
   color: #606266;
-  line-height: 1.7;
+}
+.si-confirm-list b {
+  color: #303133;
 }
 .si-psteps {
   list-style: none;
@@ -620,6 +810,7 @@ code {
   margin-right: 10px;
   flex: none;
   position: relative;
+  box-sizing: border-box;
 }
 .si-psteps li.done i {
   background: #67c23a;
@@ -651,17 +842,17 @@ code {
   }
 }
 .si-note {
-  margin: 20px 0 0;
+  margin: 16px 24px 20px;
   font-size: 12px;
   color: #909399;
   line-height: 1.8;
 }
 @media (max-width: 767px) {
-  .si-wrap {
-    padding: 20px 12px;
+  .si-root {
+    padding: 16px 12px;
   }
-  .si-card {
-    padding: 20px 18px;
+  .si-dialog {
+    border-radius: 14px;
   }
   .si-steps {
     flex-direction: column;
