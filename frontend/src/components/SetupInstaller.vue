@@ -60,11 +60,13 @@
           <label>端口<el-input v-model="form.dbPort" autocomplete="off" /></label>
           <label>用户名<el-input v-model="form.dbUser" autocomplete="off" /></label>
           <label>密码<el-input v-model="form.dbPassword" type="password" show-password autocomplete="new-password" /></label>
-          <label>库名<el-input v-model="form.dbName" autocomplete="off" /></label>
+        </div>
+        <div v-show="engine === 'mysql'" class="si-dbrow">
+          <label class="si-field-flat"><span class="si-field-lbl">库名</span><el-input v-model="form.dbName" autocomplete="off" /></label>
           <el-checkbox v-model="form.createDatabase" class="si-chk">
             数据库不存在时自动创建
           </el-checkbox>
-          <p v-if="mysqlNote" class="si-tip si-tip--hint">{{ mysqlNote }}</p>
+          <p v-if="mysqlNote" class="si-tip si-tip--hint si-dbnote">{{ mysqlNote }}</p>
         </div>
 
         <div v-show="engine === 'sqlite'" class="si-grid">
@@ -656,7 +658,7 @@ onMounted(() => {
   gap: 12px 16px;
   align-items: start;
 }
-.si-grid label {
+.si-grid label:not(.el-checkbox) {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -703,8 +705,30 @@ onMounted(() => {
   height: auto;
   font-size: 13px;
   color: #606266;
-  align-self: center;
-  justify-self: start;
+}
+.si-dbrow {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.si-field-flat {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 220px;
+}
+.si-field-lbl {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  font-size: 13px;
+  color: #606266;
+}
+.si-dbnote {
+  flex-basis: 100%;
+  margin: 2px 0 0;
 }
 .si-tip {
   margin: 0;
