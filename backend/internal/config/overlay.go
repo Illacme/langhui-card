@@ -45,11 +45,14 @@ func (c *Config) OverlayFromSettings() {
 	c.UploadDir = str("upload_dir", c.UploadDir)
 	c.UploadBaseURL = str("upload_base_url", c.UploadBaseURL)
 
-	// CDN 缓存刷新
+	// CDN 缓存刷新：厂商 + 通用凭据位 + 资源标识
 	c.CDNEnabled = setting.GetBool("cdn_enabled", c.CDNEnabled)
+	c.CDNProvider = str("cdn_provider", c.CDNProvider)
 	c.CDNAccessKeyID = str("cdn_access_key_id", c.CDNAccessKeyID)
 	c.CDNAccessKeySecret = str("cdn_access_key_secret", c.CDNAccessKeySecret)
+	// 端点留空时由各厂商实现按 provider 取自己的默认域名（写死一个会串厂商）
 	c.CDNEndpoint = str("cdn_endpoint", c.CDNEndpoint)
+	c.CDNResourceID = str("cdn_resource_id", c.CDNResourceID)
 
 	// 微信：AppID / AppSecret 另有请求期解析（resolveWXAppID / resolveWXAppSecret，改完即时生效），
 	// 此处同步一份到 cfg，保证启动日志与其它读取点看到的值一致。

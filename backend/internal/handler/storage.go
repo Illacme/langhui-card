@@ -143,7 +143,9 @@ func signTTL(key string, def int) time.Duration {
 func cdnRefreshHandler(rf storage.CDNRefresher) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if rf == nil {
-			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "CDN 刷新未配置（需设置 CDN_ENABLED=1 与 CDN_ACCESS_KEY_*）"})
+			// 五家厂商要求的凭据不同（Cloudflare 是 Token+Zone ID，AK/SK 三家不要资源标识），
+			// 所以提示只指路、不点名具体环境变量，避免指错厂商
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "CDN 刷新未配置：请在「系统设置 → 文件存储与 CDN」启用刷新，选好厂商并填全它要求的凭据后重启服务"})
 			return
 		}
 		var req struct {

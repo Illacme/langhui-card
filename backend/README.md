@@ -96,11 +96,14 @@ export OSS_BUCKET="weichuan"
 # 注：MINIO/OSS 模式下 UPLOAD_BASE_URL 改为对象存储的公开访问基址（如 https://cdn.xxx 或 bucket 公网域名）
 # 存储可见性：true=公开桶（默认）；false=私有桶，需配合限时签名访问（STORAGE_PUBLIC=false）
 export STORAGE_PUBLIC="true"
-# CDN 刷新（覆盖写后使边缘缓存失效）：CDN_ENABLED=1 + 阿里云 CDN 凭据（可与 OSS 相同）
+# CDN 刷新（覆盖写后使边缘缓存失效）：CDN_ENABLED=1 + 厂商 + 该厂商要求的凭据
 export CDN_ENABLED="false"
-export CDN_ACCESS_KEY_ID=""
-export CDN_ACCESS_KEY_SECRET=""
-export CDN_ENDPOINT="cdn.aliyuncs.com"
+# 厂商：aliyun / tencent / qiniu / cloudflare / cloudfront（留空按 aliyun）
+export CDN_PROVIDER="aliyun"
+export CDN_ACCESS_KEY_ID=""      # aliyun=AccessKeyId / tencent=SecretId / qiniu=AccessKey / cloudfront=AccessKeyId
+export CDN_ACCESS_KEY_SECRET=""  # aliyun=Secret / tencent=SecretKey / qiniu=SecretKey / cloudfront=SecretAccessKey / cloudflare=API Token
+export CDN_RESOURCE_ID=""        # 仅 cloudflare=Zone ID / cloudfront=Distribution ID
+export CDN_ENDPOINT=""           # 留空按厂商取默认（cdn.aliyuncs.com / cdn.tencentcloudapi.com / fusion.qiniuapi.com / api.cloudflare.com / cloudfront.amazonaws.com）
 # 微信小程序码（wxacode）所需凭据
 export WX_APPID="wxXXXXXXXXXXXXXXXX"
 export WX_APPSECRET="your-app-secret"
@@ -175,14 +178,25 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 - 注意（OSS）：预签名 URL 已绑定 `Content-Type`，前端 `PUT` 时必须带**相同** `Content-Type`（组件已处理）；MinIO 对 PUT Content-Type 不强制。
 - 小程序端：原生 `wx.uploadFile` 只能 multipart POST，不便做 raw PUT；小程序仍走普通 `/api/employee/upload` 服务端上传（能力已具备），直传预签名主要在 PC 后台生效。
 
-### 2. CDN 刷新
-- 启用：`CDN_ENABLED=1` + `CDN_ACCESS_KEY_ID` / `CDN_ACCESS_KEY_SECRET`（可与 OSS 凭据相同），可选 `CDN_ENDPOINT`（默认 `cdn.aliyuncs.com`，阿里云 CDN）。
+### 2. CDN 刷新（五家厂商）
+- 启用：`CDN_ENABLED=1` + `CDN_PROVIDER`（aliyun / tencent / qiniu / cloudflare / cloudfront，留空按 aliyun）+ 该厂商要求的凭据。
+- 各家要填什么（界面按厂商联动只显示需要的字段）：
+
+  | 厂商 | AccessKeyId 位 | AccessKeySecret 位 | 资源标识 | 默认端点 | 单次上限 |
+  | --- | --- | --- | --- | --- | --- |
+  | aliyun 阿里云 | AccessKeyId | AccessKeySecret | — | cdn.aliyuncs.com | 1000 |
+  | tencent 腾讯云 | SecretId | SecretKey | — | cdn.tencentcloudapi.com | 1000 |
+  | qiniu 七牛云 | AccessKey | SecretKey | — | fusion.qiniuapi.com | 20（官方默认配额） |
+  | cloudflare | （不需要） | API Token | Zone ID | api.cloudflare.com | 30 |
+  | cloudfront | AccessKeyId | SecretAccessKey | Distribution ID | cloudfront.amazonaws.com | 1000（官方默认 3000） |
+
 - 触发点（三处覆盖写路径，均 best-effort，失败只记日志、不影响接口结果）：
   - `POST /api/admin/upload`（含员工端 / 申请头像）：对象名随机，实际不会覆盖，刷新属「有备无患」；
   - `POST /api/admin/assets/adopt`：对象名固定 `library/<素材ID>.<ext>`，**重复采用 = 覆盖写**（素材库升级换图），必须让边缘失效；
   - `GET /api/wechat/wxacode`：对象名固定 `wxacode/<staffID>.jpg`，TTL 到期重生成 = 覆盖写；私有桶下刷新的是公开形态 URL（短期签名 URL 每次都变，不该交给 CDN 刷）。
-- 也可手动触发：`POST /api/admin/cdn/refresh` body `{"urls":["https://cdn.xxx/a.jpg", ...]}`（单次最多 1000 条，自动分批）。
-- 仅实现阿里云 CDN；其它 CDN 只需新增一个 `CDNRefresher` 实现并在 `main.go` 注入。
+  - 注：CloudFront 提交的是 **URL 的 path**（`/uploads/a.png`），不含协议 / 主机 / 查询串。
+- 也可手动触发：`POST /api/admin/cdn/refresh` body `{"urls":["https://cdn.xxx/a.jpg", ...]}`（单次最多 1000 条，按厂商上限自动分批）。
+- 加厂商：实现 `storage.CDNRefresher`（单方法 `Refresh(urls []string) error`），在 `storage/cdn.go` 的 `NewCDNRefresher` 加一个 case，并在 `setting.go` registry 登记（Desc 写清该厂商要填什么）。全部为标准库实现，无额外依赖。
 
 ### 3. 私有桶 + 限时签名访问
 - 启用：`STORAGE_PUBLIC=false`（默认 `true`）。对象存储 Bucket 设为私有读。

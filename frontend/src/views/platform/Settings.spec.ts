@@ -36,7 +36,11 @@ const items: SettingItem[] = [
   { key: 'access_token_ttl_minutes', name: '登录凭证有效期', group: 'auth', type: 'int', value: '15', description: 'access 有效期', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'login_rate_limit_per_min', name: '登录尝试频率限制', group: 'auth', type: 'int', value: '10', description: '登录限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'cdn_enabled', name: '启用 CDN 刷新', group: 'storage', type: 'bool', value: '', description: 'CDN 刷新', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENABLED', configured: false },
+  { key: 'cdn_provider', name: 'CDN 厂商', group: 'storage', type: 'string', value: '', description: 'CDN 厂商', secret: false, restart: true, readOnly: false, envVar: 'CDN_PROVIDER', options: ['aliyun', 'tencent', 'qiniu', 'cloudflare', 'cloudfront'], configured: false },
   { key: 'cdn_access_key_id', name: 'CDN AccessKeyId', group: 'storage', type: 'string', value: '', description: 'CDN AK', secret: false, restart: true, readOnly: false, envVar: 'CDN_ACCESS_KEY_ID', configured: false },
+  { key: 'cdn_access_key_secret', name: 'CDN AccessKeySecret', group: 'storage', type: 'string', value: '', description: 'CDN SK', secret: true, restart: true, readOnly: false, envVar: 'CDN_ACCESS_KEY_SECRET', configured: false },
+  { key: 'cdn_resource_id', name: 'CDN 资源标识', group: 'storage', type: 'string', value: '', description: 'Zone ID / Distribution ID', secret: false, restart: true, readOnly: false, envVar: 'CDN_RESOURCE_ID', configured: false },
+  { key: 'cdn_endpoint', name: 'CDN 服务端点', group: 'storage', type: 'string', value: '', description: 'CDN 端点', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENDPOINT', configured: false },
   { key: 'storage_driver', name: '存储方式', group: 'storage', type: 'string', value: 'local', description: '存储驱动', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_DRIVER', options: ['local', 'minio', 'oss', 's3'], configured: true },
   { key: 'storage_endpoint', name: '存储服务端点', group: 'storage', type: 'string', value: '', description: '对象存储端点', secret: false, restart: true, readOnly: false, envVar: 'MINIO_ENDPOINT', configured: false },
   { key: 'storage_bucket', name: '存储空间名称', group: 'storage', type: 'string', value: '', description: '存储桶', secret: false, restart: true, readOnly: false, envVar: 'MINIO_BUCKET', configured: false },
@@ -632,6 +636,40 @@ describe('Settings 系统设置', () => {
     await nextTick()
     expect(rowExists(w, 'storage_use_ssl')).toBe(true)
     expect(rowOf(w, 'storage_use_ssl').text()).toContain('当前选项下不需要')
+    await w.find('input.head-search').setValue('')
+    await nextTick()
+  })
+
+  it('CDN 厂商联动：资源标识只给 Cloudflare / CloudFront，Cloudflare 用不到 AccessKeyId', async () => {
+    const { w } = await setup()
+    // 未启用 CDN：整区不占版面（开关本身仍在）
+    expect(rowExists(w, 'cdn_provider')).toBe(false)
+    expect(rowExists(w, 'cdn_resource_id')).toBe(false)
+    await selectOf(w, 'cdn_enabled').setValue('true')
+    await nextTick()
+
+    // 默认 aliyun（留空回落）：AK/SK 三家用不到资源标识
+    expect(rowExists(w, 'cdn_provider')).toBe(true)
+    expect(rowExists(w, 'cdn_access_key_id')).toBe(true)
+    expect(rowExists(w, 'cdn_resource_id')).toBe(false)
+
+    // CloudFront：要 Distribution ID（资源标识），也要 AK/SK
+    await selectOf(w, 'cdn_provider').setValue('cloudfront')
+    await nextTick()
+    expect(rowOf(w, 'cdn_resource_id').text()).toContain('待配置')
+    expect(rowExists(w, 'cdn_access_key_id')).toBe(true)
+
+    // Cloudflare：要 Zone ID，但只用 API Token——AccessKeyId 不占版面
+    await selectOf(w, 'cdn_provider').setValue('cloudflare')
+    await nextTick()
+    expect(rowExists(w, 'cdn_resource_id')).toBe(true)
+    expect(rowExists(w, 'cdn_access_key_id')).toBe(false)
+    expect(rowExists(w, 'cdn_access_key_secret')).toBe(true)
+
+    // 搜索态仍能搜到被收窄的项，并带「当前选项下不需要」标记
+    await w.find('input.head-search').setValue('cdn_access_key_id')
+    await nextTick()
+    expect(rowOf(w, 'cdn_access_key_id').text()).toContain('当前选项下不需要')
     await w.find('input.head-search').setValue('')
     await nextTick()
   })

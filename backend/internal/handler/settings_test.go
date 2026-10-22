@@ -288,6 +288,8 @@ func TestStorageSettingsOverlayEnv(t *testing.T) {
 			OssBucket:      "env-bucket",
 			CDNAccessKeyID: "env-cdn-id",
 			CDNEnabled:     false,
+			CDNProvider:    "qiniu",
+			CDNResourceID:  "env-resource",
 		}
 	}
 
@@ -298,6 +300,9 @@ func TestStorageSettingsOverlayEnv(t *testing.T) {
 	require.Equal(t, "oss-env.aliyuncs.com", cfg.OssEndpoint)
 	require.Equal(t, "env-cdn-id", cfg.CDNAccessKeyID)
 	require.False(t, cfg.CDNEnabled)
+	// 2026-10-23 新增：厂商与资源标识同样遵循「界面留空 → 保留环境变量」
+	require.Equal(t, "qiniu", cfg.CDNProvider)
+	require.Equal(t, "env-resource", cfg.CDNResourceID)
 
 	// 2) 界面填了 → 覆盖（MinIO 与 OSS 共用同一组界面字段，按驱动二选一）
 	_, body := c.do("PUT", "/api/admin/settings", map[string]string{
@@ -305,6 +310,8 @@ func TestStorageSettingsOverlayEnv(t *testing.T) {
 		"storage_endpoint": "oss-cn-hangzhou.aliyuncs.com",
 		"storage_bucket":   "ui-bucket",
 		"cdn_enabled":      "true",
+		"cdn_provider":     "cloudflare",
+		"cdn_resource_id":  "ui-zone-id",
 	}, adminToken)
 	require.EqualValues(t, 0, body["code"])
 
@@ -314,6 +321,8 @@ func TestStorageSettingsOverlayEnv(t *testing.T) {
 	require.Equal(t, "oss-cn-hangzhou.aliyuncs.com", cfg.OssEndpoint)
 	require.Equal(t, "ui-bucket", cfg.OssBucket)
 	require.True(t, cfg.CDNEnabled)
+	require.Equal(t, "cloudflare", cfg.CDNProvider)
+	require.Equal(t, "ui-zone-id", cfg.CDNResourceID)
 
 	// 3) 清空 → 回到环境变量
 	_, body = c.do("PUT", "/api/admin/settings", map[string]string{
@@ -321,6 +330,8 @@ func TestStorageSettingsOverlayEnv(t *testing.T) {
 		"storage_endpoint": "",
 		"storage_bucket":   "",
 		"cdn_enabled":      "",
+		"cdn_provider":     "",
+		"cdn_resource_id":  "",
 	}, adminToken)
 	require.EqualValues(t, 0, body["code"])
 
@@ -329,6 +340,23 @@ func TestStorageSettingsOverlayEnv(t *testing.T) {
 	require.Equal(t, "local", cfg.StorageDriver)
 	require.Equal(t, "oss-env.aliyuncs.com", cfg.OssEndpoint)
 	require.False(t, cfg.CDNEnabled)
+	require.Equal(t, "qiniu", cfg.CDNProvider)
+	require.Equal(t, "env-resource", cfg.CDNResourceID)
+}
+
+// TestCDNProviderValidation 厂商枚举：非法值被拒、合法值可存。
+// 配错厂商最坏结果是「刷新静默失效」，所以要在写入时就拦住。
+func TestCDNProviderValidation(t *testing.T) {
+	r := setupSQLiteEngine(t)
+	c := newTestClient(r, t)
+	adminToken := loginAdmin(t, c)
+
+	for _, ok := range []string{"aliyun", "tencent", "qiniu", "cloudflare", "cloudfront"} {
+		_, body := c.do("PUT", "/api/admin/settings", map[string]string{"cdn_provider": ok}, adminToken)
+		require.EqualValues(t, 0, body["code"], "合法厂商应可保存：%s", ok)
+	}
+	_, body := c.do("PUT", "/api/admin/settings", map[string]string{"cdn_provider": "akamai"}, adminToken)
+	require.EqualValues(t, 1, body["code"], "未支持的厂商应被拒")
 }
 
 // TestRestartKeysReportedOnSave 云存储 / CDN 客户端在启动时构造，改完必须重启才生效。

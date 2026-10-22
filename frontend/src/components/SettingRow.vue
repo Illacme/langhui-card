@@ -183,6 +183,12 @@ const OPTION_LABELS: Record<string, string> = {
   'storage_driver|minio': 'minio（MinIO / 自建 S3 兼容服务）',
   'storage_driver|oss': 'oss（阿里云 OSS）',
   'storage_driver|s3': 's3（S3 兼容云存储）',
+  // CDN 厂商：候选值本身就是品牌名，只补中文名，不加括号说明（同上长度约束）
+  'cdn_provider|aliyun': 'aliyun（阿里云）',
+  'cdn_provider|tencent': 'tencent（腾讯云）',
+  'cdn_provider|qiniu': 'qiniu（七牛云）',
+  'cdn_provider|cloudflare': 'cloudflare（Cloudflare）',
+  'cdn_provider|cloudfront': 'cloudfront（AWS CloudFront）',
 }
 function optionLabel(opt: string): string {
   return OPTION_LABELS[`${props.item.key}|${opt}`] || opt
@@ -210,7 +216,9 @@ const PLACEHOLDER_EXAMPLES: Record<string, string> = {
   storage_region: '如 ap-guangzhou（大多数服务留空自动探测）',
   upload_base_url: '如 https://cdn.example.com',
   miniprogram_base_url: '如 https://mp.example.com',
-  cdn_endpoint: '如 cdn.example.com',
+  cdn_endpoint: '如 cdn.example.com（留空按厂商取默认）',
+  // 资源标识只有 Cloudflare / CloudFront 需要，示例里点名两家各自填什么
+  cdn_resource_id: 'Cloudflare 填 Zone ID，CloudFront 填 Distribution ID',
 }
 function placeholderOf(item: SettingItem) {
   if (item.readOnly) return '只读'

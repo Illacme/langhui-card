@@ -35,11 +35,22 @@ type Config struct {
 	OssAccessKeyID     string
 	OssAccessKeySecret string
 	OssBucket          string
-	CDNEnabled         bool   // 是否启用 CDN 刷新（覆盖写后使边缘缓存失效）
-	CDNAccessKeyID     string // CDN 刷新凭据（阿里云，可与 OSS 凭据相同）
+	CDNEnabled bool // 是否启用 CDN 刷新（覆盖写后使边缘缓存失效）
+	// CDNProvider 厂商：aliyun / tencent / qiniu / cloudflare / cloudfront；
+	// 留空按 aliyun（既有部署没有这一项）
+	CDNProvider string
+	// CDNAccessKeyID / Secret 是通用凭据位，按厂商含义不同：
+	// 阿里云 AccessKeyId/Secret、腾讯云 SecretId/SecretKey、七牛 AccessKey/SecretKey、
+	// CloudFront AccessKeyId/SecretAccessKey；Cloudflare 只用 Secret 位放 API Token。
+	CDNAccessKeyID     string
 	CDNAccessKeySecret string
-	CDNEndpoint        string // CDN 刷新端点，默认 cdn.aliyuncs.com
-	WXAppID            string // 小程序 AppID（小程序码用）
+	// CDNEndpoint 刷新接口端点：**留空按厂商取默认值**（各厂商域名不同，
+	// 写死一个默认值会让换厂商后拿到错的域名）
+	CDNEndpoint string
+	// CDNResourceID 资源标识：Cloudflare 的 Zone ID / CloudFront 的 Distribution ID；
+	// AK/SK 三家不需要（它们按提交 URL 的域名自己定位加速域名）
+	CDNResourceID string
+	WXAppID       string // 小程序 AppID（小程序码用）
 	WXAppSecret        string // 小程序 AppSecret（小程序码用）
 	AdminUser          string // 初始超管用户名（首启动 seed 用）
 	AdminPass          string // 初始超管密码（首启动 seed 用，上线务必修改）
@@ -71,9 +82,11 @@ func Load() Config {
 		OssAccessKeySecret: getEnv("OSS_ACCESS_KEY_SECRET", ""),
 		OssBucket:          getEnv("OSS_BUCKET", ""),
 		CDNEnabled:         parseBool(getEnv("CDN_ENABLED", "false")),
+		CDNProvider:        getEnv("CDN_PROVIDER", ""),
 		CDNAccessKeyID:     getEnv("CDN_ACCESS_KEY_ID", ""),
 		CDNAccessKeySecret: getEnv("CDN_ACCESS_KEY_SECRET", ""),
-		CDNEndpoint:        getEnv("CDN_ENDPOINT", "cdn.aliyuncs.com"),
+		CDNEndpoint:        getEnv("CDN_ENDPOINT", ""),
+		CDNResourceID:      getEnv("CDN_RESOURCE_ID", ""),
 		WXAppID:            getEnv("WX_APPID", ""),
 		WXAppSecret:        getEnv("WX_APPSECRET", ""),
 		AdminUser:          getEnv("ADMIN_USER", "admin"),

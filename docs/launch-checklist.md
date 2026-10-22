@@ -23,7 +23,7 @@
 | 对象存储 `STORAGE_DRIVER` + 凭据 | 「系统设置 → 文件存储与 CDN」或环境变量 `STORAGE_*` | 取值只可是 `local` / `minio` / `oss`；选非 local 时 `STORAGE_ENDPOINT` / `STORAGE_BUCKET` / 凭据已填 | ✅ 查合法值 / 凭据非空 |
 | 上传基址 `UPLOAD_BASE_URL` | 同上 `UPLOAD_BASE_URL` | 是真实可访问的 https 基址（也可在后台系统设置覆盖并重启） | ✅ 查本机地址 / http |
 | 微信 `wx_appid` / `wx_appsecret` | 后台「系统设置」覆盖（留空回退 `WX_*` 环境变量） | 真机扫码能拉起、小程序码能生成 | ❌ 需人工确认 |
-| CDN 刷新凭据 `CDN_*` | 同上「文件存储与 CDN」或环境变量 | 需刷新时填了阿里云凭据并开 `CDN_ENABLED` | ❌ 需人工确认 |
+| CDN 刷新凭据 `CDN_*` | 同上「文件存储与 CDN」或环境变量 | 需刷新时选了厂商（`CDN_PROVIDER`，五家之一）并填全该厂商要求的凭据、开 `CDN_ENABLED` | ❌ 需人工确认 |
 | `MYSQL_ROOT_PASSWORD` | `docker-compose.yml` / 环境 | 仅 `--profile mysql` 形态必填；改强随机值（默认 SQLite 形态无所谓） | ✅ 查示例值 / 必填 |
 
 ## 三、运行级（上线后看护）

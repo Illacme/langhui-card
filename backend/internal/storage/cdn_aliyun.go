@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -26,29 +25,18 @@ type AliyunCDNRefresher struct {
 }
 
 // NewAliyunCDNRefresher 构造刷新器；endpoint 为空时默认 cdn.aliyuncs.com
+// （内部归一化为 https://<endpoint>，见 cdnBaseURL）
 func NewAliyunCDNRefresher(id, secret, endpoint string) *AliyunCDNRefresher {
-	if endpoint == "" {
-		endpoint = "cdn.aliyuncs.com"
+	return &AliyunCDNRefresher{
+		AccessKeyID:     id,
+		AccessKeySecret: secret,
+		Endpoint:        cdnBaseURL(endpoint, "cdn.aliyuncs.com"),
 	}
-	return &AliyunCDNRefresher{AccessKeyID: id, AccessKeySecret: secret, Endpoint: endpoint}
 }
 
 // Refresh 刷新一组 URL（单次最多 1000 条，超出自动分批）
 func (a *AliyunCDNRefresher) Refresh(urls []string) error {
-	if len(urls) == 0 {
-		return nil
-	}
-	const batch = 1000
-	for start := 0; start < len(urls); start += batch {
-		end := start + batch
-		if end > len(urls) {
-			end = len(urls)
-		}
-		if err := a.refreshOnce(urls[start:end]); err != nil {
-			return err
-		}
-	}
-	return nil
+	return cdnBatch(urls, 1000, a.refreshOnce)
 }
 
 func (a *AliyunCDNRefresher) refreshOnce(urls []string) error {
@@ -90,16 +78,15 @@ func (a *AliyunCDNRefresher) refreshOnce(urls []string) error {
 		final[k] = v
 	}
 	final.Set("Signature", percentEncode(signature))
-	reqURL := "https://" + a.Endpoint + "/?" + final.Encode()
-
-	resp, err := http.Get(reqURL)
+	reqURL := a.Endpoint + "/?" + final.Encode()
+	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
 	if err != nil {
 		return fmt.Errorf("cdn refresh request: %w", err)
 	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("cdn refresh http %d: %s", resp.StatusCode, string(body))
+	// 走共享客户端（带 15s 超时）：刷新同步串在用户请求里，厂商不响应不能挂死请求
+	body, err := cdnDo(req)
+	if err != nil {
+		return err
 	}
 	// 成功响应无 Code 字段；失败响应含 {"Code":"...","Message":"..."}
 	var r struct {

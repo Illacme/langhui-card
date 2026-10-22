@@ -417,10 +417,13 @@ const GROUP_ITEM_ORDER: Record<string, string[]> = {
     // 访问方式：公私总闸 + 对外基址（两种方式都生效）
     'storage_public',
     'upload_base_url',
-    // CDN 刷新：可选增强，不开则整区用不上
+    // CDN 刷新：可选增强，不开则整区用不上；厂商决定下面哪些凭据要填
     'cdn_enabled',
+    'cdn_provider',
     'cdn_access_key_id',
     'cdn_access_key_secret',
+    // 资源标识：只有 Cloudflare（Zone ID）与 CloudFront（Distribution ID）需要
+    'cdn_resource_id',
     'cdn_endpoint',
   ],
   upload: ['upload_max_mb', 'upload_video_max_mb', 'upload_allow_ext', 'presign_put_ttl_minutes', 'sign_get_ttl_minutes'],
@@ -435,7 +438,7 @@ const GROUP_SECTIONS: Record<string, { label: string; keys: string[] }[]> = {
     // local 与云存储两套互斥配置在这一区里按 depState 二选一出现
     { label: '存储位置', keys: ['storage_driver', 'upload_dir', 'storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key', 'storage_use_ssl', 'storage_region'] },
     { label: '访问方式', keys: ['storage_public', 'upload_base_url'] },
-    { label: 'CDN 刷新（可选）', keys: ['cdn_enabled', 'cdn_access_key_id', 'cdn_access_key_secret', 'cdn_endpoint'] },
+    { label: 'CDN 刷新（可选）', keys: ['cdn_enabled', 'cdn_provider', 'cdn_access_key_id', 'cdn_access_key_secret', 'cdn_resource_id', 'cdn_endpoint'] },
   ],
   upload: [
     { label: '大小与类型', keys: ['upload_max_mb', 'upload_video_max_mb', 'upload_allow_ext'] },
@@ -845,7 +848,15 @@ const CLOUD_ONLY = [
   'storage_secret_key',
   'upload_base_url',
 ]
-const CDN_ONLY = ['cdn_access_key_id', 'cdn_access_key_secret', 'cdn_endpoint']
+const CDN_ONLY = ['cdn_provider', 'cdn_access_key_id', 'cdn_access_key_secret', 'cdn_resource_id', 'cdn_endpoint']
+// 五家的凭据形态不同（与后端 storage.CDNProviderNeeds* 同源，改一边要改另一边）：
+//   - 资源标识只有 Cloudflare（Zone ID）与 CloudFront（Distribution ID）需要，
+//     AK/SK 三家按提交 URL 的域名自己定位加速域名；
+//   - Cloudflare 只用一个 API Token（填在 Secret 位），用不到 AccessKeyId。
+// 未启用 CDN 时整区不占版面；启用后按厂商再收窄一次，避免对着用不上的输入框。
+const CDN_RESOURCE_PROVIDERS = ['cloudflare', 'cloudfront']
+const cdnProvider = computed(() => (draft.cdn_provider || '').trim() || 'aliyun')
+const cdnNeedsResource = computed(() => CDN_RESOURCE_PROVIDERS.includes(cdnProvider.value))
 
 interface DepState {
   focus: boolean
@@ -862,7 +873,15 @@ function depState(key: string): DepState {
     return { focus: driverVal.value !== 'local', dim: driverVal.value === 'local' }
   }
   if (CDN_ONLY.includes(key)) {
-    return { focus: cdnOn.value, dim: !cdnOn.value }
+    if (!cdnOn.value) return { focus: false, dim: true }
+    // Cloudflare 只用 API Token：AccessKeyId 用不到，别让人对着它发愣
+    if (key === 'cdn_access_key_id') {
+      return { focus: cdnProvider.value !== 'cloudflare', dim: cdnProvider.value === 'cloudflare' }
+    }
+    if (key === 'cdn_resource_id') {
+      return { focus: cdnNeedsResource.value, dim: !cdnNeedsResource.value }
+    }
+    return { focus: true, dim: false }
   }
   if (key === 'wx_appsecret') {
     return { focus: wxAppidFilled.value, dim: !wxAppidFilled.value }
