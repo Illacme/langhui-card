@@ -22,6 +22,7 @@
         <li :class="stepClass(3)"><b>{{ 3 < step ? '✓' : 3 }}</b><span>完成</span></li>
       </ol>
 
+      <div class="si-body">
       <!-- ---------- 步骤 1：数据库 ---------- -->
       <section v-show="step === 1 && !confirming" class="si-pane">
         <h2 class="si-h2">选择数据库</h2>
@@ -187,6 +188,7 @@
         安全说明：安装向导仅在首次配置前可用，安装一次后即关闭；不会覆盖已有数据的数据库；
         配置以 0600 权限写入 <code>{{ configFile }}</code>；响应与日志中不出现明文口令。
       </p>
+      </div>
     </div>
   </div>
 </template>
@@ -471,17 +473,20 @@ onMounted(() => {
 
 <style scoped>
 .si-root {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 16px;
   box-sizing: border-box;
   background: linear-gradient(160deg, #eef3f9 0%, #f7f9fc 100%);
 }
 .si-dialog {
   width: 100%;
   max-width: 680px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border: 1px solid rgba(0, 0, 0, 0.04);
   border-radius: 16px;
@@ -528,7 +533,13 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   margin: 0;
-  padding: 16px 24px;
+  padding: 12px 24px;
+}
+/* 弹窗内容滚动区：header 与步骤条常驻，仅此区域滚动 */
+.si-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .si-steps li {
   flex: 1;
@@ -579,7 +590,7 @@ onMounted(() => {
   font-weight: 600;
 }
 .si-lead {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
   color: #606266;
   font-size: 13px;
   line-height: 1.7;
@@ -693,6 +704,7 @@ onMounted(() => {
   height: auto;
   font-size: 13px;
   color: #606266;
+  justify-self: start;
 }
 .si-tip {
   margin: 0;
@@ -801,7 +813,7 @@ code {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  margin-top: 18px;
+  margin-top: 14px;
 }
 .si-confirm {
   margin: 16px 24px;
@@ -919,7 +931,7 @@ code {
   }
 }
 .si-note {
-  margin: 16px 24px 20px;
+  margin: 12px 24px 16px;
   font-size: 12px;
   color: #909399;
   line-height: 1.8;
