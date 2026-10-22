@@ -51,12 +51,17 @@
            后端以「空串 = 未在界面设置」表达回退环境变量，两态开关表达不了。
            placeholder 必须绑成未设置文案：Element Plus 2.14 的 hasModelValue 对
            空串为 false，不传 placeholder 会回落通用「请选择」，看着像必选项，
-           与「留空=回退环境变量/缺省值」的语义相反（2026-10-22 全量核查发现）。 -->
+           与「留空=回退环境变量/缺省值」的语义相反（2026-10-22 全量核查发现）。
+           fallback-placements 砍掉 left/right：选择框贴内容区右缘，面板一旦比
+           右侧剩余空间宽，popper.js 会翻到选择框左侧盖住标签列（2026-10-23 实测），
+           只留下/上两个方向——最坏情况是被 preventOverflow 平移到贴住视口右缘，
+           仍然是「选择框正下方展开」的正常形态。 -->
       <el-select
         v-if="item.type === 'bool'"
         :model-value="modelValue"
         :placeholder="unsetLabel"
         :disabled="item.readOnly"
+        :fallback-placements="['bottom-start', 'top-start']"
         @change="(v: any) => emit('change', item.key, String(v ?? ''))"
       >
         <!-- 「未设置」的含义按项而异：登记了环境变量的项才是回退到部署环境，
@@ -69,12 +74,14 @@
       <!-- 枚举项（后端 registry 登记了 Options，与 oneOf 校验同源）：同样三态下拉。
            渲染成文本框是缺陷——候选值就摆在后端却让人手打，填错只能等保存时报错；
            且「存储方式」这类项手打 local/minio/oss 毫无意义（2026-10-22 用户实测反馈）。
-           placeholder 同 bool：空值态要显示「未设置（…）」而不是「请选择」。 -->
+           placeholder 同 bool：空值态要显示「未设置（…）」而不是「请选择」。
+           fallback-placements 同 bool：见上方注释（2026-10-23 下拉翻到左侧的修复）。 -->
       <el-select
         v-else-if="item.options && item.options.length"
         :model-value="modelValue"
         :placeholder="unsetLabel"
         :disabled="item.readOnly"
+        :fallback-placements="['bottom-start', 'top-start']"
         @change="(v: any) => emit('change', item.key, String(v ?? ''))"
       >
         <el-option :label="unsetLabel" value="" />
@@ -164,13 +171,18 @@ function minOf(item: SettingItem) {
   return INT_MIN[item.key] ?? 0
 }
 
-// 枚举候选的展示文案：值本身（local / minio / oss）对运营不够直白，
-// 补一括号说明；未登记的组合原样显示值（后端新增候选时界面不留空白）。
+// 枚举候选的展示文案：值本身（local / minio / oss）对运营不够直白，补一括号说明；
+// 未登记的组合原样显示值（后端新增候选时界面不留空白）。
+// **长度是硬约束**：设置页每行的选择框贴在内容区右缘，它左边到视口右边只有约
+// 320px，而下拉面板按最宽选项撑开——s3 标签曾写成「s3（S3 兼容云存储：腾讯云 COS
+// / 华为云 OBS / 七牛云 / AWS S3 / R2 等）」，面板宽到 528px > 318px，popper.js
+// 沿 fallback 链翻到 left，下拉整个跑到选择框左侧盖住标签列（2026-10-23 实测）。
+// 所以候选文案保持短：完整说明交给行内的 description，那儿不比下拉里挤着看更清楚。
 const OPTION_LABELS: Record<string, string> = {
   'storage_driver|local': 'local（服务器本地磁盘）',
   'storage_driver|minio': 'minio（MinIO / 自建 S3 兼容服务）',
   'storage_driver|oss': 'oss（阿里云 OSS）',
-  'storage_driver|s3': 's3（S3 兼容云存储：腾讯云 COS / 华为云 OBS / 七牛云 / AWS S3 / R2 等）',
+  'storage_driver|s3': 's3（S3 兼容云存储）',
 }
 function optionLabel(opt: string): string {
   return OPTION_LABELS[`${props.item.key}|${opt}`] || opt

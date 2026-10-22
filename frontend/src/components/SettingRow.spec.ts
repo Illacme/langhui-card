@@ -27,7 +27,7 @@ function mountRow(item: Record<string, unknown>, modelValue = '') {
       stubs: {
         // stub 要渲染 placeholder：三态下拉的空值态靠它显示「未设置（…）」而不是
 // Element Plus 通用「请选择」（EP 2.14 hasModelValue 对空串为 false，见组件注释）
-'el-select': { template: '<select :placeholder="placeholder"><slot /></select>', props: ['placeholder'] },
+'el-select': { name: 'ElSelect', template: '<select :placeholder="placeholder"><slot /></select>', props: ['placeholder', 'fallbackPlacements'] },
         'el-option': { template: '<option />' },
         'el-input-number': { template: '<input type="number" />' },
         // stub 要渲染 placeholder：示例占位符是「填什么格式」的引导，断言它就得看得见
@@ -107,6 +107,11 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
     expect(w.find('.row-control input').exists()).toBe(false)
     // 未设置（回退环境变量）+ 4 个候选
     expect(w.findAll('.row-control option')).toHaveLength(5)
+    // 下拉朝向必须限定 bottom/top：设置页的选择框贴内容区右缘，面板比右侧剩余
+    // 空间宽时 popper.js 默认翻到 left，下拉整个跑到选择框左侧盖住标签列
+    // （2026-10-23 用户实测「为什么点击下拉框后是在左侧弹出的」）。砍掉 left/right
+    // 后最坏只是被平移到贴视口右缘，形态仍是「选择框正下方展开」。
+    expect(w.findComponent({ name: 'ElSelect' }).props('fallbackPlacements')).toEqual(['bottom-start', 'top-start'])
     // 未登记 options 的普通字符串项仍是文本框
     const plain = mountRow({ key: 'brand_name', type: 'string' })
     expect(plain.find('.row-control select').exists()).toBe(false)
@@ -127,7 +132,7 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
         stubs: {
           // stub 要渲染 placeholder：三态下拉的空值态靠它显示「未设置（…）」而不是
 // Element Plus 通用「请选择」（EP 2.14 hasModelValue 对空串为 false，见组件注释）
-'el-select': { template: '<select :placeholder="placeholder"><slot /></select>', props: ['placeholder'] },
+'el-select': { name: 'ElSelect', template: '<select :placeholder="placeholder"><slot /></select>', props: ['placeholder', 'fallbackPlacements'] },
           'el-option': { template: '<option />' },
           'el-input-number': { template: '<input type="number" />' },
           'el-input': { template: '<input type="text" :placeholder="placeholder" />', props: ['placeholder'] },

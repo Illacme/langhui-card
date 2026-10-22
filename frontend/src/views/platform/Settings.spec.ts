@@ -84,7 +84,7 @@ const ElTag = defineComponent({
 // 开关改三态下拉：未设置（空串=回退环境变量）/ 开 / 关
 const ElSelect = defineComponent({
   name: 'ElSelect',
-  props: ['modelValue', 'disabled'],
+  props: ['modelValue', 'disabled', 'fallbackPlacements'],
   emits: ['update:modelValue', 'change'],
   template: `<select class="el-select" :disabled="disabled" :value="modelValue" @change="$emit('change', $event.target.value)"><slot /></select>`,
 })
