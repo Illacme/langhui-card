@@ -44,12 +44,19 @@ const ElAlert = defineComponent({
   props: ['type', 'title', 'closable', 'showIcon'],
   template: `<div class="stub-alert" :data-type="type">{{ title }}</div>`,
 })
+// 测试里把 el-tooltip 拍平：触发徽标 + 说明文本一起渲染，便于断言说明仍在 DOM。
+const ElTooltip = defineComponent({
+  name: 'ElTooltip',
+  props: ['content', 'placement'],
+  template: `<span class="stub-tip"><slot /><span class="stub-tip-content">{{ content }}</span></span>`,
+})
 
 const stubs = {
   'el-input': ElInput,
   'el-button': ElButton,
   'el-checkbox': ElCheckbox,
   'el-alert': ElAlert,
+  'el-tooltip': ElTooltip,
 }
 
 function status(over: Partial<SetupStatus> = {}): SetupStatus {
@@ -209,9 +216,11 @@ describe('SetupInstaller', () => {
     expect(w.text()).toContain('DB_DSN=sqlite:///data/weichuan.db')
   })
 
-  it('高级选项带 JWT 密钥与 Cookie 强制 HTTPS 的作用说明', () => {
+  it('高级选项用悬浮徽标承载说明，默认不占版面', () => {
     const w = mountInstaller()
-    // details 内容常驻 DOM（jsdom 不做原生折叠隐藏），text() 可直接断言
+    // 说明以悬浮「?」徽标形式存在，文本仍在 DOM（stub 拍平）可断言
+    const badges = w.findAll('.stub-tip .si-hint')
+    expect(badges.length).toBeGreaterThanOrEqual(2)
     expect(w.text()).toContain('登录凭证的签名密钥')
     expect(w.text()).toContain('至少 16 位')
     expect(w.text()).toContain('所有人已登录的状态立即失效')
