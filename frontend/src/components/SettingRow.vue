@@ -6,6 +6,12 @@
     <div class="row-main">
       <div class="row-label">
         <span class="label-text">{{ item.name || item.key }}</span>
+        <!-- 格式最易错的项：填错后果写进悬浮徽标（默认不占版面）。
+             upload_base_url 填错=图片全打不开、miniprogram_base_url 填错=小程序连不上，
+             这两类「后果严重且现场才发现」的项必须给最强引导。 -->
+        <el-tooltip v-if="fieldHint" placement="top" popper-class="si-hint-popper" :content="fieldHint">
+          <span class="row-hint" tabindex="0" aria-label="填写说明">?</span>
+        </el-tooltip>
         <!-- key 降级为次要灰字：界面面向运营用中文名，排查日志/环境变量时仍可对照 -->
         <span v-if="item.name" class="label-key">{{ item.key }}</span>
         <el-tag size="small" effect="plain">{{ typeLabel(item.type) }}</el-tag>
@@ -132,9 +138,32 @@ const INT_MIN: Record<string, number> = { upload_max_mb: 1 }
 function minOf(item: SettingItem) {
   return INT_MIN[item.key] ?? 0
 }
+
+// 格式易错项的悬浮说明：只放「填错的后果当场发现不了」的项（地址类）。
+// 默认不占版面，指针停留/聚焦时弹出；与安装向导的 JWT/Cookie 徽标同一模式。
+const FIELD_HINTS: Record<string, string> = {
+  upload_base_url:
+    '图片 / 视频 / 小程序码的公开访问地址，须为 https 完整地址（例 https://cdn.example.com）；配了 CDN 就填加速域名。填错的结果是图片全部打不开。',
+  miniprogram_base_url:
+    '小程序端冷启动第一个请求打到这，必须是小程序能访问到的公网 https 地址（例 https://mp.example.com）。填错小程序直接连不上。',
+  storage_endpoint: '对象存储的服务地址，如 minio.example.com:9000；存储方式选 local 时不需要。',
+}
+const fieldHint = computed(() => FIELD_HINTS[props.item.key] || '')
+
+// 示例占位：比笼统的「未设置」更能告诉用户该填成什么样。
+// 与 item.description（讲「是什么、改了会怎样」）互补：示例讲「填什么格式」。
+const PLACEHOLDER_EXAMPLES: Record<string, string> = {
+  upload_dir: '如 ./data/uploads',
+  storage_endpoint: '如 minio.example.com:9000',
+  storage_bucket: '如 weichuan',
+  upload_base_url: '如 https://cdn.example.com',
+  miniprogram_base_url: '如 https://mp.example.com',
+  cdn_endpoint: '如 cdn.example.com',
+}
 function placeholderOf(item: SettingItem) {
   if (item.readOnly) return '只读'
-  return item.type === 'string_slice' ? '逗号分隔，如 png,jpg,webp' : '未设置'
+  if (item.type === 'string_slice') return '逗号分隔，如 png,jpg,webp'
+  return PLACEHOLDER_EXAMPLES[item.key] || '未设置'
 }
 // 三态下拉第一档的文案：登记了环境变量名的项留空才回退到部署环境，
 // 没登记的（如 independent_lock）留空就是回退内置缺省值，不能混为一谈
@@ -186,6 +215,27 @@ const numVal = computed(() => {
   font-size: 11px;
   color: #c0c4cc;
 }
+/* 悬浮说明徽标：常驻不占版面，指针停留/聚焦时由 el-tooltip 弹出 */
+.row-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #c0c4cc;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+.row-hint:hover,
+.row-hint:focus {
+  background: #409eff;
+  outline: none;
+}
 .row-desc {
   margin-top: 4px;
   color: #909399;
@@ -225,5 +275,15 @@ const numVal = computed(() => {
     width: 100%;
     justify-content: flex-start;
   }
+}
+</style>
+
+<!-- 说明弹层样式：el-tooltip 的 popper 挂在 body 下，scoped 样式够不到，必须用非 scoped 块。
+     限宽让长说明折行成短段，而不是横穿全屏的一长行（与 SetupInstaller 同一模式）。 -->
+<style>
+.si-hint-popper {
+  max-width: 300px;
+  text-align: left;
+  line-height: 1.7;
 }
 </style>

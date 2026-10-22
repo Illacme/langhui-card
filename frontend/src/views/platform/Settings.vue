@@ -198,10 +198,31 @@
       class="wizard-dialog"
       :close-on-click-modal="false"
     >
-      <el-steps :active="wizardStep" align-center class="wizard-steps">
-        <el-step v-for="(s, i) in WIZARD_STEPS" :key="s.key" :title="s.title" :status="stepStatus(i)" />
-      </el-steps>
-      <div class="wizard-progress">第 {{ wizardStep + 1 }} 步 / 共 {{ WIZARD_STEPS.length }} 步</div>
+      <!-- 步骤条：自绘 chips 而非 el-steps——要的是「可点击回跳 + 每步待配置数」，
+           el-steps 既不 emit 点击、标题也带不上计数。草稿全程共享、步骤间无校验闸，
+           所以允许自由跳转（含未完成步），与「安全确认步的去配置按钮」行为一致。 -->
+      <div class="wizard-stepbar">
+        <button
+          v-for="(s, i) in WIZARD_STEPS"
+          :key="s.key"
+          type="button"
+          class="wizard-stepchip"
+          :class="{ cur: i === wizardStep, done: stepStatus(i) === 'success' }"
+          :aria-current="i === wizardStep ? 'step' : undefined"
+          @click="wizardStep = i"
+        >
+          <span class="wizard-stepchip-no">{{ stepStatus(i) === 'success' ? '✓' : i + 1 }}</span>
+          <span class="wizard-stepchip-title">{{ s.title }}</span>
+          <span v-if="stepPending(i) > 0" class="wizard-stepchip-count">{{ stepPending(i) }}</span>
+        </button>
+      </div>
+      <div class="wizard-progress">
+        第 {{ wizardStep + 1 }} 步 / 共 {{ WIZARD_STEPS.length }} 步<span
+          v-if="stepPending(wizardStep) > 0"
+          class="wizard-progress-pending"
+          >本步 {{ stepPending(wizardStep) }} 项待配置</span
+        >
+      </div>
       <div class="wizard-blurb">{{ currentStep.blurb }}</div>
       <div class="wizard-body">
         <SettingRow
@@ -215,20 +236,44 @@
           @clear="clearSecret"
         />
       </div>
+      <!-- 安全确认步：复用主页那套就绪清单（同一份 checks 数据），而不是几行文字。
+           「本页可配」未就绪项给「去配置」= 跳回拥有该配置项的步骤（向导内闭环）；
+           只读项给可复制的环境变量写法 + 说明，避免「看到问题却找不到解法」。
+           只读项本来就不进向导步骤，放这里是让最后一步成为完整的收尾核对。 -->
       <div v-if="currentStep.key === 'final'" class="wizard-final">
-        <p class="wizard-final-line">
-          当前上线就绪 <b>{{ readyCount }} / {{ checks.length }}</b> 项。
-          <template v-if="readyCount < checks.length">
-            未就绪的多是只读项（数据库连接串 / 签名密钥 / Cookie HTTPS），只能到部署环境改环境变量或配置文件（默认 data/runtime.env）后重启——界面不开放，是为了防止把「改回来的入口」一起弄丢。
-          </template>
-          <template v-else>必配项已全部就绪。</template>
-        </p>
+        <div class="wizard-final-head">
+          <span class="wizard-final-title">上线就绪</span>
+          <span class="wizard-final-count" :class="{ ok: readyCount === checks.length }">
+            {{ readyCount }} / {{ checks.length }}
+          </span>
+        </div>
+        <template v-if="uiChecks.length">
+          <div class="wizard-final-sec">本页可配置</div>
+          <div v-for="c in uiChecks" :key="c.label" class="wizard-final-row">
+            <span class="ready-badge" :class="c.ok ? 'ok' : 'warn'">{{ c.ok ? '✓' : '!' }}</span>
+            <span class="wizard-final-label">{{ c.label }}</span>
+            <span class="wizard-final-desc">{{ c.ok ? '已就绪' : c.hint || '待配置' }}</span>
+            <el-button v-if="!c.ok" size="small" text type="primary" @click="wizardJumpToKey(c.keys[0])">
+              去配置
+            </el-button>
+          </div>
+        </template>
+        <template v-if="envChecks.length">
+          <div class="wizard-final-sec">只读项 · 到部署环境改（界面不开放）</div>
+          <div v-for="c in envChecks" :key="c.label" class="wizard-final-row">
+            <span class="ready-badge" :class="c.ok ? 'ok' : 'warn'">{{ c.ok ? '✓' : '!' }}</span>
+            <span class="wizard-final-label">{{ c.label }}</span>
+            <span class="wizard-final-desc">{{ c.ok ? '已就绪' : c.hint || '待配置' }}</span>
+            <span v-if="!c.ok && c.envSample" class="wizard-final-env-wrap">
+              <code class="wizard-final-env">{{ c.envSample }}</code>
+              <el-button size="small" text type="primary" @click="copyEnv(c)">复制</el-button>
+            </span>
+          </div>
+        </template>
         <p v-if="wizardRestartKeys.length" class="wizard-final-line">
-          本次改动中 <b>{{ wizardRestartKeys.length }}</b> 项需重启服务后生效：{{ wizardRestartKeys.join('、') }}
+          本次改动中 {{ wizardRestartKeys.length }} 项需重启服务后生效：{{ wizardRestartKeys.join('、') }}
         </p>
-        <p class="wizard-final-line">
-          保存后请按部署方式重启进程 / 容器；重启前新存储配置不生效，属预期行为。
-        </p>
+        <p class="wizard-final-line">保存后请按部署方式重启进程 / 容器；重启前新存储配置不生效，属预期行为。</p>
       </div>
       <template #footer>
         <div class="wizard-foot">
@@ -691,11 +736,27 @@ const currentStep = computed(() => WIZARD_STEPS[wizardStep.value])
 const currentVisible = computed(() => stepVisible(currentStep.value))
 const isLastStep = computed(() => wizardStep.value === WIZARD_STEPS.length - 1)
 const wizardRestartKeys = computed(() =>
-  changedKeys.value.filter((k) => items.value.find((i) => i.key === k)?.restart),
+  changedKeys.value
+    .filter((k) => items.value.find((i) => i.key === k)?.restart)
+    // 展示中文名而不是 key：面向运营的界面不裸露内部标识符（key 在行内灰字仍可对照）
+    .map((k) => items.value.find((i) => i.key === k)?.name || k),
 )
 function stepStatus(i: number): 'success' | 'process' | 'wait' {
   if (i === wizardStep.value) return 'process'
   return stepDone(WIZARD_STEPS[i]) ? 'success' : 'wait'
+}
+// 每步「还要填几项」：可见项里未配置的数量（final 步无数可计，恒 0）。
+// 步骤 chips 与进度行共用——用户一眼知道每步的工作量，不用点进去才发现还有 5 项。
+function stepPending(i: number): number {
+  const s = WIZARD_STEPS[i]
+  if (s.key === 'final') return 0
+  return stepVisible(s).filter((it) => !it.configured).length
+}
+// 安全确认步的「去配置」：跳回拥有该配置项的步骤（向导内闭环）。
+// 与主页 jumpTo 不同——那里滚主列表，这里在对话框内切步骤。
+function wizardJumpToKey(key: string) {
+  const idx = WIZARD_STEPS.findIndex((s) => s.keys.includes(key))
+  if (idx >= 0) wizardStep.value = idx
 }
 function wizardSeen(): boolean {
   try {
@@ -1214,14 +1275,90 @@ onMounted(load)
   color: #909399;
 }
 /* 配置向导 */
-.wizard-steps {
-  margin-bottom: 4px;
+/* 步骤条用 max-width 而不是改 width prop：el-dialog 的 width 是内联样式，
+   样式表覆盖不了内联值，max-width 则能在窄屏直接生效（无需 !important） */
+.wizard-dialog {
+  max-width: 92vw;
+}
+.wizard-stepbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.wizard-stepchip {
+  flex: 1 1 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 0.5px solid #ebeef5;
+  border-radius: 6px;
+  background: #fff;
+  color: #909399;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.wizard-stepchip:hover {
+  border-color: #c0c4cc;
+  color: #606266;
+}
+.wizard-stepchip.done {
+  background: #f0f9eb;
+  border-color: #e1f3d8;
+  color: #67c23a;
+}
+.wizard-stepchip.cur {
+  background: #ecf5ff;
+  border-color: #409eff;
+  color: #409eff;
+  font-weight: 500;
+}
+.wizard-stepchip-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 10px;
+}
+.wizard-stepchip.cur .wizard-stepchip-no {
+  background: #409eff;
+  color: #fff;
+}
+.wizard-stepchip.done .wizard-stepchip-no {
+  background: #67c23a;
+  color: #fff;
+}
+/* 每步待配置数：琥珀色小徽标，步骤没填完就一直挂着 */
+.wizard-stepchip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #fdf6ec;
+  color: #e6a23c;
+  font-size: 10px;
 }
 .wizard-progress {
   text-align: center;
   font-size: 12px;
   color: #909399;
   margin: 8px 0 4px;
+}
+.wizard-progress-pending {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fdf6ec;
+  color: #e6a23c;
 }
 .wizard-blurb {
   font-size: 12px;
@@ -1237,6 +1374,71 @@ onMounted(load)
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed #ebeef5;
+}
+.wizard-final-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.wizard-final-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+}
+.wizard-final-count {
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+.wizard-final-count.ok {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+.wizard-final-sec {
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+  margin: 10px 0 2px;
+}
+.wizard-final-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #303133;
+  padding: 4px 0;
+}
+.wizard-final-label {
+  flex: none;
+}
+.wizard-final-desc {
+  color: #909399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wizard-final-row .el-button {
+  margin-left: auto;
+  flex: none;
+}
+.wizard-final-env-wrap {
+  margin-left: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wizard-final-env {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  background: #f5f7fa;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: #606266;
 }
 .wizard-final-line {
   margin: 8px 0 0;

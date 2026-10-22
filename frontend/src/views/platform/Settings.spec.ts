@@ -104,17 +104,18 @@ const ElButton = defineComponent({
   props: ['type', 'loading', 'disabled', 'text', 'size'],
   template: `<button class="el-button" :disabled="disabled"><slot /></button>`,
 })
-// 配置向导：对话框 + 步骤条。stub 不传送门，直接内联渲染，便于在 wrapper 里断言。
+// 配置向导：对话框。stub 不传送门，直接内联渲染，便于在 wrapper 里断言。
+// 步骤条是自绘 button chips（可点击回跳 + 待配置计数），不再用 el-steps。
 const ElDialog = defineComponent({
   name: 'ElDialog',
   props: ['modelValue', 'title', 'width', 'closeOnClickModal'],
   template: `<div class="el-dialog" v-if="modelValue"><div class="el-dialog__title">{{ title }}</div><slot /><div class="el-dialog__footer"><slot name="footer" /></div></div>`,
 })
-const ElSteps = defineComponent({ name: 'ElSteps', props: ['active'], template: `<div class="el-steps"><slot /></div>` })
-const ElStep = defineComponent({
-  name: 'ElStep',
-  props: ['title', 'status'],
-  template: `<div class="el-step"><span class="el-step__title">{{ title }}</span><slot /></div>`,
+// tooltip 拍平：触发徽标 + 说明文本一起渲染，便于断言说明仍在 DOM
+const ElTooltip = defineComponent({
+  name: 'ElTooltip',
+  props: ['content', 'placement'],
+  template: `<span class="el-tooltip"><slot /><span class="el-tooltip__content">{{ content }}</span></span>`,
 })
 
 const mountOpts = {
@@ -129,8 +130,7 @@ const mountOpts = {
       'el-input': ElInput,
       'el-button': ElButton,
       'el-dialog': ElDialog,
-      'el-steps': ElSteps,
-      'el-step': ElStep,
+      'el-tooltip': ElTooltip,
     },
   },
 }
@@ -626,6 +626,71 @@ describe('Settings 系统设置', () => {
     // 品牌名也未配置 → 落在第 1 步
     expect(dialogOf(w).text()).toContain('第 1 步 / 共 6 步')
     expect(dialogOf(w).text()).toContain('品牌与身份')
+  })
+
+  // ---- P0：向导易用性优化 ----
+  it('步骤条可点击回跳：从第 2 步点回第 1 步', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    const chip = dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('品牌与身份'))
+    expect(chip, '未找到品牌步骤 chip').toBeTruthy()
+    await chip!.trigger('click')
+    await nextTick()
+    expect(dialogOf(w).text()).toContain('第 1 步 / 共 6 步')
+  })
+
+  it('步骤条带每步待配置数：local 下存储步亮 2', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    const chip = dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('存储与上传'))
+    // local 驱动下可见项：storage_driver（已配）/ upload_dir / upload_base_url（未配）
+    expect(chip!.find('.wizard-stepchip-count').text()).toBe('2')
+    expect(dialogOf(w).text()).toContain('本步 2 项待配置')
+  })
+
+  it('格式关键项给示例占位与悬浮说明徽标', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    // 第 2 步 local 下就有 upload_base_url：示例占位讲格式、徽标讲填错的后果
+    expect(dialogRow(w, 'upload_base_url').find('input.el-input').attributes('placeholder')).toContain('https://')
+    expect(dialogRow(w, 'upload_base_url').text()).toContain('图片全部打不开')
+    // 切到小程序步：miniprogram_base_url 也有徽标
+    for (let i = 0; i < 3; i++) {
+      await dialogButton(w, '下一步').trigger('click')
+      await nextTick()
+    }
+    expect(dialogRow(w, 'miniprogram_base_url').text()).toContain('小程序直接连不上')
+  })
+
+  it('安全确认步：就绪清单 + 去配置跳回对应步骤 + 只读项给可复制写法', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    for (let i = 0; i < 4; i++) {
+      await dialogButton(w, '下一步').trigger('click')
+      await nextTick()
+    }
+    const dlg = dialogOf(w)
+    // 复用主页 checks 数据：分组 + 就绪数（夹具 3/7）
+    expect(dlg.text()).toContain('上线就绪')
+    expect(dlg.text()).toContain('3 / 7')
+    expect(dlg.text()).toContain('本页可配置')
+    expect(dlg.text()).toContain('只读项')
+    // 只读未就绪项（cookie_secure）给可复制的环境变量写法
+    expect(dlg.text()).toContain('COOKIE_SECURE=true')
+    // 「去配置」跳回拥有该配置项的步骤：文件访问基址 → 第 2 步
+    const row = dlg.findAll('.wizard-final-row').find((r: any) => r.text().includes('文件访问基址'))
+    expect(row, '未找到文件访问基址行').toBeTruthy()
+    await row!.find('button.el-button').trigger('click')
+    await nextTick()
+    expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
   })
 
   // ---- P2：搜索过滤 + 破坏性更改二次确认 ----

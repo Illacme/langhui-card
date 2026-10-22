@@ -28,9 +28,15 @@ function mountRow(item: Record<string, unknown>, modelValue = '') {
         'el-select': { template: '<select><slot /></select>' },
         'el-option': { template: '<option />' },
         'el-input-number': { template: '<input type="number" />' },
-        'el-input': { template: '<input type="text" />' },
+        // stub 要渲染 placeholder：示例占位符是「填什么格式」的引导，断言它就得看得见
+        'el-input': { template: '<input type="text" :placeholder="placeholder" />', props: ['placeholder'] },
         'el-button': { template: '<button><slot /></button>' },
         'el-tag': { template: '<span><slot /></span>' },
+        // tooltip 拍平：触发徽标 + 说明文本一起渲染，便于断言说明仍在 DOM
+        'el-tooltip': {
+          template: '<span class="el-tooltip"><slot /><span class="el-tooltip__content">{{ content }}</span></span>',
+          props: ['content', 'placement'],
+        },
       },
     },
   })
@@ -60,5 +66,22 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
   it('只读敏感行：走普通只读框显示预览，也只有一个输入控件', () => {
     const w = mountRow({ type: 'string', secret: true, readOnly: true }, 'preview')
     expect(w.find('.row-control').findAll('input')).toHaveLength(1)
+  })
+
+  it('格式易错项带悬浮说明徽标，普通项不带', () => {
+    // 地址类项填错后果当场发现不了（图片打不开 / 小程序连不上），必须有说明徽标
+    const w = mountRow({ key: 'upload_base_url', type: 'string' })
+    expect(w.find('.row-hint').exists()).toBe(true)
+    expect(w.text()).toContain('图片全部打不开')
+    // 无提示的项不挂徽标：徽标一多就等于没有
+    const plain = mountRow({ key: 'brand_name', type: 'string' })
+    expect(plain.find('.row-hint').exists()).toBe(false)
+  })
+
+  it('格式关键项给示例占位，其余保持未设置', () => {
+    const w = mountRow({ key: 'miniprogram_base_url', type: 'string' })
+    expect(w.find('.row-control input').attributes('placeholder')).toContain('https://')
+    const plain = mountRow({ key: 'brand_name', type: 'string' })
+    expect(plain.find('.row-control input').attributes('placeholder')).toBe('未设置')
   })
 })
