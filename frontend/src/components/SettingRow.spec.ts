@@ -57,7 +57,7 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
     expect(withEnv.find('.row-control select').attributes('placeholder')).toBe('未设置（用部署环境的值）')
     const noEnv = mountRow({ type: 'bool' })
     expect(noEnv.find('.row-control select').attributes('placeholder')).toBe('未设置（用缺省值）')
-    const enumRow = mountRow({ type: 'string', options: ['local', 'minio', 'oss'], envVar: 'STORAGE_DRIVER' })
+    const enumRow = mountRow({ type: 'string', options: ['local', 'minio', 'oss', 's3'], envVar: 'STORAGE_DRIVER' })
     expect(enumRow.find('.row-control select').attributes('placeholder')).toBe('未设置（用部署环境的值）')
   })
 
@@ -102,11 +102,11 @@ describe('SettingRow 控件唯一性（防 v-if 链断裂回归）', () => {
     // storage_driver 后端有 oneOf 校验 + Options 候选：界面必须渲染下拉而不是
     // 文本框——候选值就摆在后端却让人手打，填错只能等保存时报错
     // （2026-10-22 用户实测：「存储方式还是填写字符串的方式，怎么没有下拉」）
-    const w = mountRow({ key: 'storage_driver', type: 'string', options: ['local', 'minio', 'oss'] })
+    const w = mountRow({ key: 'storage_driver', type: 'string', options: ['local', 'minio', 'oss', 's3'] })
     expect(w.find('.row-control select').exists()).toBe(true)
     expect(w.find('.row-control input').exists()).toBe(false)
-    // 未设置（回退环境变量）+ 3 个候选
-    expect(w.findAll('.row-control option')).toHaveLength(4)
+    // 未设置（回退环境变量）+ 4 个候选
+    expect(w.findAll('.row-control option')).toHaveLength(5)
     // 未登记 options 的普通字符串项仍是文本框
     const plain = mountRow({ key: 'brand_name', type: 'string' })
     expect(plain.find('.row-control select').exists()).toBe(false)

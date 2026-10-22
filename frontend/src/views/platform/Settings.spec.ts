@@ -37,12 +37,13 @@ const items: SettingItem[] = [
   { key: 'login_rate_limit_per_min', name: '登录尝试频率限制', group: 'auth', type: 'int', value: '10', description: '登录限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'cdn_enabled', name: '启用 CDN 刷新', group: 'storage', type: 'bool', value: '', description: 'CDN 刷新', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENABLED', configured: false },
   { key: 'cdn_access_key_id', name: 'CDN AccessKeyId', group: 'storage', type: 'string', value: '', description: 'CDN AK', secret: false, restart: true, readOnly: false, envVar: 'CDN_ACCESS_KEY_ID', configured: false },
-  { key: 'storage_driver', name: '存储方式', group: 'storage', type: 'string', value: 'local', description: '存储驱动', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_DRIVER', options: ['local', 'minio', 'oss'], configured: true },
+  { key: 'storage_driver', name: '存储方式', group: 'storage', type: 'string', value: 'local', description: '存储驱动', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_DRIVER', options: ['local', 'minio', 'oss', 's3'], configured: true },
   { key: 'storage_endpoint', name: '存储服务端点', group: 'storage', type: 'string', value: '', description: '对象存储端点', secret: false, restart: true, readOnly: false, envVar: 'MINIO_ENDPOINT', configured: false },
   { key: 'storage_bucket', name: '存储空间名称', group: 'storage', type: 'string', value: '', description: '存储桶', secret: false, restart: true, readOnly: false, envVar: 'MINIO_BUCKET', configured: false },
   { key: 'storage_access_key', name: '存储 AccessKey', group: 'storage', type: 'string', value: '', description: '存储 AK', secret: false, restart: true, readOnly: false, envVar: 'MINIO_ACCESS_KEY', configured: false },
   { key: 'storage_secret_key', name: '存储 SecretKey', group: 'storage', type: 'string', value: '', description: '存储 SecretKey', secret: true, restart: true, readOnly: false, envVar: 'MINIO_SECRET_KEY', configured: false },
   { key: 'storage_use_ssl', name: '存储启用 HTTPS', group: 'storage', type: 'bool', value: '', description: '存储 SSL', secret: false, restart: true, readOnly: false, envVar: 'MINIO_USE_SSL', configured: false },
+  { key: 'storage_region', name: '存储区域', group: 'storage', type: 'string', value: '', description: 'S3 区域', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_REGION', configured: false },
   { key: 'storage_public', name: '存储空间公开访问', group: 'storage', type: 'bool', value: 'true', description: '公开桶', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_PUBLIC', configured: true },
   { key: 'upload_dir', name: '本地上传目录', group: 'storage', type: 'string', value: '', description: '本地落盘目录', secret: false, restart: true, readOnly: false, envVar: 'UPLOAD_DIR', configured: false },
   { key: 'upload_base_url', name: '文件访问基址', group: 'storage', type: 'string', value: '', description: '文件公开访问地址', secret: false, restart: true, readOnly: false, envVar: 'UPLOAD_BASE_URL', configured: false },
@@ -426,14 +427,14 @@ describe('Settings 系统设置', () => {
     expect(numberComponentOf(w, 'wxacode_ttl_hours').props('min')).toBe(0)
   })
 
-  it('枚举项渲染为下拉：存储方式带 local / minio / oss 候选，不再手打字符串', async () => {
+  it('枚举项渲染为下拉：存储方式带 local / minio / oss / s3 候选，不再手打字符串', async () => {
     const { w } = await setup()
     const row = rowOf(w, 'storage_driver')
     // 后端 oneOf 校验的候选值通过 options 下发：界面渲染三态下拉
-    // （未设置 + 3 候选），而不是文本框——手打候选值毫无意义，填错只能等保存时报错
+    // （未设置 + 4 候选），而不是文本框——手打候选值毫无意义，填错只能等保存时报错
     expect(row.find('input.el-input').exists()).toBe(false)
     expect(row.find('select.el-select').exists()).toBe(true)
-    expect(row.findAll('option')).toHaveLength(4)
+    expect(row.findAll('option')).toHaveLength(5)
   })
 
   // ---- P0：商业产品可读性（中文名 / 分组导语 / 上线就绪面板）----
@@ -606,17 +607,27 @@ describe('Settings 系统设置', () => {
     expect(rowExists(w, 'upload_base_url')).toBe(true)
   })
 
-  it('storage_use_ssl 是 minio 专属：oss 驱动下不占版面', async () => {
+  it('storage_use_ssl / storage_region 是 S3 兼容驱动（minio / s3）专属：oss 驱动下不占版面', async () => {
     const { w } = await setup()
     await selectOf(w, 'storage_driver').setValue('minio')
     await nextTick()
     expect(rowExists(w, 'storage_use_ssl')).toBe(true)
-    // 阿里云 OSS 客户端固定 https，NewOssUploader 不收 SSL 参数：
-    // oss 下这一项填了不产生任何效果，不能跟着端点那批一起亮
+    expect(rowExists(w, 'storage_region')).toBe(true)
+    // 阿里云 OSS 客户端固定 https 且没有区域参数（NewOssUploader 两个都不收）：
+    // oss 下这两项填了不产生任何效果，不能跟着端点那批一起亮
     await selectOf(w, 'storage_driver').setValue('oss')
     await nextTick()
     expect(rowExists(w, 'storage_use_ssl')).toBe(false)
+    expect(rowExists(w, 'storage_region')).toBe(false)
+    // s3 驱动与 minio 共用同一套 S3 客户端实现（main.go 的 case "minio","s3"）：
+    // useSSL / region 两个入参对它俩都真正生效，必须亮
+    await selectOf(w, 'storage_driver').setValue('s3')
+    await nextTick()
+    expect(rowExists(w, 'storage_use_ssl')).toBe(true)
+    expect(rowOf(w, 'storage_region').text()).toContain('待配置')
     // 搜索态仍能搜到：置灰标记就是「当前选项下不需要」的答案
+    await selectOf(w, 'storage_driver').setValue('oss')
+    await nextTick()
     await w.find('input.head-search').setValue('storage_use_ssl')
     await nextTick()
     expect(rowExists(w, 'storage_use_ssl')).toBe(true)

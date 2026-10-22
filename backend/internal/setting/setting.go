@@ -180,9 +180,12 @@ var registry = []def{
 	// 因此允许在界面维护；留空则回退同名环境变量。
 	{Key: "storage_driver", Group: "storage", Type: "string", Restart: true, EnvVar: "STORAGE_DRIVER",
 		Name:     "存储方式",
-		Options:  []string{"local", "minio", "oss"},
-		Validate: oneOf("local", "minio", "oss"),
-		Desc:     "图片和视频存到哪里：local=服务器本地磁盘，minio=MinIO 或 S3 兼容存储，oss=阿里云 OSS。留空则使用部署环境里配置的值。改完要重启服务才生效。"},
+		Options:  []string{"local", "minio", "oss", "s3"},
+		Validate: oneOf("local", "minio", "oss", "s3"),
+		// s3 与 minio 共用同一套端点 / 桶 / 凭据字段与 S3 客户端实现，差别只在
+		// 「声明的用途」：minio 面向自建 MinIO，s3 面向腾讯云 COS / 华为云 OBS /
+		// 七牛云 / AWS S3 / Cloudflare R2 等 S3 兼容云（这类云常需填存储区域）。
+		Desc:     "图片和视频存到哪里：local=服务器本地磁盘，minio=MinIO 或自建 S3 兼容服务，oss=阿里云 OSS，s3=S3 兼容云存储（腾讯云 COS / 华为云 OBS / 七牛云 / AWS S3 / R2 等）。留空则使用部署环境里配置的值。改完要重启服务才生效。"},
 	{Key: "storage_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ENDPOINT",
 		Name: "存储服务端点",
 		Desc: "对象存储的服务地址，只填域名或 IP:端口，不要带 http://（例：127.0.0.1:9000）。MinIO 和阿里云 OSS 共用这一项。改完要重启服务才生效。"},
@@ -197,7 +200,17 @@ var registry = []def{
 		Desc: "对象存储的密码（阿里云 OSS 里叫 AccessKeySecret）。界面不会显示已保存的内容，填新值即覆盖。改完要重启服务才生效。"},
 	{Key: "storage_use_ssl", Group: "storage", Type: "bool", Restart: true, EnvVar: "MINIO_USE_SSL",
 		Name: "存储启用 HTTPS",
-		Desc: "连接对象存储时是否走 HTTPS。留空则使用部署环境里配置的值。改完要重启服务才生效。"},
+		// 「OSS 用不到」必须写进 Desc：NewOssUploader 不收 SSL 参数（阿里云客户端
+		// 固定 https），oss 驱动下这一项是空操作，前端也把它置灰（2026-10-22 全量核查口径）。
+		Desc: "连接 MinIO / S3 兼容存储时是否走 HTTPS（阿里云 OSS 固定 HTTPS，用不到这项）。留空则使用部署环境里配置的值。改完要重启服务才生效。"},
+	{Key: "storage_region", Group: "storage", Type: "string", Restart: true, EnvVar: "STORAGE_REGION",
+		Name: "存储区域",
+		// 为什么允许留空、错了也不拦：minio-go 的 Region 留空时会先按 endpoint URL
+		// 猜（AWS / Google 可猜中），猜不到再向服务端发 GetBucketLocation 探测
+		// （bucket-cache.go），主流 S3 云都能自动拿到；只有探测失败或不实现该接口的
+		// 云才需要手填。填错的最坏结果是上传失败，改回正确值重启即可自愈，
+		// 不属于「填错会把自己锁在系统外」的项，故不加 Validate。
+		Desc: "连接 MinIO / S3 兼容存储（腾讯云 COS / 华为云 OBS / 七牛云 / AWS S3 / R2）时使用的区域，例：ap-guangzhou、us-east-1。留空会自动探测，大多数服务不用填；填错会导致上传失败，改回正确值重启即可恢复。阿里云 OSS 用不到这项。改完要重启服务才生效。"},
 	{Key: "storage_public", Group: "storage", Type: "bool", Restart: true, EnvVar: "STORAGE_PUBLIC",
 		Name: "存储空间公开访问",
 		Desc: "存储桶是否允许公开访问。选「关」（私有桶）时，已上传的图片只能通过限时签名链接访问。改完要重启服务才生效。"},
@@ -210,8 +223,8 @@ var registry = []def{
 		// 「仅对象存储需要」必须写进 Desc：local 驱动 Save 返回相对地址 /uploads/...，
 		// 端上自行拼基址（浏览器按页面源、小程序用 miniprogram_base_url），
 		// 这一项不参与——早期文案说「小程序和后台都用它拼」对 local 是误导，
-		// 界面联动也已按 minio / oss 专属过滤（2026-10-22 全量核查统一口径）。
-		Desc:     "已上传文件对外访问的根地址（仅 minio / oss 需要），必须是 http:// 或 https:// 开头的完整地址（例：https://cdn.example.com）。小程序和后台都用它拼出完整的图片链接，填错的话所有图片都会打不开；本地存储用相对地址，不经过这项。改完要重启服务才生效。"},
+		// 界面联动也已按 minio / oss / s3 专属过滤（2026-10-22 全量核查统一口径）。
+		Desc:     "已上传文件对外访问的根地址（仅 minio / oss / s3 需要），必须是 http:// 或 https:// 开头的完整地址（例：https://cdn.example.com）。小程序和后台都用它拼出完整的图片链接，填错的话所有图片都会打不开；本地存储用相对地址，不经过这项。改完要重启服务才生效。"},
 	{Key: "cdn_enabled", Group: "storage", Type: "bool", Restart: true, EnvVar: "CDN_ENABLED",
 		Name: "启用 CDN 刷新",
 		Desc: "覆盖同名文件后是否自动刷新 CDN 缓存，让访客立刻看到新文件。要同时填好下面的 CDN 凭据才有用。改完要重启服务才生效。"},

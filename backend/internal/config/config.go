@@ -23,8 +23,9 @@ type Config struct {
 	JWTKey             string
 	UploadDir          string // 本地上传目录（local 驱动用，小程序码缓存也落这里）
 	UploadBaseURL      string // 上传文件公开访问基址（小程序/前端取此拼 URL）
-	StorageDriver      string // 文件存储驱动：local(默认) | minio | oss
+	StorageDriver      string // 文件存储驱动：local(默认) | minio | oss | s3
 	StoragePublic      bool   // 是否为公开桶；false=私有桶，需限时签名访问（STORAGE_PUBLIC）
+	StorageRegion      string // S3 兼容存储区域（STORAGE_REGION）；留空=自动探测，oss 驱动用不到
 	MinioEndpoint      string // MinIO / S3 兼容端点（不含协议头）
 	MinioAccessKey     string
 	MinioSecretKey     string
@@ -59,6 +60,7 @@ func Load() Config {
 		UploadBaseURL:      getEnv("UPLOAD_BASE_URL", "http://127.0.0.1:8080/uploads"),
 		StorageDriver:      getEnv("STORAGE_DRIVER", "local"),
 		StoragePublic:      parseBool(getEnv("STORAGE_PUBLIC", "true")),
+		StorageRegion:      getEnv("STORAGE_REGION", ""),
 		MinioEndpoint:      getEnv("MINIO_ENDPOINT", ""),
 		MinioAccessKey:     getEnv("MINIO_ACCESS_KEY", ""),
 		MinioSecretKey:     getEnv("MINIO_SECRET_KEY", ""),

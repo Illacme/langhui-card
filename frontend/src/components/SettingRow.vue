@@ -168,8 +168,9 @@ function minOf(item: SettingItem) {
 // 补一括号说明；未登记的组合原样显示值（后端新增候选时界面不留空白）。
 const OPTION_LABELS: Record<string, string> = {
   'storage_driver|local': 'local（服务器本地磁盘）',
-  'storage_driver|minio': 'minio（MinIO / S3 兼容存储）',
+  'storage_driver|minio': 'minio（MinIO / 自建 S3 兼容服务）',
   'storage_driver|oss': 'oss（阿里云 OSS）',
+  'storage_driver|s3': 's3（S3 兼容云存储：腾讯云 COS / 华为云 OBS / 七牛云 / AWS S3 / R2 等）',
 }
 function optionLabel(opt: string): string {
   return OPTION_LABELS[`${props.item.key}|${opt}`] || opt
@@ -178,10 +179,10 @@ function optionLabel(opt: string): string {
 // 格式易错项的悬浮说明：只放「填错的后果当场发现不了」的项（地址类）。
 // 默认不占版面，指针停留/聚焦时弹出；与安装向导的 JWT/Cookie 徽标同一模式。
 const FIELD_HINTS: Record<string, string> = {
-  // 云存储专属（local 用相对地址、不经过它）——这一项只在 minio / oss 下可见，
+  // 云存储专属（local 用相对地址、不经过它）——这一项只在 minio / oss / s3 下可见，
   // 提示里点明归属，被搜索拽出来的置灰行也能自解释
   upload_base_url:
-    '图片 / 视频 / 小程序码的公开访问地址，http:// 或 https:// 完整地址（例 https://cdn.example.com）；配了 CDN 就填加速域名。仅 minio / oss 需要——本地存储用相对地址，不经过这项。填错的结果是图片全部打不开。',
+    '图片 / 视频 / 小程序码的公开访问地址，http:// 或 https:// 完整地址（例 https://cdn.example.com）；配了 CDN 就填加速域名。仅 minio / oss / s3 需要——本地存储用相对地址，不经过这项。填错的结果是图片全部打不开。',
   miniprogram_base_url:
     '小程序端冷启动第一个请求打到这，必须是小程序能访问到的公网 https 地址（例 https://mp.example.com）。填错小程序直接连不上。',
   storage_endpoint: '对象存储的服务地址，如 minio.example.com:9000；存储方式选 local 时不需要。',
@@ -194,6 +195,7 @@ const PLACEHOLDER_EXAMPLES: Record<string, string> = {
   upload_dir: '如 ./data/uploads',
   storage_endpoint: '如 minio.example.com:9000',
   storage_bucket: '如 weichuan',
+  storage_region: '如 ap-guangzhou（大多数服务留空自动探测）',
   upload_base_url: '如 https://cdn.example.com',
   miniprogram_base_url: '如 https://mp.example.com',
   cdn_endpoint: '如 cdn.example.com',

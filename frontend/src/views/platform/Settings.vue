@@ -406,12 +406,14 @@ const GROUP_ITEM_ORDER: Record<string, string[]> = {
     'storage_driver',
     // local 分支
     'upload_dir',
-    // 云存储分支（minio / oss）
+    // 云存储分支（minio / oss / s3）
     'storage_endpoint',
     'storage_bucket',
     'storage_access_key',
     'storage_secret_key',
     'storage_use_ssl',
+    // S3 兼容存储专属：部分云（COS / OBS 等）需显式区域，留空自动探测
+    'storage_region',
     // 访问方式：公私总闸 + 对外基址（两种方式都生效）
     'storage_public',
     'upload_base_url',
@@ -431,7 +433,7 @@ const GROUP_ITEM_ORDER: Record<string, string[]> = {
 const GROUP_SECTIONS: Record<string, { label: string; keys: string[] }[]> = {
   storage: [
     // local 与云存储两套互斥配置在这一区里按 depState 二选一出现
-    { label: '存储位置', keys: ['storage_driver', 'upload_dir', 'storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key', 'storage_use_ssl'] },
+    { label: '存储位置', keys: ['storage_driver', 'upload_dir', 'storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key', 'storage_use_ssl', 'storage_region'] },
     { label: '访问方式', keys: ['storage_public', 'upload_base_url'] },
     { label: 'CDN 刷新（可选）', keys: ['cdn_enabled', 'cdn_access_key_id', 'cdn_access_key_secret', 'cdn_endpoint'] },
   ],
@@ -540,7 +542,7 @@ const visibleGroups = computed(() =>
 // 每项默认以「相关 key 均已 configured」为就绪标准；两处例外按「后端实际读取路径」
 // 驱动感知（2026-10-22 全量核查：本地驱动下要求云存储专属项 = 永远就绪不了的假警报）：
 //   - cookie_secure：只读开关，就绪标准是值为 true/1（生产 HTTPS）；
-//   - 文件访问基址：仅对象存储参与 URL 生成（minio/oss 用 BaseURL 拼绝对地址），
+//   - 文件访问基址：仅对象存储参与 URL 生成（minio/oss/s3 用 BaseURL 拼绝对地址），
 //     local 返回相对地址、端上自行拼基址——本地部署根本不看这项，不进清单；
 //   - 存储方式与凭据：云驱动时端点 / 桶 / 凭据缺一项上传就全坏（minio 空端点甚至
 //     构造客户端不出错，拖到运行时才炸），就绪判定要把它们一并纳入。
@@ -555,7 +557,7 @@ interface ReadyCheck {
   /** 只读项的环境变量示例：界面改不了，必须把这条交给部署的人去设 */
   envSample?: string
 }
-// 云驱动才检查的存储凭据（minio / oss 共用同一组界面字段）
+// 云驱动才检查的存储凭据（minio / oss / s3 共用同一组界面字段）
 const CLOUD_CREDENTIALS = ['storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key']
 const checks = computed<ReadyCheck[]>(() => {
   const find = (k: string) => items.value.find((i) => i.key === k)
@@ -583,8 +585,8 @@ const checks = computed<ReadyCheck[]>(() => {
       label: '存储方式与凭据',
       keys: ['storage_driver'],
       hint: cloud
-        ? '生产建议 minio / oss，并填好端点 / 存储桶 / AccessKey / SecretKey'
-        : '演示可用 local；生产建议 minio / oss',
+        ? '生产建议 minio / oss / s3（S3 兼容云），并填好端点 / 存储桶 / AccessKey / SecretKey'
+        : '演示可用 local；生产建议 minio / oss / s3',
     },
     // local 驱动不经过这项（见上方注释），进清单就是永远划不掉的假警报
     ...(cloud
@@ -826,14 +828,16 @@ const wxAppidFilled = computed(
   () => !!(draft.wx_appid || '').trim() || !!items.value.find((i) => i.key === 'wx_appid')?.configured,
 )
 
-// local 只关心「文件落盘目录」；minio / oss 只关心端点 / 桶 / 凭据 / 访问基址。
+// local 只关心「文件落盘目录」；minio / oss / s3 只关心端点 / 桶 / 凭据 / 访问基址。
 // 两类项互斥出现，避免对着一堆当前选项下用不上的输入框。
-// 两条「专属」边界按后端实际读取路径划（2026-10-22 全量核查核实过源码）：
-//   - storage_use_ssl 是 minio 专属：cmd/server 的 NewOssUploader 不收 SSL 参数
-//     （阿里云 OSS 客户端固定 https），oss 下填它不产生任何效果；
+// 「专属」边界按后端实际读取路径划（2026-10-22 全量核查核实过源码，2026-10-23 加 s3 时重核）：
+//   - storage_use_ssl / storage_region 是 S3 兼容驱动（minio / s3）专属：
+//     cmd/server 的 NewOssUploader 不收 SSL 参数（阿里云 OSS 客户端固定 https），
+//     也没有区域参数；而 minio 与 s3 在 newUploader 里是同一个 case，
+//     共用 MinioUploader 的 useSSL / region 入参——两项对两者都真正生效；
 //   - upload_base_url 是云存储专属：LocalUploader.Save 返回相对地址 /uploads/...，
 //     小程序端用 miniprogram_base_url 拼绝对地址、浏览器按页面源解析，都不经过它。
-const MINIO_ONLY = ['storage_use_ssl']
+const S3_COMPAT_ONLY = ['storage_use_ssl', 'storage_region']
 const CLOUD_ONLY = [
   'storage_endpoint',
   'storage_bucket',
@@ -851,8 +855,8 @@ function depState(key: string): DepState {
   if (key === 'upload_dir') {
     return { focus: driverVal.value === 'local', dim: driverVal.value !== 'local' }
   }
-  if (MINIO_ONLY.includes(key)) {
-    return { focus: driverVal.value === 'minio', dim: driverVal.value !== 'minio' }
+  if (S3_COMPAT_ONLY.includes(key)) {
+    return { focus: driverVal.value === 'minio' || driverVal.value === 's3', dim: driverVal.value !== 'minio' && driverVal.value !== 's3' }
   }
   if (CLOUD_ONLY.includes(key)) {
     return { focus: driverVal.value !== 'local', dim: driverVal.value === 'local' }
@@ -891,7 +895,7 @@ const WIZARD_STEPS: WizardStep[] = [
   {
     key: 'storage',
     title: '存储与上传',
-    blurb: '图片 / 视频 / 小程序码存哪、怎么访问。演示选 local 即可；生产建议 minio / oss，并配上公开访问基址。切换存储方式后只显示当前方式相关的项，另一种方式已填的值不会丢。本组改动需重启服务。',
+    blurb: '图片 / 视频 / 小程序码存哪、怎么访问。演示选 local 即可；生产建议 minio / oss / s3（腾讯云 COS、华为云 OBS 等 S3 兼容云），并配上公开访问基址。切换存储方式后只显示当前方式相关的项，另一种方式已填的值不会丢。本组改动需重启服务。',
     keys: [
       'storage_driver',
       'upload_dir',
@@ -900,6 +904,8 @@ const WIZARD_STEPS: WizardStep[] = [
       'storage_access_key',
       'storage_secret_key',
       'storage_use_ssl',
+      // S3 兼容云（s3）常需显式区域；minio 同样生效（同一 S3 客户端实现）
+      'storage_region',
       // 公私总闸：两种存储方式都生效（本地私有文件也要鉴权后读取），必须进首配路径
       'storage_public',
       'upload_base_url',
@@ -916,6 +922,7 @@ const WIZARD_STEPS: WizardStep[] = [
           'storage_access_key',
           'storage_secret_key',
           'storage_use_ssl',
+          'storage_region',
         ],
       },
       { label: '访问方式', keys: ['storage_public', 'upload_base_url'] },

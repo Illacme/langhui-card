@@ -133,6 +133,26 @@ func TestMinioPresignAndSign(t *testing.T) {
 
 func TestNewMinioUploaderInvalidEndpoint(t *testing.T) {
 	// 空 endpoint 应在构造期即报错（minio.New 对空 endpoint 返回错误）
-	_, err := NewMinioUploader("", "ak", "sk", "weichuan", "http://cdn.example.com", false, 10<<20, DefaultAllowExt)
+	_, err := NewMinioUploader("", "ak", "sk", "weichuan", "http://cdn.example.com", "", false, 10<<20, DefaultAllowExt)
 	require.Error(t, err)
+}
+
+// TestNewMinioUploaderRegion 区域参数必须透传到 minio 客户端：部分 S3 云
+// （腾讯云 COS / 华为云 OBS 等）的 GetBucketLocation 探测不可靠或不实现，
+// 显式区域是它们能正常工作的前提。region 会进入 V4 签名的 credential scope
+// （X-Amz-Credential=.../<region>/s3/aws4_request，查询串里 / 编码为 %2F），
+// 这是可从外部观察的透传证据；且显式区域后 presign 不再发 location 探测请求。
+func TestNewMinioUploaderRegion(t *testing.T) {
+	fake := &fakeS3{}
+	srv := fake.server(t)
+	defer srv.Close()
+
+	up, err := NewMinioUploader(strings.TrimPrefix(srv.URL, "http://"), "ak", "sk", "weichuan",
+		"http://cdn.example.com", "ap-guangzhou", false, 10<<20, DefaultAllowExt)
+	require.NoError(t, err)
+
+	putURL, _, err := up.PresignPut("direct/a.png", "image/png", 15*time.Minute)
+	require.NoError(t, err)
+	require.Contains(t, putURL, "ap-guangzhou%2Fs3%2Faws4_request", "区域应进入签名 credential scope")
+	require.Equal(t, 0, fake.hits, "显式 region 应跳过 GetBucketLocation 探测")
 }

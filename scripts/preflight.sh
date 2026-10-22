@@ -157,10 +157,10 @@ case "$drv" in
       skip "UPLOAD_DIR 未设置（由 .env / 环境变量提供）"
     fi
     ;;
-  minio)
+  minio|s3)
     ok=1
     for v in MINIO_ENDPOINT MINIO_ACCESS_KEY MINIO_SECRET_KEY MINIO_BUCKET; do need "$v" minio || ok=0; done
-    [ "$ok" = 1 ] && pass "存储驱动 minio 的必需凭据齐全"
+    [ "$ok" = 1 ] && pass "存储驱动 $drv 的必需凭据齐全（S3 兼容云如探测异常可加 STORAGE_REGION）"
     ;;
   oss)
     ok=1
@@ -168,7 +168,7 @@ case "$drv" in
     [ "$ok" = 1 ] && pass "存储驱动 oss 的必需凭据齐全"
     ;;
   *)
-    fail "STORAGE_DRIVER=$drv 非法：只能是 local / minio / oss"
+    fail "STORAGE_DRIVER=$drv 非法：只能是 local / minio / oss / s3"
     ;;
 esac
 

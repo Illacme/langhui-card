@@ -110,10 +110,11 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 | 微信 | `wx_appsecret` | 小程序 AppSecret（敏感；留空回退 `WX_APPSECRET`，改完即时生效） |
 | 登录与令牌 | `access_token_ttl_minutes` / `refresh_token_ttl_days` | 令牌有效期；填 0 或负数回落默认值 15 分钟 / 30 天 |
 | 登录与令牌 | `login_rate_limit_per_min` / `refresh_rate_limit_per_min` | 每 IP 每分钟登录 / 刷新次数（防爆破；填 0 或负数回落默认值 10 / 60） |
-| 文件存储与 CDN | `storage_driver` | `local` / `minio` / `oss`（只能取这三个值；留空回退 `STORAGE_DRIVER`，**需重启**） |
-| 文件存储与 CDN | `storage_endpoint` / `storage_bucket` | 对象存储端点与桶名（MinIO 与 OSS 共用这两个字段） |
+| 文件存储与 CDN | `storage_driver` | `local` / `minio` / `oss` / `s3`（只能取这四个值；留空回退 `STORAGE_DRIVER`，**需重启**） |
+| 文件存储与 CDN | `storage_endpoint` / `storage_bucket` | 对象存储端点与桶名（MinIO / OSS / S3 兼容云共用这两个字段） |
 | 文件存储与 CDN | `storage_access_key` / `storage_secret_key` | 对象存储凭据（后者敏感，界面只回传掩码） |
-| 文件存储与 CDN | `storage_use_ssl` / `storage_public` | MinIO 走 HTTPS / 是否公开桶（私有桶走限时签名） |
+| 文件存储与 CDN | `storage_use_ssl` / `storage_region` | MinIO / S3 兼容存储走 HTTPS / 区域（如 `ap-guangzhou`；留空自动探测，阿里云 OSS 用不到） |
+| 文件存储与 CDN | `storage_public` | 是否公开桶（私有桶走限时签名） |
 | 文件存储与 CDN | `upload_dir` / `upload_base_url` | 本地存储目录 / 上传文件公开访问基址 |
 | 文件存储与 CDN | `cdn_enabled` / `cdn_access_key_id` / `cdn_access_key_secret` / `cdn_endpoint` | CDN 缓存刷新（覆盖写后使边缘缓存失效） |
 | 安全与基础设施 | `db_dsn` / `jwt_key` / `cookie_secure` / `cookie_domain` | **只读**，仅掩码展示当前值，修改走环境变量**或配置文件**（默认 `data/runtime.env`）后重启 |
@@ -129,7 +130,7 @@ cd frontend && npm install && npm run dev   # http://localhost:5173
 >   代码内保留**安全下限**：界面填 0 / 负数一律回落缺省值。
 > - **类型合法 ≠ 取值合法**：对「填错会造成大面积故障」的项，保存入口还会做值域校验并当场拒绝——
 >   `upload_max_mb`（1~1024）、`miniprogram_base_url` / `upload_base_url`（必须 `http(s)://` 开头）、
->   `storage_driver`（只能 `local` / `minio` / `oss`）、`pinned_company_id`（必须是存在且启用的企业，0 = 平台模式）。
+>   `storage_driver`（只能 `local` / `minio` / `oss` / `s3`）、`pinned_company_id`（必须是存在且启用的企业，0 = 平台模式）。
 >   例如上传上限填 0 会让所有上传失败、报错却指向文件；基址漏写协议头会让小程序永远连不上，
 >   且「后台下发正确基址」只在种子地址能连通一次之后才生效，等于自愈不了。
 >

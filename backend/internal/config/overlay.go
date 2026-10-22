@@ -35,6 +35,8 @@ func (c *Config) OverlayFromSettings() {
 	c.MinioAccessKey = str("storage_access_key", c.MinioAccessKey)
 	c.MinioSecretKey = str("storage_secret_key", c.MinioSecretKey)
 	c.MinioUseSSL = setting.GetBool("storage_use_ssl", c.MinioUseSSL)
+	// storage_region 对 minio / s3 两个 S3 兼容驱动生效（oss 客户端没有区域参数）
+	c.StorageRegion = str("storage_region", c.StorageRegion)
 	c.OssEndpoint = str("storage_endpoint", c.OssEndpoint)
 	c.OssBucket = str("storage_bucket", c.OssBucket)
 	c.OssAccessKeyID = str("storage_access_key", c.OssAccessKeyID)

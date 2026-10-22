@@ -187,13 +187,17 @@ func newUploaderWithFallback(cfg config.Config) storage.Uploader {
 	}
 }
 
-// newUploader 按存储驱动构造文件存储实现（local / minio / oss），统一返回 storage.Uploader
+// newUploader 按存储驱动构造文件存储实现（local / minio / oss / s3），统一返回 storage.Uploader
 func newUploader(cfg config.Config) (storage.Uploader, error) {
 	const maxBytes = 10 * 1024 * 1024 // 10MB
 	switch cfg.StorageDriver {
-	case "minio":
+	// minio 与 s3 共用同一套 S3 客户端实现：端点 / 桶 / 凭据 / SSL / 区域全部来自
+	// 同一批界面字段（storage_region 对两者都生效），枚举分开只为界面上的归属说明
+	// ——s3 面向腾讯云 COS / 华为云 OBS / 七牛云 / AWS S3 / R2 等 S3 兼容云，
+	// 这类云常需要显式指定区域，minio-go 的自动探测对它们并非总可靠。
+	case "minio", "s3":
 		return storage.NewMinioUploader(cfg.MinioEndpoint, cfg.MinioAccessKey, cfg.MinioSecretKey,
-			cfg.MinioBucket, cfg.UploadBaseURL, cfg.MinioUseSSL, maxBytes, storage.DefaultAllowExt)
+			cfg.MinioBucket, cfg.UploadBaseURL, cfg.StorageRegion, cfg.MinioUseSSL, maxBytes, storage.DefaultAllowExt)
 	case "oss":
 		return storage.NewOssUploader(cfg.OssEndpoint, cfg.OssAccessKeyID, cfg.OssAccessKeySecret,
 			cfg.OssBucket, cfg.UploadBaseURL, maxBytes, storage.DefaultAllowExt)
