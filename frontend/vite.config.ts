@@ -14,6 +14,17 @@ import { fileURLToPath, URL } from 'node:url'
 const apiBase = process.env.VITE_API_BASE || 'http://127.0.0.1:8080/api'
 const proxyTarget = apiBase.replace(/\/api\/?$/, '') || 'http://127.0.0.1:8080'
 
+// 开发代理把 Origin 改写为目标源站：后端 setup 接口的 sameOrigin 同源检查会比对
+// 请求的 Origin/Referer 与 Host（端口不同即不同源），而 vite 仅转发、浏览器对同源
+// 5173 的请求不发 Origin、却带 5173 的 Referer，导致开发期所有 /api/setup/* 被误判跨源 403。
+// 这里把 Origin 显式设为 proxyTarget（如 http://127.0.0.1:8080），让开发环境的请求对后端
+// 显得同源，仅影响开发期，不动生产安全语义，也不改后端代码。
+function rewriteOriginForProxy(proxy: any) {
+  proxy.on('proxyReq', (proxyReq: any) => {
+    proxyReq.setHeader('origin', proxyTarget)
+  })
+}
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -39,12 +50,14 @@ export default defineConfig({
       '/api': {
         target: proxyTarget,
         changeOrigin: true,
+        configure: rewriteOriginForProxy,
       },
       // 上传/采用接口返回相对路径 /uploads/<name>，开发态由本代理转发到后端静态目录，
       // 保证管理后台 <img src="/uploads/..."> 在 vite 源下也能取到图（生产态由同源/反代保证）。
       '/uploads': {
         target: proxyTarget,
         changeOrigin: true,
+        configure: rewriteOriginForProxy,
       },
     },
   },

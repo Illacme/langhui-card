@@ -97,7 +97,7 @@
 
         <div class="si-actions">
           <el-button :loading="testing" @click="onTest">测试连接</el-button>
-          <el-button type="primary" @click="onNext">下一步</el-button>
+          <el-button type="primary" :loading="nexting" @click="onNext">下一步</el-button>
         </div>
       </section>
 
@@ -218,6 +218,7 @@ const alertType = ref<'success' | 'error'>('error')
 const progressTip = ref('')
 const showRecheck = ref(false)
 const manualOpen = ref(false)
+const nexting = ref(false)
 
 // 安装进度：0=未开始，1..3 已完成到哪一步；'fail' 记失败
 const done = ref(0)
@@ -343,14 +344,24 @@ async function onTest() {
   }
 }
 
-function onNext() {
+async function onNext() {
   clearAlert()
   const err = precheckStep1()
   if (err) {
     setAlert('error', err)
     return
   }
-  step.value = 2
+  // 进入下一步前强制验证数据库连通性：避免带着连不上的配置走到安装才报错。
+  // 后端安装时也会再测一次（双保险），这里给的是即时前端反馈。
+  nexting.value = true
+  try {
+    await testConnection(payload())
+    step.value = 2
+  } catch (e: any) {
+    setAlert('error', e?.message || '数据库连通性校验未通过，请检查连接信息')
+  } finally {
+    nexting.value = false
+  }
 }
 
 function onInstall() {
