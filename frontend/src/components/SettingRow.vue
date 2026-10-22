@@ -138,6 +138,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { SettingItem } from '@/api/settings'
+import { CDN_PROVIDERS, CDN_PROVIDER_LABELS } from '@/utils/cdn'
 
 const props = defineProps<{
   item: SettingItem
@@ -183,12 +184,11 @@ const OPTION_LABELS: Record<string, string> = {
   'storage_driver|minio': 'minio（MinIO / 自建 S3 兼容服务）',
   'storage_driver|oss': 'oss（阿里云 OSS）',
   'storage_driver|s3': 's3（S3 兼容云存储）',
-  // CDN 厂商：候选值本身就是品牌名，只补中文名，不加括号说明（同上长度约束）
-  'cdn_provider|aliyun': 'aliyun（阿里云）',
-  'cdn_provider|tencent': 'tencent（腾讯云）',
-  'cdn_provider|qiniu': 'qiniu（七牛云）',
-  'cdn_provider|cloudflare': 'cloudflare（Cloudflare）',
-  'cdn_provider|cloudfront': 'cloudfront（AWS CloudFront）',
+  // CDN 厂商：候选值本身就是品牌名，只补中文名，不加括号说明（同上长度约束）。
+  // 厂商清单来自 utils/cdn（与后端同源），新增厂商时界面自动跟上，不用在这儿再补一行
+  ...Object.fromEntries(
+    CDN_PROVIDERS.map((p) => [`cdn_provider|${p}`, `${p}（${CDN_PROVIDER_LABELS[p]}）`]),
+  ),
 }
 function optionLabel(opt: string): string {
   return OPTION_LABELS[`${props.item.key}|${opt}`] || opt

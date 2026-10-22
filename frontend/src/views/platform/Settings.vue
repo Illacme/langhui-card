@@ -362,6 +362,7 @@ import { getSettings, updateSettings, type SettingItem } from '@/api/settings'
 import { useSettingsStore } from '@/store/settings'
 import SettingRow from '@/components/SettingRow.vue'
 import { clearWizardDraft, loadWizardDraft, saveWizardDraft } from '@/utils/wizardDraft'
+import { CDN_DEFAULT_PROVIDER, CDN_RESOURCE_PROVIDERS } from '@/utils/cdn'
 
 // 分组展示顺序与中文名；与后端 setting.registry 的 group 字段对应。
 // 未登记的分组兜底显示在最后，避免后端新增分组后前端丢项。
@@ -853,9 +854,9 @@ const CDN_ONLY = ['cdn_provider', 'cdn_access_key_id', 'cdn_access_key_secret', 
 //   - 资源标识只有 Cloudflare（Zone ID）与 CloudFront（Distribution ID）需要，
 //     AK/SK 三家按提交 URL 的域名自己定位加速域名；
 //   - Cloudflare 只用一个 API Token（填在 Secret 位），用不到 AccessKeyId。
+// 厂商清单与「谁需要什么」在 utils/cdn（与后端 storage.CDNProviderNeeds* 同源）。
 // 未启用 CDN 时整区不占版面；启用后按厂商再收窄一次，避免对着用不上的输入框。
-const CDN_RESOURCE_PROVIDERS = ['cloudflare', 'cloudfront']
-const cdnProvider = computed(() => (draft.cdn_provider || '').trim() || 'aliyun')
+const cdnProvider = computed(() => (draft.cdn_provider || '').trim() || CDN_DEFAULT_PROVIDER)
 const cdnNeedsResource = computed(() => CDN_RESOURCE_PROVIDERS.includes(cdnProvider.value))
 
 interface DepState {

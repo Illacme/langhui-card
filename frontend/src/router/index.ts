@@ -81,7 +81,7 @@ const routes = [
         meta: { title: '企业管理', group: '平台管理', platformOnly: true },
       },
       {
-        // CDN 刷新：平台级基础设施操作（上传后已自动 purge，此处为覆盖写场景的兜底），
+        // CDN 刷新：平台级基础设施操作（覆盖同名对象的场景已自动刷新，此处为手动兜底），
         // 仅平台超级管理员可见可访问
         path: 'platform/cdn-refresh',
         name: 'cdn-refresh',

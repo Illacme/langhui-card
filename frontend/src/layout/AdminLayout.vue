@@ -150,7 +150,7 @@ const allMenuGroups = [
   },
   {
     // 仅平台超级管理员可见：企业管理（开通/停用企业、企业管理员管理）
-    // + CDN 刷新（平台级基础设施操作，上传后已自动 purge）
+    // + CDN 刷新（平台级基础设施操作，覆盖同名对象的场景已自动刷新，此处为手动兜底）
     group: '平台管理',
     icon: School,
     platformOnly: true,
