@@ -148,6 +148,14 @@ CI 见 `.github/workflows/ci.yml`，四个 job：
 - **前端 (Vue)**：`npm ci` + `npm run build` + `npm test`（Vitest；含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
 - **前端类型检查 (vue-tsc)**：`vue-tsc --noEmit`，历史 4 个 `@wangeditor/*` 类型错误已修复，**现为阻塞门禁**。
 
+「前端单测」与「前端类型检查」是两个独立 job，单测全绿不等于类型通过。想在本机提前拦住，仓库自带了一个 `pre-push` 钩子：
+
+```bash
+git config core.hooksPath .githooks   # 每个克隆执行一次
+```
+
+它只在本次推送涉及 `frontend/` 变更时才跑类型检查（纯后端或文档提交直接放行）；还没装依赖时会提示而不阻断。临时跳过用 `SKIP_TYPECHECK=1 git push`，或对单次推送 `git push --no-verify`。
+
 > 分支保护与协作规范见 `docs/branch-protection.md`；接口契约见 `docs/openapi.yaml`（OpenAPI 3.0.3，56 paths）。
 
 ## 安全与已知限制
