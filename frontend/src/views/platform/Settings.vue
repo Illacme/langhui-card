@@ -159,7 +159,7 @@
         没有匹配「{{ keyword.trim() }}」的配置项——换个关键词，或清空搜索查看全部。
       </div>
 
-      <el-card v-for="g in filteredGroups" :key="g.key" shadow="never" class="group-card" :id="'grp-' + g.key">
+      <el-card v-for="g in displayGroups" :key="g.key" shadow="never" class="group-card" :id="'grp-' + g.key">
         <template #header>
           <div class="group-header">
             <div class="group-title-wrap">
@@ -174,9 +174,25 @@
         </template>
 
         <!-- 单行渲染抽成 SettingRow 组件：主列表与配置向导共用同一形态，
-             draft 仍由本页持有（:model-value + @change），避免两处各存一份值 -->
+             draft 仍由本页持有（:model-value + @change），避免两处各存一份值。
+             组内分区与配置向导 steps 的 groups 同结构：项多的组按主题分堆，
+             小标题 + 尾部细线；无分区的组平铺 -->
+        <template v-for="sec in sectionsOf(g.items)" :key="sec.label">
+          <div class="group-sub">{{ sec.label }}</div>
+          <SettingRow
+            v-for="item in sec.items"
+            :key="item.key"
+            :id="'set-' + item.key"
+            :item="item"
+            :model-value="draft[item.key]"
+            :focus="depState(item.key).focus"
+            :dim="depState(item.key).dim"
+            @change="setVal"
+            @clear="clearSecret"
+          />
+        </template>
         <SettingRow
-          v-for="item in g.items"
+          v-for="item in ungroupedOf(g.items)"
           :key="item.key"
           :id="'set-' + item.key"
           :item="item"
@@ -313,6 +329,12 @@
           本次改动中 {{ wizardRestartKeys.length }} 项需重启服务后生效：{{ wizardRestartKeys.join('、') }}
         </p>
         <p class="wizard-final-line">保存后请按部署方式重启进程 / 容器；重启前新存储配置不生效，属预期行为。</p>
+        <!-- 向导只走「首配最小路径」：有缺省值或可选增强的项（登录限流 / 令牌有效期 /
+             CDN 刷新 / 功能开关等）不占步骤，但要说清它们去哪了——否则用户会以为
+             系统里只有这几项，该调的限流永远找不到 -->
+        <p class="wizard-final-line">
+          未进向导的项（登录限流 / 令牌有效期 / CDN 刷新 / 功能开关等）均有可用缺省值，可在本页对应分组按需调整。
+        </p>
       </div>
       <template #footer>
         <div class="wizard-foot">
@@ -340,6 +362,12 @@ import { clearWizardDraft, loadWizardDraft, saveWizardDraft } from '@/utils/wiza
 
 // 分组展示顺序与中文名；与后端 setting.registry 的 group 字段对应。
 // 未登记的分组兜底显示在最后，避免后端新增分组后前端丢项。
+//
+// 排列逻辑（依赖链，从「产品是什么」到「怎么运营」）：
+//   通用 → 文件存储 → 上传 → 小程序 → 微信 → 登录与令牌 → 安全与基础设施 → 功能开关
+// 存储必须排在上传**之前**：上传限的是「文件多大」，可文件存哪还没定就是倒挂；
+// 小程序与微信相邻：同一条小程序业务线（基址 + 凭据 + 小程序码缓存），
+// 旧顺序里被拆到第 2 和第 4 位，配一次要在两个组之间跳。
 const GROUP_LABELS: Record<string, string> = {
   general: '通用',
   miniprogram: '小程序',
@@ -350,19 +378,67 @@ const GROUP_LABELS: Record<string, string> = {
   security: '安全与基础设施（只读）',
   feature: '功能开关',
 }
-const GROUP_ORDER = ['general', 'miniprogram', 'upload', 'wechat', 'auth', 'storage', 'security', 'feature']
+const GROUP_ORDER = ['general', 'storage', 'upload', 'miniprogram', 'wechat', 'auth', 'security', 'feature']
 
 // 分组导语：每组一句话「管什么、什么时候该动」，降低首配心智负担。
 const GROUP_BLURBS: Record<string, string> = {
   general: '产品的基础展示信息，随时可改、即时生效。',
-  miniprogram: '小程序端如何找到后端、是否锁定为单一企业版。首次部署必配「小程序接口基址」。',
-  upload: '限制文件大小、类型与临时链接有效期，防止撑爆存储或链接过早失效。',
-  wechat: '微信凭据，用于生成小程序码与微信登录；未配置则小程序码相关功能不可用。',
-  auth: '后台登录凭证能用多久、防爆破的尝试次数。',
   storage:
-    '图片 / 视频 / 小程序码存哪、怎么访问。⚠️ 本组任一项改动都需重启服务；更换存储方式前请确认历史文件仍可访问。',
+    '图片 / 视频 / 小程序码存哪、怎么访问，是上传功能的前提。⚠️ 本组任一项改动都需重启服务；更换存储方式前请确认历史文件仍可访问。切换「存储方式」后只显示当前方式相关的项，另一种方式已填的值不会丢、切回来还在；想查看全部项可用顶部搜索。',
+  upload: '文件存哪定了，再限制单文件大小、类型与临时链接时效。默认值已可用；临时链接只在私有桶（「存储空间公开访问」为关）时才涉及。',
+  miniprogram: '小程序端如何找到后端、是否锁定为单一企业版。首次部署必配「小程序接口基址」。',
+  wechat: '微信凭据（小程序码与微信登录用），以及小程序码的缓存时长；未配置则小程序码相关功能不可用。',
+  auth: '后台登录凭证能用多久、防爆破的尝试次数。',
   security: '数据库连接、签名密钥等关键项，界面不能改，只展示可辨认的预览（隐去口令与密钥中段），必须到部署环境改环境变量或配置文件（默认 data/runtime.env）后重启——改错会把自己锁在系统外。',
   feature: '运营期功能开关，按需开启。',
+}
+
+// 组内顺序：呈现顺序由前端显式掌控，不随后端 registry 的声明顺序漂移
+// （registry 按「新增时间」堆叠，前端按「配置时的逻辑顺序」排）。
+// 未登记的组保持后端返回顺序——那些组（通用 / 小程序 / 令牌 / 只读 / 开关）
+// 的声明顺序本就合理，逐个写死只会多一处要同步的地方。
+const GROUP_ITEM_ORDER: Record<string, string[]> = {
+  storage: [
+    'storage_driver',
+    // local 分支
+    'upload_dir',
+    // 云存储分支（minio / oss）
+    'storage_endpoint',
+    'storage_bucket',
+    'storage_access_key',
+    'storage_secret_key',
+    'storage_use_ssl',
+    // 访问方式：公私总闸 + 对外基址（两种方式都生效）
+    'storage_public',
+    'upload_base_url',
+    // CDN 刷新：可选增强，不开则整区用不上
+    'cdn_enabled',
+    'cdn_access_key_id',
+    'cdn_access_key_secret',
+    'cdn_endpoint',
+  ],
+  upload: ['upload_max_mb', 'upload_video_max_mb', 'upload_allow_ext', 'presign_put_ttl_minutes', 'sign_get_ttl_minutes'],
+  wechat: ['wx_appid', 'wx_appsecret', 'wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'],
+}
+
+// 组内分区：项多的组按「在配什么」再分堆，小标题让人不用逐行读描述。
+// 与配置向导 steps 的 groups 元数据是同一套结构——主列表与向导结构一致，
+// 用户在一边看懂的分区，另一边直接认出来。
+const GROUP_SECTIONS: Record<string, { label: string; keys: string[] }[]> = {
+  storage: [
+    // local 与云存储两套互斥配置在这一区里按 depState 二选一出现
+    { label: '存储位置', keys: ['storage_driver', 'upload_dir', 'storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key', 'storage_use_ssl'] },
+    { label: '访问方式', keys: ['storage_public', 'upload_base_url'] },
+    { label: 'CDN 刷新（可选）', keys: ['cdn_enabled', 'cdn_access_key_id', 'cdn_access_key_secret', 'cdn_endpoint'] },
+  ],
+  upload: [
+    { label: '大小与类型', keys: ['upload_max_mb', 'upload_video_max_mb', 'upload_allow_ext'] },
+    { label: '临时链接有效期', keys: ['presign_put_ttl_minutes', 'sign_get_ttl_minutes'] },
+  ],
+  wechat: [
+    { label: '小程序凭据', keys: ['wx_appid', 'wx_appsecret'] },
+    { label: '小程序码缓存', keys: ['wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'] },
+  ],
 }
 
 const settings = useSettingsStore()
@@ -395,7 +471,7 @@ const saving = ref(false)
 const restartPending = ref<string[]>([])
 const restartDismissed = ref(false)
 
-// 按分组聚合（已按后端返回顺序 stable，这里再套一层分组顺序）
+// 按分组聚合（已按后端返回顺序 stable，这里再套一层分组顺序 + 组内逻辑顺序）
 const groups = computed(() => {
   const map = new Map<string, SettingItem[]>()
   for (const it of items.value) {
@@ -407,13 +483,53 @@ const groups = computed(() => {
     const ib = GROUP_ORDER.indexOf(b)
     return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib)
   })
-  return keys.map((k) => ({
-    key: k,
-    label: GROUP_LABELS[k] || k,
-    blurb: GROUP_BLURBS[k] || '',
-    items: map.get(k)!,
-  }))
+  return keys.map((k) => {
+    const list = map.get(k)!
+    const order = GROUP_ITEM_ORDER[k]
+    // 未登记的 key 排到最后：后端新增项不该被隐藏到已登记项前面，
+    // 也不能让它打乱已排好的逻辑顺序
+    const rank = (key: string) => {
+      const i = order.indexOf(key)
+      return i < 0 ? order.length : i
+    }
+    return {
+      key: k,
+      label: GROUP_LABELS[k] || k,
+      blurb: GROUP_BLURBS[k] || '',
+      items: order ? [...list].sort((a, b) => rank(a.key) - rank(b.key)) : list,
+    }
+  })
 })
+
+// 组内分区（输入 items 可以是过滤前 / 后的，分区按实际传入的项计算）
+function sectionsOf(items: SettingItem[]): { label: string; items: SettingItem[] }[] {
+  const secs = GROUP_SECTIONS[items[0]?.group]
+  if (!secs) return []
+  return secs
+    .map((s) => ({
+      label: s.label,
+      items: s.keys
+        .map((k) => items.find((i) => i.key === k))
+        .filter((it): it is SettingItem => !!it),
+    }))
+    .filter((s) => s.items.length > 0)
+}
+// 未归入分区的项（无分区元数据的组 / 元数据没覆盖的 key）：平铺在分区之后，不丢项
+function ungroupedOf(items: SettingItem[]): SettingItem[] {
+  const secs = GROUP_SECTIONS[items[0]?.group]
+  if (!secs) return items
+  const covered = new Set(secs.flatMap((s) => s.keys))
+  return items.filter((it) => !covered.has(it.key))
+}
+
+// 非搜索态：按依赖联动过滤——当前存储方式 / 未填 AppID 下用不上的项不占版面
+// （与配置向导 stepVisible 同一套 depState 规则，两边行为一致：向导里切 minio
+// 后 upload_dir 会消失，主列表以前只是置灰，现在一致地「只显示相关的」）。
+// 注意只过滤「呈现」：草稿按 key 全量持有，被过滤掉的项保存时照样进载荷，
+// 切回另一种方式时值还在——过滤是视图，不是删除。
+const visibleGroups = computed(() =>
+  groups.value.map((g) => ({ ...g, items: g.items.filter((it) => !depState(it.key).dim) })),
+)
 
 // ---- 上线就绪检查 ----
 // 把「上线前必须配好的项」从全量里挑出来集中呈现（规则与 scripts/preflight.sh 对齐）。
@@ -571,8 +687,8 @@ function computeActive() {
     pinned.value = toolbarRef.value.getBoundingClientRect().top <= base + 1
   }
   const line = base + toolbarH.value + 6
-  let cur = filteredGroups.value[0]?.key || ''
-  for (const g of filteredGroups.value) {
+  let cur = displayGroups.value[0]?.key || ''
+  for (const g of displayGroups.value) {
     const el = document.getElementById('grp-' + g.key)
     if (el && el.getBoundingClientRect().top <= line) cur = g.key
   }
@@ -640,8 +756,14 @@ const filteredGroups = computed(() => {
 })
 const matchCount = computed(() => filteredGroups.value.reduce((n, g) => n + g.items.length, 0))
 
+// 实际渲染用哪份分组：搜索态走全量（被联动过滤掉的项也要能搜到——
+// local 时搜 minio_endpoint 必须命中，否则用户会以为系统里没这项，
+// 那时行内的「当前选项下不需要」置灰标记就是正确答案）；
+// 非搜索态走 visibleGroups（只显示当前选项下相关的项）。
+const displayGroups = computed(() => (keyword.value.trim() ? filteredGroups.value : visibleGroups.value))
+
 // 搜索过滤后可见分组变化，重新判定当前模块（默认落到第一个）
-watch(filteredGroups, () => nextTick(computeActive))
+watch(displayGroups, () => nextTick(computeActive))
 
 // ---- 破坏性更改二次确认 ----
 // 这些改动会让「已经存下来的文件」失联、或把「已配好的凭据」清掉回退到
@@ -731,7 +853,7 @@ const WIZARD_STEPS: WizardStep[] = [
   {
     key: 'storage',
     title: '存储与上传',
-    blurb: '图片 / 视频 / 小程序码存哪、怎么访问。演示选 local 即可；生产建议 minio / oss，并配上公开访问基址。本组改动需重启服务。',
+    blurb: '图片 / 视频 / 小程序码存哪、怎么访问。演示选 local 即可；生产建议 minio / oss，并配上公开访问基址。切换存储方式后只显示当前方式相关的项，另一种方式已填的值不会丢。本组改动需重启服务。',
     keys: [
       'storage_driver',
       'upload_dir',
@@ -740,40 +862,54 @@ const WIZARD_STEPS: WizardStep[] = [
       'storage_access_key',
       'storage_secret_key',
       'storage_use_ssl',
+      // 公私总闸：两种存储方式都生效（本地私有文件也要鉴权后读取），必须进首配路径
+      'storage_public',
       'upload_base_url',
     ],
+    // 与主列表 storage 组的分区一致：本地 / 云存储两套互斥配置按 depState 二选一出现
     groups: [
-      // local 与云存储两套互斥的配置混在一屏，最容易看串；
-      // 按「东西放哪」和「外面怎么访问到」分开，各配各的
-      { label: '存储位置', keys: ['storage_driver', 'upload_dir'] },
       {
-        label: '访问方式',
+        label: '存储位置',
         keys: [
+          'storage_driver',
+          'upload_dir',
           'storage_endpoint',
           'storage_bucket',
           'storage_access_key',
           'storage_secret_key',
           'storage_use_ssl',
-          'upload_base_url',
         ],
       },
+      { label: '访问方式', keys: ['storage_public', 'upload_base_url'] },
     ],
   },
   {
     key: 'limits',
     title: '上传限制',
     blurb: '限制单文件大小与允许的类型，防止撑爆存储。默认值已可用，按需调整。',
-    keys: ['upload_max_mb', 'upload_allow_ext', 'upload_video_max_mb'],
+    keys: [
+      'upload_max_mb',
+      'upload_allow_ext',
+      'upload_video_max_mb',
+      // 私有桶（存储空间公开访问=关）时，直传与下载走限时签名链接；
+      // 公开桶用不到——有默认值，不专门开一步，放在本步尾部
+      'presign_put_ttl_minutes',
+      'sign_get_ttl_minutes',
+    ],
     groups: [
-      { label: '大小上限', keys: ['upload_max_mb', 'upload_video_max_mb'] },
-      { label: '允许类型', keys: ['upload_allow_ext'] },
+      { label: '大小与类型', keys: ['upload_max_mb', 'upload_video_max_mb', 'upload_allow_ext'] },
+      { label: '临时链接有效期', keys: ['presign_put_ttl_minutes', 'sign_get_ttl_minutes'] },
     ],
   },
   {
     key: 'wechat',
-    title: '微信凭据',
+    title: '微信与小程序码',
     blurb: '小程序码与微信登录依赖微信 AppID / AppSecret。没有微信业务可先跳过，相关功能不可用而已。',
-    keys: ['wx_appid', 'wx_appsecret'],
+    keys: ['wx_appid', 'wx_appsecret', 'wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'],
+    groups: [
+      { label: '小程序凭据', keys: ['wx_appid', 'wx_appsecret'] },
+      { label: '小程序码缓存', keys: ['wxacode_ttl_hours', 'wxacode_sign_ttl_minutes'] },
+    ],
   },
   {
     key: 'miniprogram',
@@ -1218,6 +1354,26 @@ onMounted(load)
   font-size: 12px;
   color: #909399;
   line-height: 1.6;
+}
+/* 组内分区小标题：与配置向导的 .wizard-group-title 同一形态
+   （12px 500 字重 + 尾部细线），两处结构一致、看起来也像一家产品 */
+.group-sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #606266;
+  margin: 14px 0 2px;
+}
+.group-card .group-sub:first-child {
+  margin-top: 0;
+}
+.group-sub::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #ebeef5;
 }
 /* 吸顶头：标题 + 搜索 + 操作按钮 + 模块锚点。整块常驻，滚不滚动、搜不搜索
    看到的结构都一样（旧版标题随内容滚走、搜索后才露出，两态不一致） */

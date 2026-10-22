@@ -26,9 +26,13 @@ const items: SettingItem[] = [
   { key: 'pinned_company_id', name: '独立版锁定企业', group: 'miniprogram', type: 'int', value: '0', description: '锁定租户', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'upload_allow_ext', name: '允许上传的文件类型', group: 'upload', type: 'string_slice', value: 'png,jpg', description: '扩展名', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'upload_max_mb', name: '单张图片大小上限', group: 'upload', type: 'int', value: '10', description: '上传上限', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'upload_video_max_mb', name: '单个视频大小上限', group: 'upload', type: 'int', value: '100', description: '视频上限', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'presign_put_ttl_minutes', name: '上传链接有效期', group: 'upload', type: 'int', value: '15', description: '预签名时效', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'sign_get_ttl_minutes', name: '私有桶下载链接有效期', group: 'upload', type: 'int', value: '30', description: '签名下载时效', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'wx_appid', name: '小程序 AppID', group: 'wechat', type: 'string', value: '', description: 'AppID', secret: false, restart: false, readOnly: false, envVar: 'WX_APPID', configured: false },
   { key: 'wx_appsecret', name: '小程序 AppSecret', group: 'wechat', type: 'string', value: '******', description: 'AppSecret（敏感）', secret: true, restart: false, readOnly: false, envVar: 'WX_APPSECRET', configured: true },
   { key: 'wxacode_ttl_hours', name: '小程序码缓存时长', group: 'wechat', type: 'int', value: '720', description: '小程序码 TTL', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
+  { key: 'wxacode_sign_ttl_minutes', name: '小程序码签名链接有效期', group: 'wechat', type: 'int', value: '60', description: '小程序码签名时效', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'access_token_ttl_minutes', name: '登录凭证有效期', group: 'auth', type: 'int', value: '15', description: 'access 有效期', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'login_rate_limit_per_min', name: '登录尝试频率限制', group: 'auth', type: 'int', value: '10', description: '登录限流', secret: false, restart: false, readOnly: false, envVar: '', configured: true },
   { key: 'cdn_enabled', name: '启用 CDN 刷新', group: 'storage', type: 'bool', value: '', description: 'CDN 刷新', secret: false, restart: true, readOnly: false, envVar: 'CDN_ENABLED', configured: false },
@@ -39,6 +43,7 @@ const items: SettingItem[] = [
   { key: 'storage_access_key', name: '存储 AccessKey', group: 'storage', type: 'string', value: '', description: '存储 AK', secret: false, restart: true, readOnly: false, envVar: 'MINIO_ACCESS_KEY', configured: false },
   { key: 'storage_secret_key', name: '存储 SecretKey', group: 'storage', type: 'string', value: '', description: '存储 SecretKey', secret: true, restart: true, readOnly: false, envVar: 'MINIO_SECRET_KEY', configured: false },
   { key: 'storage_use_ssl', name: '存储启用 HTTPS', group: 'storage', type: 'bool', value: '', description: '存储 SSL', secret: false, restart: true, readOnly: false, envVar: 'MINIO_USE_SSL', configured: false },
+  { key: 'storage_public', name: '存储空间公开访问', group: 'storage', type: 'bool', value: 'true', description: '公开桶', secret: false, restart: true, readOnly: false, envVar: 'STORAGE_PUBLIC', configured: true },
   { key: 'upload_dir', name: '本地上传目录', group: 'storage', type: 'string', value: '', description: '本地落盘目录', secret: false, restart: true, readOnly: false, envVar: 'UPLOAD_DIR', configured: false },
   { key: 'upload_base_url', name: '文件访问基址', group: 'storage', type: 'string', value: '', description: '文件公开访问地址', secret: false, restart: true, readOnly: false, envVar: 'UPLOAD_BASE_URL', configured: false },
   { key: 'cookie_domain', name: '登录 Cookie 作用域', group: 'security', type: 'string', value: '', description: 'Cookie 作用域', secret: false, restart: true, readOnly: true, envVar: 'COOKIE_DOMAIN', configured: false },
@@ -250,6 +255,9 @@ describe('Settings 系统设置', () => {
 
   it('敏感项输入框留空：已配置的显示占位提示，不把掩码当值提交', async () => {
     const { w } = await setup()
+    // AppID 未填时 AppSecret 按联动不占版面——按真实配置顺序先填 AppID
+    await textInputOf(w, 'wx_appid').setValue('wx123')
+    await nextTick()
     const input = textInputOf(w, 'wx_appsecret')
     // 后端只给掩码，界面输入框必须是空的（否则一保存就把 '******' 写进库）
     expect((input.element as HTMLInputElement).value).toBe('')
@@ -260,15 +268,17 @@ describe('Settings 系统设置', () => {
     await textInputOf(w, 'brand_name').setValue('朗汇机电')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
-    expect(updateSettings).toHaveBeenCalledWith({ brand_name: '朗汇机电' })
+    expect(updateSettings).toHaveBeenCalledWith({ wx_appid: 'wx123', brand_name: '朗汇机电' })
   })
 
   it('敏感项填新值才会提交；点「清除」则提交空串回退环境变量', async () => {
     const { w } = await setup()
+    await textInputOf(w, 'wx_appid').setValue('wx123')
+    await nextTick()
     await textInputOf(w, 'wx_appsecret').setValue('new-secret')
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
-    expect(updateSettings).toHaveBeenCalledWith({ wx_appsecret: 'new-secret' })
+    expect(updateSettings).toHaveBeenCalledWith({ wx_appid: 'wx123', wx_appsecret: 'new-secret' })
 
     vi.mocked(updateSettings).mockClear()
     const clearBtn = rowOf(w, 'db_dsn').findAll('button.el-button')
@@ -281,6 +291,7 @@ describe('Settings 系统设置', () => {
     expect(saveButton(w).attributes('disabled')).toBeUndefined()
     await saveButton(w).trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
+    // 首次保存成功后 AppID 已推进为原值，二次保存只带清空项
     expect(updateSettings).toHaveBeenCalledWith({ wx_appsecret: '' })
   })
 
@@ -523,25 +534,95 @@ describe('Settings 系统设置', () => {
     expect(w.text()).toContain('4 / 7 项就绪')
   })
 
-  // ---- P1：依赖联动 + 首次配置向导 ----
-  it('依赖联动：local 只亮本地上传目录，云存储凭据置灰；切 minio 后反之', async () => {
+  // ---- P1：依赖联动（非搜索态按分支过滤） + 分组顺序 ----
+  it('依赖联动：local 下云凭据不占版面，切 minio 后反之；搜索态全量可见', async () => {
     const { w } = await setup()
-    // 夹具默认 local：upload_dir 未配置 → 待配置；云凭据「当前选项下不需要」且不出现待配置
+    // 非搜索态：local 只显示本地上传目录（待配置），云凭据整批不渲染——
+    // 置灰保留是旧行为，半透明行仍占版面，与向导「切 minio 后 upload_dir 消失」也不一致
     expect(rowOf(w, 'upload_dir').text()).toContain('待配置')
     ;['storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key'].forEach((k) => {
-      expect(rowOf(w, k).text()).toContain('当前选项下不需要')
-      expect(rowOf(w, k).text()).not.toContain('待配置')
+      expect(rowExists(w, k), `${k} 在 local 下不应占版面`).toBe(false)
     })
-    // CDN 未开：CDN 凭据同样置灰
-    expect(rowOf(w, 'cdn_access_key_id').text()).toContain('当前选项下不需要')
+    // CDN 未开：CDN 凭据同样不渲染（开关本身仍在，开了才出现凭据区）
+    expect(rowExists(w, 'cdn_access_key_id')).toBe(false)
+    expect(rowExists(w, 'cdn_enabled')).toBe(true)
+    // AppID 未填：AppSecret 也不占版面（填了 AppID 才需要配 Secret）
+    expect(rowExists(w, 'wx_appsecret')).toBe(false)
 
-    // 切到 minio：云凭据转亮（待配置），本地上传目录转为置灰
+    // 切到 minio：云凭据转亮出现（待配置），本地上传目录不再占版面
     await textInputOf(w, 'storage_driver').setValue('minio')
     await nextTick()
     expect(rowOf(w, 'storage_endpoint').text()).toContain('待配置')
-    expect(rowOf(w, 'storage_endpoint').text()).not.toContain('当前选项下不需要')
+    expect(rowExists(w, 'upload_dir')).toBe(false)
+    // 填了 AppID：AppSecret 转亮出现
+    await textInputOf(w, 'wx_appid').setValue('wx123')
+    await nextTick()
+    expect(rowOf(w, 'wx_appsecret').exists()).toBe(true)
+
+    // 搜索态例外：两种方式的项都要能搜到（带置灰标记）——local 时搜 minio_endpoint
+    // 必须命中，否则用户会以为系统里没有这项
+    await w.find('input.head-search').setValue('minio_endpoint')
+    await nextTick()
+    expect(rowExists(w, 'storage_endpoint')).toBe(true)
+    expect(rowExists(w, 'upload_dir')).toBe(false)
+    await w.find('input.head-search').setValue('upload_dir')
+    await nextTick()
+    expect(rowExists(w, 'upload_dir')).toBe(true)
     expect(rowOf(w, 'upload_dir').text()).toContain('当前选项下不需要')
-    expect(rowOf(w, 'upload_dir').text()).not.toContain('待配置')
+    await w.find('input.head-search').setValue('')
+    await nextTick()
+  })
+
+  it('分组按依赖链排序：存储在上传之前，小程序与微信相邻', async () => {
+    const { w } = await setup()
+    // 存储是上传的前提（限「文件多大」之前先定「存哪」），必须排在前；
+    // 小程序与微信是同一条业务线，相邻配置不用跳组
+    const order = w.findAll('.group-card').map((c: any) => c.find('.group-title').text())
+    expect(order).toEqual([
+      '通用',
+      '文件存储与 CDN',
+      '上传',
+      '小程序',
+      '微信',
+      '登录与令牌',
+      '安全与基础设施（只读）',
+      '功能开关',
+    ])
+  })
+
+  it('组内分区：存储三分区、上传两分区、微信两分区，无分区组平铺', async () => {
+    const { w } = await setup()
+    const subs = (title: string) =>
+      w
+        .findAll('.group-card')
+        .find((c: any) => c.find('.group-title').text() === title)!
+        .findAll('.group-sub')
+        .map((s: any) => s.text())
+    // 存储组：位置 / 访问方式 / CDN（可选）——公私总闸与 CDN 不再混在主凭据里
+    expect(subs('文件存储与 CDN')).toEqual(['存储位置', '访问方式', 'CDN 刷新（可选）'])
+    // local 态：CDN 区只剩开关本身，凭据不占版面
+    expect(rowExists(w, 'cdn_enabled')).toBe(true)
+    expect(rowExists(w, 'cdn_access_key_id')).toBe(false)
+    // 上传组：大小与类型 / 临时链接有效期（主列表与向导 steps 同结构）
+    expect(subs('上传')).toEqual(['大小与类型', '临时链接有效期'])
+    // 微信组：凭据 / 小程序码缓存
+    expect(subs('微信')).toEqual(['小程序凭据', '小程序码缓存'])
+    // 无分区元数据的组（通用 / 小程序 / 令牌 / 只读 / 开关）不画小标题
+    expect(subs('通用')).toEqual([])
+    expect(subs('小程序')).toEqual([])
+  })
+
+  it('组内按逻辑顺序排列：存储方式 → 分支项 → 公私开关 → 基址 → CDN', async () => {
+    const { w } = await setup()
+    const keys = w
+      .findAll('.group-card')
+      .find((c: any) => c.find('.group-title').text().includes('文件存储'))!
+      .findAll('.row')
+      // 取行内灰色 key 文本（.label-key）：整行 text() 会先吞到悬浮徽标里的
+      // 「https://」示例串，按 key 定位才对
+      .map((r: any) => r.find('.label-key').text())
+    // local 态可见项的顺序：driver → upload_dir → public → base_url → cdn_enabled
+    expect(keys).toEqual(['storage_driver', 'upload_dir', 'storage_public', 'upload_base_url', 'cdn_enabled'])
   })
 
   it('配置向导：默认落在第一个未完成步骤，条件显隐与主列表一致', async () => {
@@ -827,7 +908,7 @@ describe('Settings 系统设置', () => {
     expect(dialogOf(w).text()).toContain('本步 2 项待配置')
   })
 
-  it('步内小组标题：项多的步骤按主题分堆，无分组的步骤不渲染', async () => {
+  it('步内小组标题：项多的步骤按主题分堆，与主列表分区同结构', async () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
     await nextTick()
@@ -839,19 +920,24 @@ describe('Settings 系统设置', () => {
     // local 下：本地上传目录在「存储位置」组可见；云凭据被置灰，整组不出现
     expect(dialogRow(w, 'upload_dir').exists()).toBe(true)
     expect(dialogRowExists(w, 'storage_endpoint')).toBe(false)
+    // 公私总闸补进首配路径：local 态也在「访问方式」组
+    expect(dialogRow(w, 'storage_public').exists()).toBe(true)
 
-    // 上传限制步：大小上限 / 允许类型
+    // 上传限制步：大小与类型 / 临时链接有效期（与主列表上传组一致）
     await dialogOf(w)
       .findAll('.wizard-stepchip')
       .find((c: any) => c.text().includes('上传限制'))!
       .trigger('click')
     await nextTick()
     expect(dialogOf(w).findAll('.wizard-group-title').map((t: any) => t.text())).toEqual([
-      '大小上限',
-      '允许类型',
+      '大小与类型',
+      '临时链接有效期',
     ])
     expect(dialogRow(w, 'upload_max_mb').exists()).toBe(true)
     expect(dialogRow(w, 'upload_allow_ext').exists()).toBe(true)
+    // 预签名时效补齐进向导（原缺口：14 项不在任何步骤）
+    expect(dialogRow(w, 'presign_put_ttl_minutes').exists()).toBe(true)
+    expect(dialogRow(w, 'sign_get_ttl_minutes').exists()).toBe(true)
 
     // 小程序步：接入地址 / 独立版锁定（可选）
     await dialogOf(w)
@@ -864,14 +950,29 @@ describe('Settings 系统设置', () => {
       '独立版锁定（可选）',
     ])
 
-    // 无 groups 元数据的步骤（品牌 / 微信）保持平铺，不画小标题
+    // 微信步：小程序凭据 / 小程序码缓存（原只有两项，缓存时效补齐）
     await dialogOf(w)
       .findAll('.wizard-stepchip')
-      .find((c: any) => c.text().includes('微信凭据'))!
+      .find((c: any) => c.text().includes('微信与小程序码'))!
+      .trigger('click')
+    await nextTick()
+    expect(dialogOf(w).findAll('.wizard-group-title').map((t: any) => t.text())).toEqual([
+      '小程序凭据',
+      '小程序码缓存',
+    ])
+    expect(dialogRow(w, 'wxacode_ttl_hours').exists()).toBe(true)
+    expect(dialogRow(w, 'wxacode_sign_ttl_minutes').exists()).toBe(true)
+    // AppID 未填：AppSecret 置灰不出现（填了 AppID 才需要配 Secret）
+    expect(dialogRowExists(w, 'wx_appsecret')).toBe(false)
+
+    // 无 groups 元数据的步骤（品牌）保持平铺，不画小标题
+    await dialogOf(w)
+      .findAll('.wizard-stepchip')
+      .find((c: any) => c.text().includes('品牌与身份'))!
       .trigger('click')
     await nextTick()
     expect(dialogOf(w).findAll('.wizard-group-title')).toHaveLength(0)
-    expect(dialogRow(w, 'wx_appid').exists()).toBe(true)
+    expect(dialogRow(w, 'brand_name').exists()).toBe(true)
   })
 
   it('格式关键项给示例占位与悬浮说明徽标', async () => {
@@ -911,6 +1012,21 @@ describe('Settings 系统设置', () => {
     await row!.find('button.el-button').trigger('click')
     await nextTick()
     expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
+  })
+
+  it('安全确认步：说明未进向导的项去哪了（有缺省、可在本页调）', async () => {
+    const { w } = await setup()
+    await wizardEntryButton(w).trigger('click')
+    await nextTick()
+    for (let i = 0; i < 4; i++) {
+      await dialogButton(w, '下一步').trigger('click')
+      await nextTick()
+    }
+    // 首配路径只走最小集：有缺省 / 可选增强的项不占步骤，但必须说清去哪了，
+    // 否则用户会以为系统里只有这几项，该调的限流永远找不到
+    expect(dialogOf(w).text()).toContain('未进向导的项')
+    expect(dialogOf(w).text()).toContain('登录限流')
+    expect(dialogOf(w).text()).toContain('可在本页对应分组按需调整')
   })
 
   // ---- P2：搜索过滤 + 破坏性更改二次确认 ----
@@ -986,6 +1102,8 @@ describe('Settings 系统设置', () => {
 
   it('清空敏感项同样需确认：消息讲清回退环境变量的后果', async () => {
     const { w } = await setup()
+    await textInputOf(w, 'wx_appid').setValue('wx123')
+    await nextTick()
     const secretClear = rowOf(w, 'wx_appsecret').findAll('button.el-button')
     await secretClear[0].trigger('click')
     await nextTick()
@@ -993,7 +1111,7 @@ describe('Settings 系统设置', () => {
     await vi.waitFor(() => expect(ElMessageBox.confirm).toHaveBeenCalledTimes(1))
     expect(vi.mocked(ElMessageBox.confirm).mock.calls[0][0]).toContain('回退环境变量')
     // 默认确认 → 正常提交空串
-    expect(updateSettings).toHaveBeenCalledWith({ wx_appsecret: '' })
+    expect(updateSettings).toHaveBeenCalledWith({ wx_appid: 'wx123', wx_appsecret: '' })
   })
 
   it('向导内破坏性改动：确认被取消则对话框不关、不提交', async () => {
