@@ -58,9 +58,9 @@
         <div v-show="engine === 'mysql'" class="si-grid">
           <label>主机<el-input v-model="form.dbHost" autocomplete="off" /></label>
           <label>端口<el-input v-model="form.dbPort" autocomplete="off" /></label>
-          <label>库名<el-input v-model="form.dbName" autocomplete="off" /></label>
           <label>用户名<el-input v-model="form.dbUser" autocomplete="off" /></label>
-          <label class="wide">密码<el-input v-model="form.dbPassword" type="password" show-password autocomplete="new-password" /></label>
+          <label>密码<el-input v-model="form.dbPassword" type="password" show-password autocomplete="new-password" /></label>
+          <label>库名<el-input v-model="form.dbName" autocomplete="off" /></label>
           <el-checkbox v-model="form.createDatabase" class="si-chk">
             数据库不存在时自动创建
           </el-checkbox>
@@ -700,10 +700,10 @@ onMounted(() => {
   min-width: 18px;
 }
 .si-chk {
-  grid-column: 1 / -1;
   height: auto;
   font-size: 13px;
   color: #606266;
+  align-self: center;
   justify-self: start;
 }
 .si-tip {
