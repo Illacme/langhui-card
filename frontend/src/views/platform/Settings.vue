@@ -75,9 +75,10 @@
     </el-alert>
 
     <!-- 上线就绪检查：默认收起成一条状态栏，点「查看详情」再展开清单。
-         本页主任务是改配置，7 项清单常驻会把它推到屏幕外；但完全藏起来又丢掉
+         本页主任务是改配置，整份清单常驻会把它推到屏幕外；但完全藏起来又丢掉
          「还差几项」这个一眼可见的信号——所以留一行摘要：未就绪时给出待处理数与归属，
          全就绪时只留一句「已全部就绪」，不再占用注意力。
+         清单按存储方式驱动感知（local 6 项 / 对象存储 7 项，见 checks 注释）。
          清单内仍分两类，避免误导：
          - 本页可配置：能点「去配置」直接跳到对应行改；
          - 部署环境配置（环境变量 / 配置文件）：只读项，界面改不了，直接给出要设的
@@ -137,9 +138,11 @@
       <!-- 底部入口：向导只覆盖「本页可配置」项，所以只在还有本页项时才给入口 -->
       <div class="ready-foot">
         <span v-if="readyCount < checks.length">
-          还有 {{ checks.length - readyCount }} 项上线前要处理：本页可配 {{ uiPending }} 项（点「去配置」直接改）<template
+          还有 {{ checks.length - readyCount }} 项上线前要处理：<template v-if="uiPending">本页可配 {{ uiPending }} 项（点「去配置」直接改）</template><template
+            v-if="uiPending && envPending"
+          >，</template><template
             v-if="envPending"
-          >，环境变量 / 配置文件 {{ envPending }} 项（需在服务器 / 容器的环境变量或 data/runtime.env 里设置后重启）</template>。
+          >环境变量 / 配置文件 {{ envPending }} 项（需在服务器 / 容器的环境变量或 data/runtime.env 里设置后重启）</template>。
         </span>
         <span v-else>上线必配项已全部就绪。</span>
         <el-button v-if="uiPending > 0" size="small" type="primary" text @click="openWizard">
@@ -385,7 +388,8 @@ const GROUP_BLURBS: Record<string, string> = {
   general: '产品的基础展示信息，随时可改、即时生效。',
   storage:
     '图片 / 视频 / 小程序码存哪、怎么访问，是上传功能的前提。⚠️ 本组任一项改动都需重启服务；更换存储方式前请确认历史文件仍可访问。切换「存储方式」后只显示当前方式相关的项，另一种方式已填的值不会丢、切回来还在；想查看全部项可用顶部搜索。',
-  upload: '文件存哪定了，再限制单文件大小、类型与临时链接时效。默认值已可用；临时链接只在私有桶（「存储空间公开访问」为关）时才涉及。',
+  upload:
+    '文件存哪定了，再限制单文件大小、类型与临时链接时效。默认值已可用：「上传链接有效期」管直传预签名（对象存储下公私桶都会走），「私有桶下载链接有效期」只在公开访问关掉时才涉及。',
   miniprogram: '小程序端如何找到后端、是否锁定为单一企业版。首次部署必配「小程序接口基址」。',
   wechat: '微信凭据（小程序码与微信登录用），以及小程序码的缓存时长；未配置则小程序码相关功能不可用。',
   auth: '后台登录凭证能用多久、防爆破的尝试次数。',
@@ -533,8 +537,13 @@ const visibleGroups = computed(() =>
 
 // ---- 上线就绪检查 ----
 // 把「上线前必须配好的项」从全量里挑出来集中呈现（规则与 scripts/preflight.sh 对齐）。
-// 每项默认以「相关 key 均已 configured」为就绪标准；cookie_secure 例外：
-// 它是只读开关，就绪标准是值为 true/1（生产 HTTPS）。
+// 每项默认以「相关 key 均已 configured」为就绪标准；两处例外按「后端实际读取路径」
+// 驱动感知（2026-10-22 全量核查：本地驱动下要求云存储专属项 = 永远就绪不了的假警报）：
+//   - cookie_secure：只读开关，就绪标准是值为 true/1（生产 HTTPS）；
+//   - 文件访问基址：仅对象存储参与 URL 生成（minio/oss 用 BaseURL 拼绝对地址），
+//     local 返回相对地址、端上自行拼基址——本地部署根本不看这项，不进清单；
+//   - 存储方式与凭据：云驱动时端点 / 桶 / 凭据缺一项上传就全坏（minio 空端点甚至
+//     构造客户端不出错，拖到运行时才炸），就绪判定要把它们一并纳入。
 interface ReadyCheck {
   label: string
   keys: string[]
@@ -546,8 +555,11 @@ interface ReadyCheck {
   /** 只读项的环境变量示例：界面改不了，必须把这条交给部署的人去设 */
   envSample?: string
 }
+// 云驱动才检查的存储凭据（minio / oss 共用同一组界面字段）
+const CLOUD_CREDENTIALS = ['storage_endpoint', 'storage_bucket', 'storage_access_key', 'storage_secret_key']
 const checks = computed<ReadyCheck[]>(() => {
   const find = (k: string) => items.value.find((i) => i.key === k)
+  const cloud = driverVal.value !== 'local'
   const defs: Array<Omit<ReadyCheck, 'ok' | 'readOnly' | 'envVar'>> = [
     {
       label: '登录签名密钥',
@@ -567,8 +579,23 @@ const checks = computed<ReadyCheck[]>(() => {
       hint: '生产 HTTPS 环境应为「开」',
       envSample: 'COOKIE_SECURE=true',
     },
-    { label: '存储方式与凭据', keys: ['storage_driver'], hint: '演示可用 local；生产建议 minio / oss' },
-    { label: '文件访问基址', keys: ['upload_base_url'], hint: '图片 / 视频的公开访问地址，须为 https 完整地址' },
+    {
+      label: '存储方式与凭据',
+      keys: ['storage_driver'],
+      hint: cloud
+        ? '生产建议 minio / oss，并填好端点 / 存储桶 / AccessKey / SecretKey'
+        : '演示可用 local；生产建议 minio / oss',
+    },
+    // local 驱动不经过这项（见上方注释），进清单就是永远划不掉的假警报
+    ...(cloud
+      ? [
+          {
+            label: '文件访问基址',
+            keys: ['upload_base_url'],
+            hint: '图片 / 视频的公开访问地址，须为 http:// 或 https:// 完整地址',
+          },
+        ]
+      : []),
     { label: '微信 AppID / AppSecret', keys: ['wx_appid', 'wx_appsecret'], hint: '小程序码与微信登录依赖，未配则相关功能不可用' },
     { label: '小程序接口基址', keys: ['miniprogram_base_url'], hint: '小程序端冷启动引导地址，须为 https 完整地址' },
   ]
@@ -577,6 +604,8 @@ const checks = computed<ReadyCheck[]>(() => {
     let ok: boolean
     if (c.keys[0] === 'cookie_secure') {
       ok = ['true', '1'].includes((first?.value || '').trim())
+    } else if (c.keys[0] === 'storage_driver') {
+      ok = !!first?.configured && (cloud ? CLOUD_CREDENTIALS.every((k) => !!find(k)?.configured) : true)
     } else {
       ok = c.keys.every((k) => !!find(k)?.configured)
     }
@@ -797,14 +826,20 @@ const wxAppidFilled = computed(
   () => !!(draft.wx_appid || '').trim() || !!items.value.find((i) => i.key === 'wx_appid')?.configured,
 )
 
-// local 只关心「文件落盘目录」；minio / oss 只关心端点 / 桶 / 凭据。
+// local 只关心「文件落盘目录」；minio / oss 只关心端点 / 桶 / 凭据 / 访问基址。
 // 两类项互斥出现，避免对着一堆当前选项下用不上的输入框。
+// 两条「专属」边界按后端实际读取路径划（2026-10-22 全量核查核实过源码）：
+//   - storage_use_ssl 是 minio 专属：cmd/server 的 NewOssUploader 不收 SSL 参数
+//     （阿里云 OSS 客户端固定 https），oss 下填它不产生任何效果；
+//   - upload_base_url 是云存储专属：LocalUploader.Save 返回相对地址 /uploads/...，
+//     小程序端用 miniprogram_base_url 拼绝对地址、浏览器按页面源解析，都不经过它。
+const MINIO_ONLY = ['storage_use_ssl']
 const CLOUD_ONLY = [
   'storage_endpoint',
   'storage_bucket',
   'storage_access_key',
   'storage_secret_key',
-  'storage_use_ssl',
+  'upload_base_url',
 ]
 const CDN_ONLY = ['cdn_access_key_id', 'cdn_access_key_secret', 'cdn_endpoint']
 
@@ -815,6 +850,9 @@ interface DepState {
 function depState(key: string): DepState {
   if (key === 'upload_dir') {
     return { focus: driverVal.value === 'local', dim: driverVal.value !== 'local' }
+  }
+  if (MINIO_ONLY.includes(key)) {
+    return { focus: driverVal.value === 'minio', dim: driverVal.value !== 'minio' }
   }
   if (CLOUD_ONLY.includes(key)) {
     return { focus: driverVal.value !== 'local', dim: driverVal.value === 'local' }
@@ -891,8 +929,8 @@ const WIZARD_STEPS: WizardStep[] = [
       'upload_max_mb',
       'upload_allow_ext',
       'upload_video_max_mb',
-      // 私有桶（存储空间公开访问=关）时，直传与下载走限时签名链接；
-      // 公开桶用不到——有默认值，不专门开一步，放在本步尾部
+      // 直传预签名链接（对象存储下公私桶都会走：UploadField 总是先试预签名）
+      // 与私有桶下载签名链接。两者都有默认值，不专门开一步，放在本步尾部
       'presign_put_ttl_minutes',
       'sign_get_ttl_minutes',
     ],

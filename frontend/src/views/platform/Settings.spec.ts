@@ -461,6 +461,9 @@ describe('Settings 系统设置', () => {
     expect(w.text()).toContain('产品的基础展示信息') // general
     expect(w.text()).toContain('图片 / 视频 / 小程序码存哪') // storage
     expect(w.text()).toContain('首次部署必配') // miniprogram
+    // 上传组导语要说清两条链接各自的适用条件：直传预签名公私桶都走，
+    // 只有私有桶下载签名仅在公开访问关掉时才涉及（2026-10-22 核查 UploadField 总是先试预签名）
+    expect(w.text()).toContain('公私桶都会走')
     // 8 个分组各一条导语
     expect(w.findAll('.group-blurb')).toHaveLength(8)
   })
@@ -469,9 +472,10 @@ describe('Settings 系统设置', () => {
     const { w } = await setup()
     // 常驻摘要条：一眼给出「还差几项」及其归属（本页可配 / 环境变量）
     expect(w.find('.ready-bar').exists()).toBe(true)
-    expect(w.text()).toContain('3 / 7 项就绪')
-    expect(w.text()).toContain('还有 4 项待处理')
-    // 清单本身默认不展开：本页主任务是改配置，不能被 7 项清单推到屏幕外
+    // local 驱动 6 项（文件访问基址仅对象存储需要，不进本地清单）
+    expect(w.text()).toContain('3 / 6 项就绪')
+    expect(w.text()).toContain('还有 3 项待处理')
+    // 清单本身默认不展开：本页主任务是改配置，不能被清单推到屏幕外
     expect(w.find('.ready-card').exists()).toBe(false)
     await w.find('.ready-bar-toggle').trigger('click')
     await nextTick()
@@ -490,25 +494,26 @@ describe('Settings 系统设置', () => {
     const { w } = await setup()
     // 0 就绪会自动拉起向导（stub 不传送门，页面本体仍在同一棵树上，可直接断言）
     expect(w.find('.el-dialog').exists()).toBe(true)
-    expect(w.text()).toContain('0 / 7 项就绪')
+    expect(w.text()).toContain('0 / 6 项就绪')
     expect(w.find('.ready-card').exists()).toBe(true)
   })
 
   it('上线就绪面板：按「本页可配置 / 环境变量 / 配置文件」分组；只读项给可复制写法而非死路入口', async () => {
     const { w } = await setup()
-    // 夹具已配置 jwt_key / db_dsn / storage_driver → 3/7；
-    // cookie_secure=false、wx_appid 未配、upload_base_url 夹具缺省、miniprogram_base_url 未配
+    // 夹具已配置 jwt_key / db_dsn / storage_driver → 3/6；
+    // cookie_secure=false、wx_appid 未配、miniprogram_base_url 未配；
+    // upload_base_url 是云存储专属项，local 驱动下不进清单（假警报修复）
     expect(w.text()).toContain('上线就绪检查')
-    expect(w.text()).toContain('3 / 7 项就绪')
+    expect(w.text()).toContain('3 / 6 项就绪')
     // 清单默认收起：点「查看详情」展开后再断言明细
     if (!w.find('.ready-card').exists()) {
       await w.find('.ready-bar-toggle').trigger('click')
       await nextTick()
     }
     const readyRows = w.findAll('.ready-row')
-    expect(readyRows).toHaveLength(7)
+    expect(readyRows).toHaveLength(6)
 
-    // 分两组呈现：本页可配 4 项（1 就绪） / 部署环境变量 3 项（2 就绪）
+    // 分两组呈现：本页可配 3 项（1 就绪） / 部署环境变量 3 项（2 就绪）
     expect(w.findAll('.ready-section-title')).toHaveLength(2)
     expect(w.text()).toContain('本页可配置')
     expect(w.text()).toContain('环境变量 / 配置文件')
@@ -544,7 +549,7 @@ describe('Settings 系统设置', () => {
       data: items.map((it) => (it.key === 'cookie_secure' ? { ...it, value: 'true' } : it)),
     }) as any)
     const { w } = await setup()
-    expect(w.text()).toContain('4 / 7 项就绪')
+    expect(w.text()).toContain('4 / 6 项就绪')
   })
 
   // ---- P1：依赖联动（非搜索态按分支过滤） + 分组顺序 ----
@@ -586,6 +591,64 @@ describe('Settings 系统设置', () => {
     await nextTick()
   })
 
+  it('云存储专属项：local 下 upload_base_url 不占版面，切 minio / oss 后出现', async () => {
+    const { w } = await setup()
+    // 只有对象存储用 BaseURL 拼公开 URL（minio.go / oss.go 的 Save/Presign）；
+    // local 驱动 Save 返回相对地址 /uploads/...，小程序端用 miniprogram_base_url
+    // 拼、浏览器按页面源解析——local 下点亮这项是空操作（2026-10-22 全量核查）
+    expect(rowExists(w, 'upload_base_url')).toBe(false)
+    await selectOf(w, 'storage_driver').setValue('minio')
+    await nextTick()
+    expect(rowOf(w, 'upload_base_url').text()).toContain('待配置')
+    // oss 同样需要：OSS 上传器也用 BaseURL 拼公开 URL
+    await selectOf(w, 'storage_driver').setValue('oss')
+    await nextTick()
+    expect(rowExists(w, 'upload_base_url')).toBe(true)
+  })
+
+  it('storage_use_ssl 是 minio 专属：oss 驱动下不占版面', async () => {
+    const { w } = await setup()
+    await selectOf(w, 'storage_driver').setValue('minio')
+    await nextTick()
+    expect(rowExists(w, 'storage_use_ssl')).toBe(true)
+    // 阿里云 OSS 客户端固定 https，NewOssUploader 不收 SSL 参数：
+    // oss 下这一项填了不产生任何效果，不能跟着端点那批一起亮
+    await selectOf(w, 'storage_driver').setValue('oss')
+    await nextTick()
+    expect(rowExists(w, 'storage_use_ssl')).toBe(false)
+    // 搜索态仍能搜到：置灰标记就是「当前选项下不需要」的答案
+    await w.find('input.head-search').setValue('storage_use_ssl')
+    await nextTick()
+    expect(rowExists(w, 'storage_use_ssl')).toBe(true)
+    expect(rowOf(w, 'storage_use_ssl').text()).toContain('当前选项下不需要')
+    await w.find('input.head-search').setValue('')
+    await nextTick()
+  })
+
+  it('就绪清单按存储方式驱动感知：local 无文件访问基址项，minio 出现且未配则不就绪', async () => {
+    const { w } = await setup()
+    const expandReady = async () => {
+      if (!w.find('.ready-card').exists()) {
+        await w.find('.ready-bar-toggle').trigger('click')
+        await nextTick()
+      }
+    }
+    await expandReady()
+    // local：文件访问基址不进清单——本地存储用相对地址，要求它 = 永远划不掉的假警报
+    expect(w.findAll('.ready-row').some((r: any) => r.text().includes('文件访问基址'))).toBe(false)
+
+    // 切 minio：基址项出现（未配 → 不就绪）
+    await selectOf(w, 'storage_driver').setValue('minio')
+    await nextTick()
+    await expandReady()
+    const rows = w.findAll('.ready-row')
+    expect(rows.some((r: any) => r.text().includes('文件访问基址'))).toBe(true)
+    // 云驱动下凭据也纳入「存储方式与凭据」判定：缺端点/桶/密钥上传会在运行时才坏，
+    // 就绪检查必须提前拦（提示语同时讲清要补哪几项）
+    const credRow = rows.find((r: any) => r.text().includes('存储方式与凭据'))!
+    expect(credRow.text()).toContain('端点 / 存储桶 / AccessKey / SecretKey')
+  })
+
   it('分组按依赖链排序：存储在上传之前，小程序与微信相邻', async () => {
     const { w } = await setup()
     // 存储是上传的前提（限「文件多大」之前先定「存哪」），必须排在前；
@@ -625,7 +688,7 @@ describe('Settings 系统设置', () => {
     expect(subs('小程序')).toEqual([])
   })
 
-  it('组内按逻辑顺序排列：存储方式 → 分支项 → 公私开关 → 基址 → CDN', async () => {
+  it('组内按逻辑顺序排列：存储方式 → 分支项 → 公私开关 → CDN', async () => {
     const { w } = await setup()
     const keys = w
       .findAll('.group-card')
@@ -634,15 +697,16 @@ describe('Settings 系统设置', () => {
       // 取行内灰色 key 文本（.label-key）：整行 text() 会先吞到悬浮徽标里的
       // 「https://」示例串，按 key 定位才对
       .map((r: any) => r.find('.label-key').text())
-    // local 态可见项的顺序：driver → upload_dir → public → base_url → cdn_enabled
-    expect(keys).toEqual(['storage_driver', 'upload_dir', 'storage_public', 'upload_base_url', 'cdn_enabled'])
+    // local 态可见项的顺序：driver → upload_dir → public → cdn_enabled。
+    // upload_base_url 是云存储专属（local 用相对地址不经过它），local 下不占版面
+    expect(keys).toEqual(['storage_driver', 'upload_dir', 'storage_public', 'cdn_enabled'])
   })
 
   it('配置向导：默认落在第一个未完成步骤，条件显隐与主列表一致', async () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
     await nextTick()
-    // 品牌名已配置 → 跳过；存储与上传有未配置项（upload_dir / upload_base_url）→ 落在第 2 步
+    // 品牌名已配置 → 跳过；存储步有未配置项（upload_dir）→ 落在第 2 步
     expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
     expect(dialogOf(w).text()).toContain('存储与上传')
     // local 驱动：向导里出现本地上传目录，不出现云凭据
@@ -744,7 +808,9 @@ describe('Settings 系统设置', () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
     await nextTick()
-    // 第 2 步（存储）：upload_base_url 填一个不带协议的地址
+    // 第 2 步（存储）：先切 minio——文件访问基址是云存储专属项，local 下不出现
+    await dialogRow(w, 'storage_driver').find('select.el-select').setValue('minio')
+    await nextTick()
     await dialogRow(w, 'upload_base_url').find('input.el-input').setValue('cdn.example.com')
     await nextTick()
     // 行内错误即时出现（不用等点下一步），指出该填成什么样
@@ -876,10 +942,10 @@ describe('Settings 系统设置', () => {
     await finish.trigger('click')
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1))
     expect(updateSettings).toHaveBeenCalledWith({ upload_dir: '/data/uploads' })
-    // 保存成功 → 对话框关闭；upload_dir 不属于上线就绪检查的 7 个 key，
-    // 就绪数保持 3/7（不伪造进度），但该行「待配置」标记应随之消失
+    // 保存成功 → 对话框关闭；upload_dir 不属于上线就绪检查的 key，
+    // 就绪数保持 3/6（不伪造进度），但该行「待配置」标记应随之消失
     expect(w.find('.el-dialog').exists()).toBe(false)
-    expect(w.text()).toContain('3 / 7 项就绪')
+    expect(w.text()).toContain('3 / 6 项就绪')
     expect(rowOf(w, 'upload_dir').text()).not.toContain('待配置')
   })
 
@@ -909,16 +975,17 @@ describe('Settings 系统设置', () => {
     expect(dialogOf(w).text()).toContain('第 1 步 / 共 6 步')
   })
 
-  it('步骤条带每步待配置数：local 下存储步亮 2', async () => {
+  it('步骤条带每步待配置数：local 下存储步亮 1', async () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
     await nextTick()
     const chip = dialogOf(w)
       .findAll('.wizard-stepchip')
       .find((c: any) => c.text().includes('存储与上传'))
-    // local 驱动下可见项：storage_driver（已配）/ upload_dir / upload_base_url（未配）
-    expect(chip!.find('.wizard-stepchip-count').text()).toBe('2')
-    expect(dialogOf(w).text()).toContain('本步 2 项待配置')
+    // local 驱动下可见项：storage_driver（已配）/ upload_dir（未配）。
+    // upload_base_url 云存储专属，local 下不计入待配置
+    expect(chip!.find('.wizard-stepchip-count').text()).toBe('1')
+    expect(dialogOf(w).text()).toContain('本步 1 项待配置')
   })
 
   it('步内小组标题：项多的步骤按主题分堆，与主列表分区同结构', async () => {
@@ -992,7 +1059,10 @@ describe('Settings 系统设置', () => {
     const { w } = await setup()
     await wizardEntryButton(w).trigger('click')
     await nextTick()
-    // 第 2 步 local 下就有 upload_base_url：示例占位讲格式、徽标讲填错的后果
+    // 文件访问基址是云存储专属：local 下不出现，切 minio 后才该讲格式
+    await dialogRow(w, 'storage_driver').find('select.el-select').setValue('minio')
+    await nextTick()
+    // minio 下就有 upload_base_url：示例占位讲格式、徽标讲填错的后果
     expect(dialogRow(w, 'upload_base_url').find('input.el-input').attributes('placeholder')).toContain('https://')
     expect(dialogRow(w, 'upload_base_url').text()).toContain('图片全部打不开')
     // 切到小程序步：miniprogram_base_url 也有徽标
@@ -1012,19 +1082,19 @@ describe('Settings 系统设置', () => {
       await nextTick()
     }
     const dlg = dialogOf(w)
-    // 复用主页 checks 数据：分组 + 就绪数（夹具 3/7）
+    // 复用主页 checks 数据：分组 + 就绪数（夹具 3/6，local 驱动无文件访问基址项）
     expect(dlg.text()).toContain('上线就绪')
-    expect(dlg.text()).toContain('3 / 7')
+    expect(dlg.text()).toContain('3 / 6')
     expect(dlg.text()).toContain('本页可配置')
     expect(dlg.text()).toContain('只读项')
     // 只读未就绪项（cookie_secure）给可复制的环境变量写法
     expect(dlg.text()).toContain('COOKIE_SECURE=true')
-    // 「去配置」跳回拥有该配置项的步骤：文件访问基址 → 第 2 步
-    const row = dlg.findAll('.wizard-final-row').find((r: any) => r.text().includes('文件访问基址'))
-    expect(row, '未找到文件访问基址行').toBeTruthy()
+    // 「去配置」跳回拥有该配置项的步骤：小程序接口基址 → 第 5 步（小程序接入）
+    const row = dlg.findAll('.wizard-final-row').find((r: any) => r.text().includes('小程序接口基址'))
+    expect(row, '未找到小程序接口基址行').toBeTruthy()
     await row!.find('button.el-button').trigger('click')
     await nextTick()
-    expect(dialogOf(w).text()).toContain('第 2 步 / 共 6 步')
+    expect(dialogOf(w).text()).toContain('第 5 步 / 共 6 步')
   })
 
   it('安全确认步：说明未进向导的项去哪了（有缺省、可在本页调）', async () => {

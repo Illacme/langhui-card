@@ -111,8 +111,11 @@ var registry = []def{
 	{Key: "miniprogram_base_url", Group: "miniprogram", Type: "string",
 		Name:     "小程序接口基址",
 		Validate: httpURLOrEmpty(),
-		// 说清「填错会怎样」比只说格式有用：这是首配最容易填错、且错了表现最远的一项
-		Desc: "小程序访问后端的地址，必须是 http:// 或 https:// 开头的完整地址（例：https://api.example.com）。留空则小程序用自己内置的地址——首次部署务必填对，填错小程序会连不上后端。"},
+		// 说清「填错会怎样」比只说格式有用：这是首配最容易填错、且错了表现最远的一项。
+		// 必须写 https：微信生产环境只收 https（http 仅本地开发关域名校验时可用），
+		// 后端校验放行 http 是「可自愈」哲学，文案不能据此说 http 也能用——
+		// 与向导的 httpsOnly 规则、悬浮提示同一口径（2026-10-22 全量核查统一）。
+		Desc: "小程序访问后端的地址，必须是小程序能访问到的公网 https 地址（例：https://api.example.com；仅本地开发且关闭了域名校验才可用 http://）。留空则小程序用自己内置的地址——首次部署务必填对，填错小程序会连不上后端。"},
 	{Key: "pinned_company_id", Group: "miniprogram", Type: "int", Value: "0",
 		Name:     "独立版锁定企业",
 		Validate: companyEnabledOrZero,
@@ -182,10 +185,10 @@ var registry = []def{
 		Desc:     "图片和视频存到哪里：local=服务器本地磁盘，minio=MinIO 或 S3 兼容存储，oss=阿里云 OSS。留空则使用部署环境里配置的值。改完要重启服务才生效。"},
 	{Key: "storage_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ENDPOINT",
 		Name: "存储服务端点",
-		Desc: "对象存储的服务地址，只填域名或 IP:端口，不要带 http://（例：127.0.0.1:9000）。MinIO 和阿里云 OSS 共用这一项。"},
+		Desc: "对象存储的服务地址，只填域名或 IP:端口，不要带 http://（例：127.0.0.1:9000）。MinIO 和阿里云 OSS 共用这一项。改完要重启服务才生效。"},
 	{Key: "storage_bucket", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_BUCKET",
 		Name: "存储空间名称",
-		Desc: "对象存储里存放文件的桶名（MinIO 与阿里云 OSS 都叫 bucket）。上传的文件都会存进这个桶。"},
+		Desc: "对象存储里存放文件的桶名（MinIO 与阿里云 OSS 都叫 bucket）。上传的文件都会存进这个桶。改完要重启服务才生效。"},
 	{Key: "storage_access_key", Group: "storage", Type: "string", Restart: true, EnvVar: "MINIO_ACCESS_KEY",
 		Name: "存储 AccessKey",
 		Desc: "对象存储的用户名（阿里云 OSS 里叫 AccessKeyId）。改完要重启服务才生效。"},
@@ -204,7 +207,11 @@ var registry = []def{
 	{Key: "upload_base_url", Group: "storage", Type: "string", Restart: true, EnvVar: "UPLOAD_BASE_URL",
 		Name:     "文件访问基址",
 		Validate: httpURLOrEmpty(),
-		Desc:     "已上传文件对外访问的根地址，必须是 http:// 或 https:// 开头的完整地址（例：https://cdn.example.com）。小程序和后台都用它拼出完整的图片链接，填错的话所有图片都会打不开。改完要重启服务才生效。"},
+		// 「仅对象存储需要」必须写进 Desc：local 驱动 Save 返回相对地址 /uploads/...，
+		// 端上自行拼基址（浏览器按页面源、小程序用 miniprogram_base_url），
+		// 这一项不参与——早期文案说「小程序和后台都用它拼」对 local 是误导，
+		// 界面联动也已按 minio / oss 专属过滤（2026-10-22 全量核查统一口径）。
+		Desc:     "已上传文件对外访问的根地址（仅 minio / oss 需要），必须是 http:// 或 https:// 开头的完整地址（例：https://cdn.example.com）。小程序和后台都用它拼出完整的图片链接，填错的话所有图片都会打不开；本地存储用相对地址，不经过这项。改完要重启服务才生效。"},
 	{Key: "cdn_enabled", Group: "storage", Type: "bool", Restart: true, EnvVar: "CDN_ENABLED",
 		Name: "启用 CDN 刷新",
 		Desc: "覆盖同名文件后是否自动刷新 CDN 缓存，让访客立刻看到新文件。要同时填好下面的 CDN 凭据才有用。改完要重启服务才生效。"},
@@ -216,7 +223,7 @@ var registry = []def{
 		Desc: "阿里云 CDN 刷新用的 AccessKeySecret。界面不会显示已保存的内容，填新值即覆盖。改完要重启服务才生效。"},
 	{Key: "cdn_endpoint", Group: "storage", Type: "string", Restart: true, EnvVar: "CDN_ENDPOINT",
 		Name: "CDN 服务端点",
-		Desc: "阿里云 CDN 的刷新接口地址，留空默认 cdn.aliyuncs.com，一般不用改。"},
+		Desc: "阿里云 CDN 的刷新接口地址，留空默认 cdn.aliyuncs.com，一般不用改。改完要重启服务才生效。"},
 
 	// ---- 安全与基础设施（只读：只能改环境变量后重启）----
 	// 这三项改错会把「改回来的入口」一起弄丢（连不上库 / 登不进后台），故界面只展示。

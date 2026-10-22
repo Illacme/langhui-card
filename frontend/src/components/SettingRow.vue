@@ -178,8 +178,10 @@ function optionLabel(opt: string): string {
 // 格式易错项的悬浮说明：只放「填错的后果当场发现不了」的项（地址类）。
 // 默认不占版面，指针停留/聚焦时弹出；与安装向导的 JWT/Cookie 徽标同一模式。
 const FIELD_HINTS: Record<string, string> = {
+  // 云存储专属（local 用相对地址、不经过它）——这一项只在 minio / oss 下可见，
+  // 提示里点明归属，被搜索拽出来的置灰行也能自解释
   upload_base_url:
-    '图片 / 视频 / 小程序码的公开访问地址，须为 https 完整地址（例 https://cdn.example.com）；配了 CDN 就填加速域名。填错的结果是图片全部打不开。',
+    '图片 / 视频 / 小程序码的公开访问地址，http:// 或 https:// 完整地址（例 https://cdn.example.com）；配了 CDN 就填加速域名。仅 minio / oss 需要——本地存储用相对地址，不经过这项。填错的结果是图片全部打不开。',
   miniprogram_base_url:
     '小程序端冷启动第一个请求打到这，必须是小程序能访问到的公网 https 地址（例 https://mp.example.com）。填错小程序直接连不上。',
   storage_endpoint: '对象存储的服务地址，如 minio.example.com:9000；存储方式选 local 时不需要。',
