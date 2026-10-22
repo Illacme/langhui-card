@@ -13,7 +13,7 @@
       :closable="false"
       show-icon
       title="记录谁在什么时候、对什么对象做了什么"
-      description="覆盖系统设置变更（含密钥，但只记「已修改」不落明文）、管理员增删改、企业启停等。审计记录一旦可改就等于没有审计，因此本页只提供查询。"
+      description="覆盖系统设置变更（含密钥，但只记「已修改」不落明文）、管理员增删改、企业启停、员工增删改与申请审核，以及登录失败（连续失败是暴力破解的信号）。审计记录一旦可改就等于没有审计，因此本页只提供查询。"
       style="margin-bottom: 14px"
     />
 
@@ -72,7 +72,7 @@
 <script setup lang="ts">
 import { Refresh } from '@element-plus/icons-vue'
 import { onMounted, ref } from 'vue'
-import { actionLabel, listAuditLogs, type AuditLog } from '@/api/audit'
+import { ACTION_LABELS, actionLabel, listAuditLogs, type AuditLog } from '@/api/audit'
 import { formatDateTime } from '@/utils/datetime'
 import { useBreakpoint } from '@/composables/useBreakpoint'
 
@@ -88,20 +88,10 @@ const action = ref('')
 const result = ref('')
 const actorType = ref('')
 
-// 下拉只列出后端已埋点的动作（与 internal/audit 的动作常量一致）
-const actionOptions = [
-  'setting.update',
-  'login.fail',
-  'password.change',
-  'admin.create',
-  'admin.rename',
-  'admin.reset_password',
-  'admin.delete',
-  'company.create',
-  'company.update',
-  'company.status',
-  'company.admin.create',
-]
+// 下拉直接取中文名表的键：后端新增动作时只要补一条 ACTION_LABELS，这里自动跟上。
+// 手写清单曾漏掉 employee.* / apply.* / login.success / logout / company.admin.reset_password
+// 共 9 个已埋点的动作——列表里看得见（有中文名）却筛不出来，等于功能缺了一块。
+const actionOptions = Object.keys(ACTION_LABELS)
 
 function actorTypeText(t: string) {
   return { admin: '管理员', employee: '员工', anonymous: '未登录' }[t] || t || '—'

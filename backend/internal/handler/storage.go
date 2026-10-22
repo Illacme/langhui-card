@@ -73,7 +73,9 @@ func capabilityHandler(up storage.Uploader, cfg config.Config) gin.HandlerFunc {
 		reason := ""
 		switch {
 		case driver == "local":
-			reason = "当前为本地磁盘存储：视频会占用服务器磁盘与带宽。请先在「系统设置 → 文件存储」配置对象存储"
+			// 分组名要与前端「系统设置」里的分组中文名一致（文件存储与 CDN），
+			// 否则按提示找过去会找不到对应位置
+			reason = "当前为本地磁盘存储：视频会占用服务器磁盘与带宽。请先在「系统设置 → 文件存储与 CDN」配置对象存储"
 		case !presign:
 			reason = "当前存储驱动不支持直传预签名，大视频经服务器中转会拖垮服务"
 		}

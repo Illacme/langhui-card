@@ -7,7 +7,7 @@
     <el-alert
       type="info"
       :closable="false"
-      title="覆盖写后使 CDN 边缘旧缓存失效；需后端 CDN_ENABLED=1 并配置阿里云 CDN 凭据。"
+      title="覆盖同名文件后，用它让 CDN 边缘的旧缓存立刻失效。前提是在「系统设置 → 文件存储与 CDN」里开启 CDN 刷新并填好阿里云凭据（也可在部署环境用环境变量 CDN_ENABLED 配置）。"
       style="margin-bottom: 14px"
     />
 

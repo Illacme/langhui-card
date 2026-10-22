@@ -11,7 +11,7 @@ vi.mock('element-plus', () => ({
 }))
 vi.mock('@element-plus/icons-vue', () => ({ Refresh: {}, Plus: {}, Search: {} }))
 
-import { listAuditLogs, actionLabel } from '@/api/audit'
+import { ACTION_LABELS, listAuditLogs, actionLabel } from '@/api/audit'
 import AuditLogs from './AuditLogs.vue'
 
 // 夹具：覆盖「成功 / 失败」与「未登录」三种形态
@@ -127,6 +127,23 @@ describe('AuditLogs 操作日志', () => {
     expect(listAuditLogs).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'setting.update', page: 1 }),
     )
+  })
+
+  it('动作下拉覆盖全部已埋点动作，且都显示中文名而不是原始键', async () => {
+    const w = await setup()
+    const opts = w.findAll('select.el-select')[0].findAll('option')
+    // 下拉曾手写清单、漏掉 employee.* / apply.* / login.success / logout 等 8 个动作：
+    // 列表里看得见（有中文名）却筛不出来。这里钉住「选项数 = 中文名表条目数」。
+    expect(opts).toHaveLength(Object.keys(ACTION_LABELS).length)
+    const labels = opts.map((o: any) => o.text())
+    // 每个动作都显示中文名
+    for (const label of Object.values(ACTION_LABELS)) {
+      expect(labels).toContain(label)
+    }
+    // 且没有一个选项直接把英文键摊开
+    for (const key of Object.keys(ACTION_LABELS)) {
+      expect(labels).not.toContain(key)
+    }
   })
 
   it('按结果筛选：只带 result，未选的筛选项不传', async () => {
