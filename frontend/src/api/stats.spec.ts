@@ -54,9 +54,46 @@ describe('adminStats', () => {
   it('回包缺字段时回落空集合，不抛', async () => {
     mocks.httpGet.mockResolvedValue({ data: {} })
     const r = await adminStats()
-    expect(r.summary).toEqual({ visit: 0, call: 0, save: 0 })
+    // 八项全在：缺项补 0（后端未跑迁移 0021 时后五项就没有）
+    expect(r.summary).toEqual({
+      visit: 0,
+      call: 0,
+      save: 0,
+      projectView: 0,
+      serviceView: 0,
+      videoPlay: 0,
+      share: 0,
+      posterSave: 0,
+    })
     expect(r.byStaff).toEqual([])
     expect(r.trend).toEqual([])
+    expect(r.topProjects).toEqual([])
+    expect(r.topServices).toEqual([])
+  })
+
+  it('解包内容意向：TOP 榜与意向计数原样透出', async () => {
+    mocks.httpGet.mockResolvedValue({
+      data: {
+        summary: { visit: 10, call: 2, save: 3, projectView: 7, serviceView: 5, videoPlay: 4, share: 6, posterSave: 1 },
+        byStaff: [],
+        trend: [],
+        topProjects: [{ targetId: 3, name: '朗汇车间改造', count: 5 }],
+        topServices: [{ targetId: 9, name: '机电维保', count: 4 }],
+      },
+    })
+    const r = await adminStats()
+    expect(r.summary.projectView).toBe(7)
+    expect(r.summary.posterSave).toBe(1)
+    expect(r.topProjects).toEqual([{ targetId: 3, name: '朗汇车间改造', count: 5 }])
+    expect(r.topServices[0].name).toBe('机电维保')
+  })
+
+  it('老副本只回三项时，意向项按 0 渲染（不出现 undefined / NaN）', async () => {
+    mocks.httpGet.mockResolvedValue({ data: { summary: { visit: 1, call: 2, save: 3 } } })
+    const r = await adminStats()
+    expect(r.summary.projectView).toBe(0)
+    expect(r.summary.share).toBe(0)
+    expect(Number.isNaN(r.summary.videoPlay)).toBe(false)
   })
 })
 
@@ -65,13 +102,14 @@ describe('adminStatsDetail', () => {
     mocks.httpGet.mockReset()
   })
 
-  it('筛选参数一起下沉：staffId/eventType 转成字符串参数', async () => {
+  it('筛选参数一起下沉：staffId/eventType/targetId 转成字符串参数', async () => {
     mocks.httpGet.mockResolvedValue({ data: [], total: 0, page: 1, size: 20 })
     await adminStatsDetail({
       from: '2026-10-01',
       to: '2026-10-07',
       staffId: 3,
-      eventType: 'call',
+      eventType: 'project_view',
+      targetId: 12,
       page: 2,
       size: 50,
     })
@@ -80,19 +118,32 @@ describe('adminStatsDetail', () => {
         from: '2026-10-01',
         to: '2026-10-07',
         staffId: '3',
-        eventType: 'call',
+        eventType: 'project_view',
+        targetId: '12',
         page: '2',
         size: '50',
       },
     })
   })
 
-  it('空筛选不发 staffId/eventType（缺省即不过滤）', async () => {
+  it('空筛选不发 staffId/eventType/targetId（缺省即不过滤）', async () => {
     mocks.httpGet.mockResolvedValue({ data: [], total: 0, page: 1, size: 20 })
     await adminStatsDetail()
     expect(mocks.httpGet).toHaveBeenCalledWith('/admin/stats/detail', {
       params: { page: '1', size: '20' },
     })
+  })
+
+  it('对象名与 targetId 随明细行透出（TOP 榜下钻的「对象」列靠它）', async () => {
+    mocks.httpGet.mockResolvedValue({
+      data: [{ id: 7, staffId: 1, name: '张三', eventType: 'project_view', targetId: 12, targetName: '车间改造' }],
+      total: 1,
+      page: 1,
+      size: 20,
+    })
+    const r = await adminStatsDetail({ targetId: 12 })
+    expect(r.list[0].targetId).toBe(12)
+    expect(r.list[0].targetName).toBe('车间改造')
   })
 
   it('解包分页信封：list/total/page/size，缺字段回落', async () => {

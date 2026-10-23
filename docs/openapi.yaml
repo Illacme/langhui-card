@@ -443,7 +443,24 @@ paths:
   /api/stat/track:
     post:
       tags: [公开内容]
-      summary: 埋点上报（点击类事件）
+      summary: 埋点上报（转化 + 内容意向）
+      description: |
+        事件白名单（权威定义在 `backend/internal/handler/stat.go`）：
+
+        | 事件 | 语义 | targetId |
+        |---|---|---|
+        | visit | 访问名片 | 0 |
+        | call | 点击拨号 | 0 |
+        | save | 点击保存 | 0 |
+        | project_view | 浏览案例详情 | 案例 ID（强制，须与员工同租户） |
+        | service_view | 浏览服务详情 | 服务 ID（强制，须与员工同租户） |
+        | video_play | 播放公司视频 | 0 |
+        | share | 转发（名片 / 案例 / 服务） | 0 或对象 ID（不强制存在） |
+        | poster_save | 保存海报 | 0 |
+
+        公开接口但按 IP 限流 60 次/分（桶键带 `track:` 前缀，与登录限流分桶），
+        并校验员工存在、事件类型在白名单内、强制类事件的 targetId 存在且同租户；
+        不合法一律 code=1（同一句回包，不泄露别家对象是否存在）。
       requestBody:
         required: true
         content:
@@ -457,10 +474,15 @@ paths:
                   format: int64
                 eventType:
                   type: string
-                  example: visit
+                  example: project_view
+                targetId:
+                  type: integer
+                  format: int64
+                  description: 关联对象 ID；0 或不传 = 无对象
+                  example: 12
       responses:
         "200":
-          description: code=0 成功；code=1 参数错误 / 上报失败
+          description: code=0 成功；code=1 参数错误 / 对象不存在 / 上报失败；code=429 限流
 
   # ───────────────────────── 鉴权 ─────────────────────────
   /api/employee/login:
@@ -1128,15 +1150,35 @@ paths:
   /api/admin/stats:
     get:
       tags: [超管-员工管理]
-      summary: 全局名片统计（汇总 + 按员工分组）
+      summary: 全局名片统计（汇总 + 按员工 + 按天趋势 + 内容意向 TOP 榜）
       description: |
-        汇总 visit/call/save 总数，并按员工分组（零数据员工补 0）。
-        与 /api/employee/me/stat（仅本人）互补，供 PC 后台"数据统计"页使用。
+        汇总转化三指标（visit/call/save）+ 内容意向五指标（projectView/serviceView/
+        videoPlay/share/posterSave），并按员工分组（零数据员工补 0）、按天趋势，
+        以及按 `target_id` 聚合的 TOP 案例 / TOP 服务榜。
+
+        TOP 榜对象已删除时 `name` 为「已删除」且**计数不减**——榜单与汇总口径
+        对得上，不会出现「汇总 3 条、榜单加起来 2 条」的对账事故。
+        与 /api/employee/me/stat（仅本人）互补，供 PC 后台「名片统计」页使用。
       security:
         - cookieAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: 起始日期 YYYY-MM-DD（闭区间，缺省 = 全部时间）
+          schema:
+            type: string
+            example: "2026-10-01"
+        - name: to
+          in: query
+          required: false
+          description: 截止日期 YYYY-MM-DD（闭区间，缺省 = 全部时间）
+          schema:
+            type: string
+            example: "2026-10-31"
       responses:
         "200":
-          description: code=0 成功
+          description: code=0 成功；code=1 日期参数错误 / 查询失败
           content:
             application/json:
               schema:
@@ -1149,12 +1191,23 @@ paths:
                     properties:
                       summary:
                         type: object
+                        description: 前三项是转化，后五项（targetId 类事件）是内容意向
                         properties:
                           visit:
                             type: integer
                           call:
                             type: integer
                           save:
+                            type: integer
+                          projectView:
+                            type: integer
+                          serviceView:
+                            type: integer
+                          videoPlay:
+                            type: integer
+                          share:
+                            type: integer
+                          posterSave:
                             type: integer
                       byStaff:
                         type: array
@@ -1176,6 +1229,158 @@ paths:
                               type: integer
                             save:
                               type: integer
+                            projectView:
+                              type: integer
+                            serviceView:
+                              type: integer
+                            videoPlay:
+                              type: integer
+                            share:
+                              type: integer
+                            posterSave:
+                              type: integer
+                      trend:
+                        type: array
+                        description: |
+                          只含范围内有事件的日期（升序）。八项一次给全——前端图例可点选，
+                          勾到哪个指标都要有线（默认只画转化三线）。
+                        items:
+                          type: object
+                          properties:
+                            date:
+                              type: string
+                              example: "2026-10-21"
+                            visit:
+                              type: integer
+                            call:
+                              type: integer
+                            save:
+                              type: integer
+                            projectView:
+                              type: integer
+                            serviceView:
+                              type: integer
+                            videoPlay:
+                              type: integer
+                            share:
+                              type: integer
+                            posterSave:
+                              type: integer
+                      topProjects:
+                        type: array
+                        description: TOP 案例（按 project_view 聚合，最多 10 条）
+                        items:
+                          $ref: "#/components/schemas/StatTopItem"
+                      topServices:
+                        type: array
+                        description: TOP 服务（按 service_view 聚合，最多 10 条）
+                        items:
+                          $ref: "#/components/schemas/StatTopItem"
+
+  /api/admin/stats/export:
+    get:
+      tags: [超管-员工管理]
+      summary: 统计 CSV 导出（与 /api/admin/stats 同口径）
+      description: |
+        同租户隔离、同日期口径。响应为 CSV 文件（`Content-Disposition` 带
+        RFC 5987 中文名），UTF-8 BOM（Excel 直接打开不乱码）+ 公式注入防护
+        （以 = + - @ 开头的单元格前置单引号）。
+        业务失败（含 401）走 HTTP 200 + JSON 信封——调用方按 `content-type`
+        判 `application/json` 再解析 `msg`，不要把错误信封当 CSV 下载。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2026-10-01"
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "2026-10-31"
+      responses:
+        "200":
+          description: 成功返回 CSV；失败返回 JSON 信封 {code:1,msg}
+
+  /api/admin/stats/detail:
+    get:
+      tags: [超管-员工管理]
+      summary: 埋点明细（汇总的下钻）
+      description: |
+        逐条事件，按 id 倒序分页 `{code:0,data,total,page,size}`。
+        与 /api/admin/stats 同租户隔离、同日期口径——两边口径必须一致，
+        否则「汇总 100、明细 105」是最难排查的事故。
+        `targetId` 配 `eventType=project_view|service_view` 用于从 TOP 榜下钻。
+        不在白名单内的 eventType 与坏参数一律 code:1（不静默忽略）。
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: staffId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: eventType
+          in: query
+          required: false
+          description: 事件白名单之一；白名单外 code:1
+          schema:
+            type: string
+            example: project_view
+        - name: targetId
+          in: query
+          required: false
+          description: 内容对象 ID（配 eventType 下钻 TOP 榜）
+          schema:
+            type: integer
+            format: int64
+        - name: page
+          in: query
+          required: false
+          description: 缺省 1；越界由后端夹到末页并回传夹后的 page
+          schema:
+            type: integer
+        - name: size
+          in: query
+          required: false
+          description: 缺省 20，上限 100
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: code=0 成功；code=1 参数错误
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    $ref: "#/components/schemas/Code"
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/StatDetailItem"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  size:
+                    type: integer
 
   # ───────────────────────── 超管-内容管理 ─────────────────────────
   /api/admin/company-info:
@@ -2816,11 +3021,54 @@ components:
           type: string
           format: date-time
 
-# ───────────────────────── 公共数据结构 ─────────────────────────
-# 说明：本文件其余部分沿用「就地内联 schema」的写法，只有安装向导的请求体
-# 被两条路径共用（/api/setup/test 与 /api/setup/install），故单独抽取。
-components:
-  schemas:
+    StatTopItem:
+      type: object
+      description: |
+        内容意向 TOP 榜的一行：按 target_id 聚合出的对象与次数。
+        对象被删除时 name 为「已删除」且计数不减（与汇总口径对得上）。
+      properties:
+        targetId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: 车间改造
+        count:
+          type: integer
+
+    StatDetailItem:
+      type: object
+      description: 埋点明细的一行（汇总的下钻）
+      properties:
+        id:
+          type: integer
+          format: int64
+        staffId:
+          type: integer
+          format: int64
+        name:
+          type: string
+        eventType:
+          type: string
+          enum:
+            [visit, call, save, project_view, service_view, video_play, share, poster_save]
+        statDate:
+          type: string
+          example: "2026-10-22"
+        createdAt:
+          type: string
+          description: "YYYY-MM-DD HH:mm:ss，已按服务端 TZ 格式化"
+          example: "2026-10-22 14:30:00"
+        targetId:
+          type: integer
+          format: int64
+          description: 关联对象 ID；0 = 无对象
+        targetName:
+          type: string
+          description: 对象名；无对象为「—」，已删除对象为「已删除」
+
+    # 安装向导请求体：被 /api/setup/test 与 /api/setup/install 两条路径共用，
+    # 本文件其余部分沿用「就地内联 schema」的写法，故这里单独抽取。
     SetupInstallReq:
       type: object
       description: 安装/测试连接的扁平表单，与后端 `setup.InstallReq` 字段一一对应

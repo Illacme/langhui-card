@@ -1,9 +1,20 @@
 <template>
   <div class="stat-trend">
     <div class="trend-legend">
-      <span v-for="s in seriesDef" :key="s.key" class="legend-item">
+      <!-- 图例可点选：八条线挤在一张图上会互相盖住，故默认只画转化三线，
+           需要看意向趋势时再勾。至少保留一项——全灭就没图可看了 -->
+      <span
+        v-for="s in seriesDef"
+        :key="s.key"
+        class="legend-item"
+        :class="{ 'legend-off': !isOn(s.key) }"
+        role="button"
+        :aria-pressed="isOn(s.key)"
+        @click="toggle(s.key)"
+      >
         <i class="dot" :style="{ background: s.color }" />{{ s.label }}
       </span>
+      <span class="trend-hint">点击图例切换指标</span>
       <span v-if="points.length" class="trend-range">{{ rangeText }}</span>
     </div>
     <svg
@@ -42,8 +53,8 @@
         :y="H - 8"
         text-anchor="middle"
       >{{ x.label }}</text>
-      <!-- 访问量的面积底（只给主指标，避免三条面积互相盖） -->
-      <polygon v-if="points.length > 1" class="area" :points="areaPoints" />
+      <!-- 面积底只给当前首条激活的系列（多条面积会互相盖住） -->
+      <polygon v-if="points.length > 1" class="area" :points="areaPoints" :style="{ fill: areaColor }" />
       <!-- 三条折线：non-scaling-stroke 保证 viewBox 缩放后线宽不跟着变 -->
       <polyline
         v-for="s in series"
@@ -90,13 +101,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
+// 一天一行：前三项是转化，后五项（带 targetId 的内容事件）是意向。
+// 意向项用可选字段——老副本（后端未跑迁移 0021 / 未升级）不回这几项时按 0 画，
+// 而不是画出 undefined 的 NaN 坐标。
 export interface TrendPoint {
   date: string
   visit: number
   call: number
   save: number
+  projectView?: number
+  serviceView?: number
+  videoPlay?: number
+  share?: number
+  posterSave?: number
 }
 
 const props = defineProps<{ points: TrendPoint[] }>()
@@ -109,18 +128,52 @@ const PAD = { l: 44, r: 16, t: 16, b: 28 }
 const plotW = W - PAD.l - PAD.r
 const plotH = H - PAD.t - PAD.b
 
-type SeriesKey = 'visit' | 'call' | 'save'
+type SeriesKey =
+  | 'visit'
+  | 'call'
+  | 'save'
+  | 'projectView'
+  | 'serviceView'
+  | 'videoPlay'
+  | 'share'
+  | 'posterSave'
+// 转化三色与汇总卡 / 明细标签同源（访问蓝 / 拨号绿 / 保存橙）；
+// 后五项统一走紫青粉系，一眼能分出「转化」与「意向」两组
 const seriesDef: { key: SeriesKey; label: string; color: string }[] = [
   { key: 'visit', label: '访问', color: '#409eff' },
   { key: 'call', label: '拨号', color: '#67c23a' },
   { key: 'save', label: '保存', color: '#e6a23c' },
+  { key: 'projectView', label: '案例浏览', color: '#9254de' },
+  { key: 'serviceView', label: '服务浏览', color: '#36cfc9' },
+  { key: 'videoPlay', label: '视频播放', color: '#f759ab' },
+  { key: 'share', label: '转发', color: '#ff9c6e' },
+  { key: 'posterSave', label: '海报保存', color: '#597ef7' },
 ]
 
+// 默认只画转化三线：八条全开在窄屏上会糊成一团，而多数时候看的就是这三条
+const active = ref<SeriesKey[]>(['visit', 'call', 'save'])
+function isOn(k: SeriesKey): boolean {
+  return active.value.includes(k)
+}
+function toggle(k: SeriesKey) {
+  if (isOn(k)) {
+    // 不允许全部关掉：最后一个激活项点了也不生效（再点一次就变空图）
+    if (active.value.length <= 1) return
+    active.value = active.value.filter((x) => x !== k)
+  } else {
+    active.value = [...active.value, k]
+  }
+}
+
 // 纵轴上限至少为 1：全零时分母不能是 0，且「有数据但都是 0」与「无数据」
-// 在图上要有区别（前者画一条贴底的线，后者走空态文案）
-const maxValue = computed(() =>
-  Math.max(1, ...props.points.flatMap((p) => [p.visit, p.call, p.save]))
-)
+// 在图上要有区别（前者画一条贴底的线，后者走空态文案）。
+// 只按**当前激活**的系列取最大值：勾掉访问后纵轴应重新贴合其余线，
+// 否则剩下的线会被压成贴底的一条直线（等于数据「消失」了）。
+const maxValue = computed(() => {
+  const vals: number[] = []
+  for (const p of props.points) for (const k of active.value) vals.push(p[k] || 0)
+  return Math.max(1, ...vals)
+})
 
 // 横坐标按索引均分（不是按日期）：缺事件的日期不占位，
 // 由后端只回有事件的日期、前端按序连点，避免两边各写一套日期推导。
@@ -128,19 +181,22 @@ const xOf = (i: number) =>
   props.points.length <= 1 ? PAD.l + plotW / 2 : PAD.l + (i * plotW) / (props.points.length - 1)
 const yOf = (v: number) => PAD.t + plotH - (v / maxValue.value) * plotH
 
+// 只画当前激活的系列（顺序固定，不随勾选顺序变——否则线色会跳）
 const series = computed(() =>
-  seriesDef.map((s) => {
-    const dots = props.points.map((p, i) => ({
-      x: xOf(i),
-      y: yOf(p[s.key] || 0),
-      date: p.date,
-      value: p[s.key] || 0,
-    }))
-    return { ...s, dots, points: dots.map((d) => `${d.x},${d.y}`).join(' ') }
-  })
+  seriesDef
+    .filter((s) => isOn(s.key))
+    .map((s) => {
+      const dots = props.points.map((p, i) => ({
+        x: xOf(i),
+        y: yOf(p[s.key] || 0),
+        date: p.date,
+        value: p[s.key] || 0,
+      }))
+      return { ...s, dots, points: dots.map((d) => `${d.x},${d.y}`).join(' ') }
+    })
 )
 
-// 面积底 = 折线 + 回到底边两个角的多边形
+// 面积底 = 折线 + 回到底边两个角的多边形（颜色跟随首条激活系列）
 const areaPoints = computed(() => {
   const s = series.value[0]
   if (!s || props.points.length < 2) return ''
@@ -148,11 +204,23 @@ const areaPoints = computed(() => {
   const back = props.points.map((_, i) => `${xOf(i)},${base}`).reverse().join(' ')
   return `${s.points} ${back}`
 })
+const areaColor = computed(() => {
+  const s = series.value[0]
+  return s ? hexToRgba(s.color, 0.08) : 'transparent'
+})
+// 面积色用同色 8% 透明：写死蓝色在「只勾案例浏览」时会变成蓝配紫
+function hexToRgba(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`
+}
 
-// 点击热区（每日期一个，不随系列重复）：锚在访问系列的 y 上
-const hitDots = computed(() =>
-  props.points.map((p, i) => ({ x: xOf(i), y: yOf(p.visit || 0), date: p.date }))
-)
+// 点击热区（每日期一个，不随系列重复）：锚在当前首条激活系列上，
+// 全部关掉访问后仍能点到（从前锚死在 visit 上，勾掉访问就点不动了）
+const hitDots = computed(() => {
+  const s = series.value[0]
+  if (!s) return []
+  return s.dots.map((d) => ({ x: d.x, y: d.y, date: d.date }))
+})
 
 const gridYs = computed(() => {
   const m = maxValue.value
@@ -185,7 +253,8 @@ const rangeText = computed(() => {
 .trend-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px 16px;
+  flex-wrap: wrap; /* 八项图例 + 提示 + 区间，窄屏要能换行而不是挤出容器 */
   margin-bottom: 4px;
   font-size: 13px;
   color: #606266;
@@ -194,6 +263,17 @@ const rangeText = computed(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+/* 未勾选的指标留着色号但压暗：用户能看出「还有哪些可勾」 */
+.legend-off {
+  opacity: 0.38;
+}
+.trend-hint {
+  color: #c0c4cc;
+  font-size: 12px;
 }
 .dot {
   width: 8px;
@@ -219,8 +299,8 @@ const rangeText = computed(() => {
   fill: #909399;
   font-size: 11px;
 }
+/* fill 由内联样式按当前首条激活系列的色号给出（写死蓝在只勾意向时会配色打架） */
 .area {
-  fill: rgba(64, 158, 255, 0.08);
   stroke: none;
 }
 .hit-dot {

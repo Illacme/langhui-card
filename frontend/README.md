@@ -132,6 +132,20 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 > 采用**前端分页 + 搜索**（对已在内存中的列表做筛选/切片），与《三端联调与接口总表》§2.3「当前版本列表接口不分页（数据量小，运营型后台可接受）」的定位一致，无需改动后端接口契约。若日后数据量显著增长，可平滑改为服务端分页（后端加 `?page&size&keyword` 并返回 `{list,total}`），前端仅替换 `useTable` 的数据源即可。
 
+## 名片统计页（Stats）
+
+`src/views/Stats.vue` + `StatTrend.vue` + `StatDetail.vue`，一层比一层细：
+
+- **汇总卡**：转化三卡（访问 / 拨号 / 保存）+ 内容意向五卡（案例浏览 / 服务浏览 / 视频播放 / 转发 / 海报保存）。
+- **趋势图**：一次拿八项指标，**图例可点选**（默认只画转化三线——八条全开会糊成一团），
+  勾掉大值系列后纵轴按激活系列重算（否则剩下的线被压成贴底直线）；点某天下钻当天明细。
+- **内容意向 TOP 榜**：案例 / 服务两张榜，按 `target_id` 聚合，点某行下钻该对象的明细
+  （预选 `eventType` + `targetId`，抽屉里是可关闭的「对象」筛选标签）。
+- **员工表**：转化三列 + 一列「内容意向」（五类之和，悬浮看拆分，可排序）——
+  做成一列而不是五列，避免表格被推到 1200px+ 需要横向滚动；细分走行「明细」下钻。
+- **口径一致性**：明细与汇总同日期范围、同租户（抽屉不自带日期选择器，跟随主页），
+  TOP 榜对象删除后显示「已删除」但计数不减，避免「汇总 100、明细 105」这类对账事故。
+
 ## 富文本编辑器（wangEditor）
 
 `项目案例.详情` 与 `业务服务.内容` 使用可视化富文本编辑器 `src/components/RichEditor.vue`（基于 wangEditor v5 + `@wangeditor/editor-for-vue`），替换了原先的纯 textarea。
@@ -155,6 +169,17 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/api/request.spec.ts`：统一响应拦截的**鉴权契约**——`code=0` 透传、`code=401` 清 token + 跳登录并重 reject、`code=403` 警告、`code!=0` 业务失败报错；以及请求拦截注入 `Bearer` 头。
 - `src/editor/wxVideoModule.spec.ts`：`<wx-video feed-id / channel-id>` 块「仅注册一次」及其序列化/反解析契约（与小程序端 `rich-video` 一致），含**存量只有 channel-id 的内容往返不丢失**。
 - `src/views/Login.spec.ts`：登录页视图层用例——表单校验提示、登录成功后写 Pinia + 跳转、`code=401` 时展示错误并不写登录态（jsdom + Element Plus 组件挂载）。
+- `src/api/stats.spec.ts`（16 例）：统计接口的解包契约——日期范围参数、分页信封、
+  TOP 榜与意向计数透出、**老副本缺项按 0 兜底（不出现 undefined / NaN）**、
+  筛选参数字符串化、CSV 文件名解析（RFC 5987 / 回落 / 坏编码）。
+- `src/views/Stats.spec.ts`（19 例）：统计页——汇总与意向卡渲染、日期范围与导出、
+  **TOP 双榜数据与点行下钻（带上 eventType + targetId + 对象名，且不筛员工）**、
+  **员工「明细」不残留上次下钻的预选**、员工表「内容意向」合计列与悬浮拆分、空态文案。
+- `src/components/StatDetail.spec.ts`（14 例）：明细抽屉——打开即查、筛选下沉服务端、
+  回包页码被夹后分页栏同步、**TOP 榜下钻的 eventType + targetId 预置与对象标签清除**、
+  事件下拉覆盖八类、对象列渲染。
+- `src/components/StatTrend.spec.ts`（13 例）：趋势图几何与交互——折线连点、轴刻度、
+  **图例点选（默认三线 / 勾选后纵轴重算 / 最后一项点不掉）**、tooltip、空态与 NaN 兜底。
 - `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
 - `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**、**风格行只渲染 count>0 的档位**、**切换风格带 style 请求**、**单一调性分类隐藏风格行**、**已选调性无素材时自动回落全部**（11 例）。
 - `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
@@ -185,16 +210,18 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
   覆盖「带 staffId 进入」「**扫码 scene 解析**（含混参 / 无参归 0）」「头像与小程序码转绝对 URL」
   「小程序码接口无 data 时不崩」。选它是因为 scene 解析只在真机扫码才走得到，本地开发永远复现不了。
 
-其余 9 个页面（共 125 例）用同一套手法，公共桩在 `miniprogram/tests/helpers/harness.ts`
+其余 11 个 spec（共 151 例）用同一套手法，公共桩在 `miniprogram/tests/helpers/harness.ts`
 （`installPageCapture` / `makeInstance` / `installWx` / `installApp` / `flush`）：
 
-- `index_home.spec.ts`（31 例）：scene 与 `globalData.myStaffId` 解析、自定义顶栏避让、四次并行请求的**根级**字段拼装、停用/不存在/异常三态、**访问埋点去重**、查看案例「滚动 or 跳转」、分享标题与路径、顶部遮罩渐变与 0.01 死区。
+- `index_home.spec.ts`（33 例）：scene 与 `globalData.myStaffId` 解析、自定义顶栏避让、四次并行请求的**根级**字段拼装、停用/不存在/异常三态、**访问埋点去重**、**分享埋点（多次分享各计一次）**、查看案例「滚动 or 跳转」、分享标题与路径、顶部遮罩渐变与 0.01 死区。
 - `apply_open.spec.ts`（17 例）：企业名简称回落、头像上传三种响应（成功 / 业务错误 / 非 JSON）、昵称授权、提交校验与 `saving` 复位、返回兜底。
 - `employee_me.spec.ts`（14 例）：未登录与失效回退、头像绝对化 + `globalData` 回写、改密三条校验、**改密成功后延时静默登出**、退出清两个令牌。
 - `employee_edit.spec.ts`（13 例）：回填与头像绝对化、备用手机号**收起即清空**、上传三条支线、提交待审。
 - `project_list.spec.ts`（15 例）：分类根级、`toView` 滚动定位、标题回显与三种回落、切换分类去重。
-- `project_detail.spec.ts`（12 例）/ `service_detail.spec.ts`（8 例）：绝对 URL、富文本片段、时间格式化、空态文案、分享回带 `companyId`、相册预览。
+- `project_detail.spec.ts`（16 例）/ `service_detail.spec.ts`（11 例）：绝对 URL、富文本片段、时间格式化、空态文案、分享回带 `companyId`、相册预览、**加载成功上报 view 埋点（失败/不存在不上报）**、**分享上报 share 且带 targetId**。
 - `employee_login.spec.ts`（9 例）/ `employee_stat.spec.ts`（6 例）：空值校验、成功/失败/401 分流、`submitting` 复位。
+- `track.spec.ts`（5 例）：埋点统一入口——带 targetId、**targetId 为 0 时省略字段（保持老载荷形状）**、staffId=0 丢弃、白名单外丢弃、请求失败静默。
+- `company_video.spec.ts`（12 例）：视频档位选择六例 + **video_play 去重上报** + staffId 缺失时丢弃。
 
 配置见 `vitest.config.ts`（jsdom 环境 + `@` 别名 + vue 插件 + 小程序 spec 纳管）。运行：
 

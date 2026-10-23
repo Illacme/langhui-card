@@ -12,15 +12,43 @@ import { ElMessage } from 'element-plus'
 
 const mocks = vi.hoisted(() => ({
   adminStats: vi.fn(async () => ({
-    summary: { visit: 12, call: 3, save: 5 },
+    summary: {
+      visit: 12,
+      call: 3,
+      save: 5,
+      projectView: 7,
+      serviceView: 4,
+      videoPlay: 2,
+      share: 6,
+      posterSave: 1,
+    },
     byStaff: [
-      { staffId: 1, name: '张三', title: '工程师', visit: 7, call: 2, save: 3 },
-      { staffId: 2, name: '李四', title: '销售', visit: 5, call: 1, save: 2 },
+      // 意向分项也带上：表格「内容意向」列是它们的合计（张三 11 / 李四 9）
+      {
+        staffId: 1, name: '张三', title: '工程师', visit: 7, call: 2, save: 3,
+        projectView: 4, serviceView: 2, videoPlay: 1, share: 3, posterSave: 1,
+      },
+      {
+        staffId: 2, name: '李四', title: '销售', visit: 5, call: 1, save: 2,
+        projectView: 3, serviceView: 2, videoPlay: 1, share: 3, posterSave: 0,
+      },
     ],
+    // 后端趋势一次给八项（前端图例可点选），这里带上意向项验透传
     trend: [
-      { date: '2026-10-21', visit: 4, call: 1, save: 2 },
-      { date: '2026-10-22', visit: 8, call: 2, save: 3 },
+      {
+        date: '2026-10-21', visit: 4, call: 1, save: 2,
+        projectView: 2, serviceView: 1, videoPlay: 0, share: 3, posterSave: 1,
+      },
+      {
+        date: '2026-10-22', visit: 8, call: 2, save: 3,
+        projectView: 5, serviceView: 3, videoPlay: 2, share: 3, posterSave: 0,
+      },
     ],
+    topProjects: [
+      { targetId: 3, name: '车间改造', count: 5 },
+      { targetId: 4, name: '配电升级', count: 2 },
+    ],
+    topServices: [{ targetId: 9, name: '机电维保', count: 4 }],
   })),
   adminStatsDetail: vi.fn(async () => ({ list: [], total: 0, page: 1, size: 20 })),
   exportStatsCsv: vi.fn(async () => {}),
@@ -66,11 +94,19 @@ const TableRow = defineComponent({
 const ElTable = defineComponent({
   name: 'ElTable',
   props: ['data', 'border', 'stripe'],
-  setup(props, { slots }) {
+  emits: ['row-click'],
+  setup(props, { slots, emit }) {
     return () =>
       h(
         'div',
-        { class: 'el-table' },
+        {
+          class: 'el-table',
+          // 点表格即当作点了第一行（TOP 榜靠 row-click 下钻，桩只需能发出事件）
+          onClick: () => {
+            const row = (props.data || [])[0]
+            if (row) emit('row-click', row)
+          },
+        },
         (props.data || []).map((row: any, i: number) =>
           h(TableRow, { key: i, row }, () => (slots.default ? slots.default() : null))
         )
@@ -102,12 +138,20 @@ const StatTrendStub = defineComponent({
 })
 
 // 明细抽屉同样有自己的单测（StatDetail.spec.ts）；这里把 props 暴露到
-// data 属性上，方便断言「打开时带了哪个员工 / 哪个日期范围」
+// data 属性上，方便断言「打开时带了哪个员工 / 哪个事件类型 / 哪个对象」
 const StatDetailStub = defineComponent({
   name: 'StatDetail',
-  props: ['open', 'range', 'staffs', 'staffId'],
+  props: ['open', 'range', 'staffs', 'staffId', 'eventType', 'targetId', 'targetName'],
   emits: ['update:open'],
-  template: `<div class="stat-detail-stub" :data-open="String(open)" :data-staff-id="String(staffId)" />`,
+  template: `<div class="stat-detail-stub" :data-open="String(open)" :data-staff-id="String(staffId)"
+    :data-event-type="String(eventType)" :data-target-id="String(targetId)" :data-target-name="String(targetName)" />`,
+})
+
+// 悬浮提示桩：只渲染默认槽，content 走 props（便于断言「内容意向」列的拆分文案）
+const ElTooltip = defineComponent({
+  name: 'ElTooltip',
+  props: ['content', 'placement'],
+  template: `<span class="el-tooltip"><slot /></span>`,
 })
 
 const mountOpts = {
@@ -120,6 +164,7 @@ const mountOpts = {
       'el-table-column': ElTableColumn,
       'el-pagination': ElPagination,
       'el-date-picker': ElDatePicker,
+      'el-tooltip': ElTooltip,
       StatTrend: StatTrendStub,
       StatDetail: StatDetailStub,
     },
@@ -132,6 +177,17 @@ async function flushLoad(w: ReturnType<typeof mount>) {
   await nextTick()
   await nextTick()
   await nextTick()
+}
+
+// 页面上有三张表（TOP 案例 / TOP 服务 / 员工），按数据行特征区分：
+// TOP 榜行带 targetId，员工行带 staffId
+function tablesOf(w: ReturnType<typeof mount>) {
+  const all = w.findAllComponents(ElTable)
+  const rows = (t: (typeof all)[number]): any[] => t.props('data') || []
+  return {
+    top: all.filter((t) => rows(t).some((r) => r.targetId !== undefined)), // 模板顺序：案例在前、服务在后
+    staff: all.find((t) => rows(t).some((r) => r.staffId !== undefined))!,
+  }
 }
 
 describe('Stats', () => {
@@ -167,21 +223,32 @@ describe('Stats', () => {
 
     await w.find('input.el-input').setValue('销售')
     await nextTick()
-    expect(w.findComponent(ElTable).props('data')).toHaveLength(1)
-    expect(w.findComponent(ElTable).props('data')[0].name).toBe('李四')
+    // 取员工表（页面现在有三张表，第一张是 TOP 案例榜）
+    expect(tablesOf(w).staff.props('data')).toHaveLength(1)
+    expect(tablesOf(w).staff.props('data')[0].name).toBe('李四')
     // 汇总卡片不受筛选影响（汇总来自接口，不是前端累加当前页）
     expect(w.text()).toContain('12')
   })
 
-  it('列定义含编号/姓名/职位/访问/拨号/保存/操作七个列', async () => {
+  it('员工列定义含编号/姓名/职位/访问/拨号/保存/内容意向/操作八个列', async () => {
     const w = mount(Stats, mountOpts)
     await flushLoad(w)
 
-    // 注意：stub 的 ElTable 会为每一行各渲染一次列，故先去重再比对顺序
+    // 注意：stub 的 ElTable 会为每一行各渲染一次列，故先去重再比对顺序；
+    // 且页面现在有三张表，这里只取员工表（TOP 榜列是另一套）
     const labels = [
-      ...new Set(w.findAllComponents(ElTableColumn).map((c) => c.props('label'))),
+      ...new Set(tablesOf(w).staff.findAllComponents(ElTableColumn).map((c) => c.props('label'))),
     ]
-    expect(labels).toEqual(['编号', '姓名', '职位', '访问', '拨号', '保存', '操作'])
+    expect(labels).toEqual([
+      '编号',
+      '姓名',
+      '职位',
+      '访问',
+      '拨号',
+      '保存',
+      '内容意向',
+      '操作',
+    ])
   })
 
   it('选日期范围后按 from/to 重新查询，范围文案同步更新', async () => {
@@ -316,5 +383,126 @@ describe('Stats', () => {
       from: '2026-10-01',
       to: '2026-10-07',
     })
+  })
+
+  it('内容意向五卡渲染（案例/服务/视频/转发/海报）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    const text = w.text()
+    // 标题 + 数值成对出现，避免「数字凑巧在别处出现」的假通过
+    expect(text).toContain('案例浏览')
+    expect(text).toContain('服务浏览')
+    expect(text).toContain('视频播放')
+    expect(text).toContain('转发')
+    expect(text).toContain('海报保存')
+    // 数值取自汇总（7/4/2/6/1），且不与转化三卡的 12/3/5 混淆：
+    // 意向卡区块内的顺序是固定的，取该区块文本比对
+    const intent = w.find('.intent-block').text()
+    expect(intent).toContain('7')
+    expect(intent).toContain('4')
+    expect(intent).toContain('2')
+    expect(intent).toContain('6')
+    expect(intent).toContain('1')
+    expect(intent).not.toContain('undefined')
+  })
+
+  it('TOP 榜渲染案例与服务两张榜（名称 + 次数）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    const { top } = tablesOf(w)
+    expect(top).toHaveLength(2) // 案例榜 + 服务榜
+    expect(top[0].props('data')).toEqual([
+      { targetId: 3, name: '车间改造', count: 5 },
+      { targetId: 4, name: '配电升级', count: 2 },
+    ])
+    expect(top[1].props('data')).toEqual([{ targetId: 9, name: '机电维保', count: 4 }])
+    // 榜上文字可见（案例名 / 服务名）
+    expect(w.text()).toContain('车间改造')
+    expect(w.text()).toContain('机电维保')
+    expect(w.text()).toContain('TOP 案例浏览')
+    expect(w.text()).toContain('TOP 服务浏览')
+  })
+
+  it('点 TOP 案例某行下钻：抽屉预选 eventType=project_view + 该案例', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    await tablesOf(w).top[0].trigger('click')
+    await nextTick()
+
+    const drawer = w.findComponent(StatDetailStub)
+    expect(drawer.props('open')).toBe(true)
+    expect(drawer.props('eventType')).toBe('project_view')
+    expect(drawer.props('targetId')).toBe(3)
+    expect(drawer.props('targetName')).toBe('车间改造')
+    // 榜单是租户级聚合，下钻不筛员工——否则看不到「这个案例吸引了多少人」
+    expect(drawer.props('staffId')).toBe(0)
+  })
+
+  it('点 TOP 服务某行下钻：抽屉预选 service_view + 该服务', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    await tablesOf(w).top[1].trigger('click')
+    await nextTick()
+
+    const drawer = w.findComponent(StatDetailStub)
+    expect(drawer.props('eventType')).toBe('service_view')
+    expect(drawer.props('targetId')).toBe(9)
+    expect(drawer.props('targetName')).toBe('机电维保')
+  })
+
+  it('员工行「明细」不带事件/对象筛选（不残留上次下钻的预选）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    // 先下钻一次，再回到员工行——筛选必须被清干净
+    await tablesOf(w).top[0].trigger('click')
+    await nextTick()
+    const rowBtn = w.findAll('button').find((b) => b.text() === '明细')!
+    await rowBtn.trigger('click')
+    await nextTick()
+
+    const drawer = w.findComponent(StatDetailStub)
+    expect(drawer.props('staffId')).toBe(1)
+    expect(drawer.props('eventType')).toBe('')
+    expect(drawer.props('targetId')).toBe(0)
+  })
+
+  it('员工表「内容意向」列是五类之和，悬浮给拆分', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    // 张三 4+2+1+3+1 = 11
+    const rows = tablesOf(w).staff.props('data') as any[]
+    expect(rows[0].intent).toBe(11)
+    expect(rows[1].intent).toBe(9) // 李四 3+2+1+3+0
+
+    // 单元格渲染的是合计数
+    const cells = w.findAll('.intent-cell').map((c) => c.text())
+    expect(cells).toContain('11')
+    // 悬浮文案给出五类拆分（省掉五列表格）
+    const tips = w.findAllComponents(ElTooltip).map((t) => t.props('content'))
+    expect(tips).toContain('案例浏览 4 · 服务浏览 2 · 视频播放 1 · 转发 3 · 海报保存 1')
+  })
+
+  it('TOP 榜无数据时显示空态文案（不像加载失败）', async () => {
+    vi.mocked(adminStats).mockResolvedValueOnce({
+      summary: {
+        visit: 0, call: 0, save: 0,
+        projectView: 0, serviceView: 0, videoPlay: 0, share: 0, posterSave: 0,
+      },
+      byStaff: [],
+      trend: [],
+      topProjects: [],
+      topServices: [],
+    })
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    expect(w.text()).toContain('范围内暂无案例浏览')
+    expect(w.text()).toContain('范围内暂无服务浏览')
   })
 })

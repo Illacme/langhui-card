@@ -24,21 +24,25 @@ const ElDrawer = defineComponent({
   emits: ['update:modelValue'],
   template: `<div class="el-drawer" v-if="modelValue"><slot /></div>`,
 })
+// 渲染默认槽：否则 ElOption 永远不会被实例化，无法断言候选覆盖了哪些事件类型
 const ElSelect = defineComponent({
   name: 'ElSelect',
   props: ['modelValue', 'placeholder', 'clearable'],
   emits: ['change'],
-  template: `<div class="el-select" />`,
+  template: `<div class="el-select"><slot /></div>`,
 })
 const ElOption = defineComponent({
   name: 'ElOption',
   props: ['label', 'value'],
   template: `<div class="el-option" />`,
 })
+// closable 要按 Boolean 声明（与真实 ElTag 一致）：数组式声明下 `closable`
+// 这种无值属性传进来是空字符串，恒为假——桩与真实组件行为不一致就会假通过
 const ElTag = defineComponent({
   name: 'ElTag',
-  props: ['type', 'size'],
-  template: `<span class="el-tag"><slot /></span>`,
+  props: { type: String, size: String, closable: Boolean },
+  emits: ['close'],
+  template: `<span class="el-tag"><slot /><span v-if="closable" class="el-tag-close" @click="$emit('close')">×</span></span>`,
 })
 const ElPagination = defineComponent({
   name: 'ElPagination',
@@ -135,6 +139,7 @@ describe('StatDetail', () => {
       to: '2026-10-07',
       staffId: 1,
       eventType: undefined,
+      targetId: undefined,
       page: 1,
       size: 20,
     })
@@ -224,7 +229,61 @@ describe('StatDetail', () => {
     expect(w.findComponent(ElPagination).props('currentPage')).toBe(1)
   })
 
-  it('正常渲染明细行：时间 / 编号 / 姓名 / 事件标签', async () => {
+  it('TOP 榜下钻：eventType + targetId 一起下传，并展示对象筛选标签', async () => {
+    const w = mountDetail({ eventType: 'project_view', targetId: 12, targetName: '车间改造' })
+    await flush(w)
+
+    expect(vi.mocked(adminStatsDetail)).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'project_view', targetId: 12 })
+    )
+    // 对象标签说明「筛了什么」——不然用户只看到行数变少，不知道为什么
+    const chip = w.findAllComponents(ElTag).find((c) => c.props('closable'))
+    expect(chip).toBeTruthy()
+    expect(chip!.text()).toContain('车间改造')
+    // 事件类型选择器同步预置（用户能看到当前是「案例浏览」口径）
+    expect(w.findAllComponents(ElSelect)[1].props('modelValue')).toBe('project_view')
+  })
+
+  it('没有对象名时标签退化成 #ID（不显示空白让用户猜）', async () => {
+    const w = mountDetail({ eventType: 'service_view', targetId: 9 })
+    await flush(w)
+    const chip = w.findAllComponents(ElTag).find((c) => c.props('closable'))
+    expect(chip!.text()).toContain('#9')
+  })
+
+  it('去掉对象标签：回到该事件类型的全部记录（事件类型不动）', async () => {
+    const w = mountDetail({ eventType: 'project_view', targetId: 12, targetName: '车间改造' })
+    await flush(w)
+
+    const chip = w.findAllComponents(ElTag).find((c) => c.props('closable'))!
+    await chip.find('.el-tag-close').trigger('click')
+    await flush(w)
+
+    expect(vi.mocked(adminStatsDetail)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ eventType: 'project_view', targetId: undefined })
+    )
+    // 标签已消失（不再有可关闭的标签）
+    expect(w.findAllComponents(ElTag).find((c) => c.props('closable'))).toBeFalsy()
+  })
+
+  it('事件类型下拉覆盖八类（与后端白名单同源）', async () => {
+    const w = mountDetail()
+    await flush(w)
+
+    // stub 里 ElOption 是独立组件，从渲染出的 option 数断言覆盖了全部事件类型
+    expect(w.findAllComponents(ElOption).map((o) => o.props('value'))).toEqual([
+      'visit',
+      'call',
+      'save',
+      'project_view',
+      'service_view',
+      'video_play',
+      'share',
+      'poster_save',
+    ])
+  })
+
+  it('正常渲染明细行：时间 / 编号 / 姓名 / 事件标签 / 对象', async () => {
     vi.mocked(adminStatsDetail).mockResolvedValueOnce({
       list: [
         {
@@ -234,6 +293,8 @@ describe('StatDetail', () => {
           eventType: 'visit',
           statDate: '2026-10-22',
           createdAt: '2026-10-22 14:30:00',
+          targetId: 0,
+          targetName: '—',
         },
         {
           id: 8,
@@ -242,9 +303,21 @@ describe('StatDetail', () => {
           eventType: 'call',
           statDate: '2026-10-22',
           createdAt: '2026-10-22 15:05:12',
+          targetId: 0,
+          targetName: '—',
+        },
+        {
+          id: 9,
+          staffId: 2,
+          name: '李四',
+          eventType: 'project_view',
+          statDate: '2026-10-22',
+          createdAt: '2026-10-22 15:06:00',
+          targetId: 12,
+          targetName: '车间改造',
         },
       ],
-      total: 2,
+      total: 3,
       page: 1,
       size: 20,
     })
@@ -256,6 +329,9 @@ describe('StatDetail', () => {
     expect(w.text()).toContain('访问')
     expect(w.text()).toContain('李四')
     expect(w.text()).toContain('拨号')
+    // 内容事件：事件名与对象名都要看得见
+    expect(w.text()).toContain('案例浏览')
+    expect(w.text()).toContain('车间改造')
   })
 
   it('空结果显示空态文案（不当成加载失败）', async () => {
