@@ -78,16 +78,31 @@ const DefaultPurgeInterval = 6 * time.Hour
 //
 // 清理失败只记日志、不中断循环：下一次 tick 会重试，且失败不影响任何吊销语义
 // （黑名单行留着只会更保守，不会误放行）。interval <= 0 时回退默认间隔。
+//
+// stop() 返回时清理协程必然已退出（内部等待其退出信号），因此
+// 「停止之后不会再有任何一次 DELETE」是硬保证，而不是时序上的运气：
+// 若只 close(done) 就返回，协程可能正停在 select 上且 tick 与 done 同时就绪
+// ——Go 的 select 在多个 case 就绪时随机选，于是 stop() 已返回却仍执行一次清理。
+// 这在 macOS 上测不出来（调度恰好绕开），在 Linux CI 上稳定复现。
 func StartExpiredSessionPurge(db *gorm.DB, interval time.Duration) (stop func()) {
 	if interval <= 0 {
 		interval = DefaultPurgeInterval
 	}
 	ticker := time.NewTicker(interval)
 	done := make(chan struct{})
+	stopped := make(chan struct{})
 	var once sync.Once
 	go func() {
 		defer ticker.Stop()
+		defer close(stopped)
 		for {
+			// 先非阻塞地看一眼停止信号：已停止就别再等下一次 tick，
+			// 免得多做一次没有意义的 DELETE（关停/热重载后不该再动数据库）。
+			select {
+			case <-done:
+				return
+			default:
+			}
 			select {
 			case <-ticker.C:
 				n, err := PurgeExpiredSessions(db)
@@ -103,5 +118,10 @@ func StartExpiredSessionPurge(db *gorm.DB, interval time.Duration) (stop func())
 			}
 		}
 	}()
-	return func() { once.Do(func() { close(done) }) }
+	return func() {
+		once.Do(func() {
+			close(done)
+			<-stopped // 等到协程真正退出，stop() 之后不可能再有清理动作
+		})
+	}
 }

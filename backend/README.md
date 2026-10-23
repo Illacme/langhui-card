@@ -431,7 +431,11 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   不必依赖真实 MySQL 就能守住升级自动迁移的核心语义。
 - `internal/repository/session_test.go`（会话黑名单）：清理只删过期行、未过期的吊销
   记录必须留着；后台定期清理（默认 6h，`REVOKED_PURGE_MINUTES` 可配）会在到期后清掉
-  且 `stop()` 后不再继续（防 goroutine 泄漏）；interval≤0 回退默认间隔而不是 0 间隔死循环。
+  且 `stop()` 后不再继续（防 goroutine 泄漏）；interval≤0 回退默认间隔而不是 0 间隔死循环；
+  `stop()` 可重复调用（main 里 `defer` + 测试里 `t.Cleanup` 会各调一次）。
+  实现侧对应一条硬约束：**`stop()` 返回时清理协程必须已退出**（内部 `close(done)` 后再等
+  `stopped`），且协程每轮先非阻塞看一眼停止信号——否则 `ticker.C` 与 `done` 同时就绪时
+  Go 的 `select` 会随机选，于是「已停止」却仍多执行一次 `DELETE`。
 - `internal/auth/jwt_test.go`（令牌签发与校验）：双令牌共享 sid（登出才能一次吊销整条链）、
   access 寿命短于 refresh、refresh 复用 sid 不换会话；解析必须拒绝「篡改签名 / 他人密钥重签 /
   `alg=none` 无签名令牌 / 已过期 / 垃圾串」；有效期由系统设置驱动且填 0 或负数回落缺省
@@ -462,6 +466,21 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
     （例：`root:pwd@tcp(host:3306)/weichuan_test?charset=utf8mb4&parseTime=true`）。
   - `frontend`：`npm ci` + `npm run build` + `npm run test`（Vitest，含 PC 后台视图层测试与经前端工程纳管的小程序纯逻辑测试）。
   - `frontend-typecheck`（**阻塞门禁**）：`vue-tsc --noEmit`。历史 4 个 `@wangeditor/*` 类型错误已通过 tsconfig `paths` 指向真实 d.ts + 精准断言修复，当前 0 错误。
+
+> **CI 红、本机绿时：在 Linux 容器里复现。**
+> CI 跑的是 `ubuntu-latest`，而开发机多为 macOS，两者在 goroutine 调度 / 时序上差异真实存在
+> （踩过一次：`select` 多 case 就绪的随机选择，macOS 恰好绕开、Linux 必现）。
+> 复现手法（容器不联网，直接复用宿主机已下载的模块缓存）：
+>
+> ```bash
+> # 仓库根目录执行
+> docker run --rm -v "$PWD:/src" -v "$(go env GOMODCACHE):/gomod" \
+>   -e GOMODCACHE=/gomod -e GOPROXY=off -e GOFLAGS=-mod=mod \
+>   -w /src/backend golang:1.26 sh -c 'go test ./... -count=1'
+> ```
+>
+> 镜像 tag 跟 `backend/go.mod` 的 `go` 行保持一致；怀疑 flaky 时对单个包加 `-count=8` 重复跑。
+> Actions 日志需登录才能下载（`gh auth login` 后 `gh run view --log`），未登录时只能用上述方式自证。
 
 ## 运维与部署
 

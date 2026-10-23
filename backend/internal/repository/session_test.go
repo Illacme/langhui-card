@@ -100,6 +100,16 @@ func TestStartExpiredSessionPurgeFallsBackToDefault(t *testing.T) {
 	require.EqualValues(t, 1, countSessions(t, db))
 }
 
+// stop() 必须可重复调用：main 里是 defer stop()，测试里又挂在 t.Cleanup 上，
+// 重复调用若 panic 或阻塞，关停流程就会被卡住。
+func TestStartExpiredSessionPurgeStopIdempotent(t *testing.T) {
+	db := newSessionTestDB(t)
+	stop := StartExpiredSessionPurge(db, 20*time.Millisecond)
+	stop()
+	stop() // 第二次必须立刻返回
+	require.EqualValues(t, 0, countSessions(t, db))
+}
+
 // Redis 之外的兜底：吊销写入 + 清理的完整闭环（登出 → 黑名单生效 → 到期清理）。
 func TestRevokeThenPurgeLifecycle(t *testing.T) {
 	db := newSessionTestDB(t)
