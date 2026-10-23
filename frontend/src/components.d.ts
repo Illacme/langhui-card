@@ -26,6 +26,7 @@ declare module 'vue' {
     ElDescriptionsItem: typeof import('element-plus/es')['ElDescriptionsItem']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDivider: typeof import('element-plus/es')['ElDivider']
+    ElDrawer: typeof import('element-plus/es')['ElDrawer']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
     ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
     ElDropdownMenu: typeof import('element-plus/es')['ElDropdownMenu']
@@ -63,6 +64,7 @@ declare module 'vue' {
     SettingRow: typeof import('./components/SettingRow.vue')['default']
     SetupGuide: typeof import('./components/SetupGuide.vue')['default']
     SetupInstaller: typeof import('./components/SetupInstaller.vue')['default']
+    StatDetail: typeof import('./components/StatDetail.vue')['default']
     StatTrend: typeof import('./components/StatTrend.vue')['default']
     UploadField: typeof import('./components/UploadField.vue')['default']
   }

@@ -69,6 +69,21 @@
           <title>{{ p.date }} {{ s.label }} {{ p.value }}</title>
         </circle>
       </g>
+      <!-- 点击热区：数据点 r=3 太小，给每个日期一个透明大圆承接点击。
+           点趋势图上某一天 = 下钻看当天的逐条明细（与点员工行「明细」
+           是两个互补的下钻入口）。锚在访问系列点上——它是主指标 -->
+      <g v-for="(p, i) in hitDots" :key="'h' + i">
+        <circle
+          class="hit-dot"
+          :cx="p.x"
+          :cy="p.y"
+          r="12"
+          fill="transparent"
+          @click="emit('pick', p.date)"
+        >
+          <title>查看 {{ p.date }} 的明细</title>
+        </circle>
+      </g>
     </svg>
     <p v-else class="trend-empty">所选时段暂无数据</p>
   </div>
@@ -85,6 +100,7 @@ export interface TrendPoint {
 }
 
 const props = defineProps<{ points: TrendPoint[] }>()
+const emit = defineEmits<{ (e: 'pick', date: string): void }>()
 
 // 画布几何：viewBox 坐标系，外层 width:100% 等比缩放
 const W = 680
@@ -132,6 +148,11 @@ const areaPoints = computed(() => {
   const back = props.points.map((_, i) => `${xOf(i)},${base}`).reverse().join(' ')
   return `${s.points} ${back}`
 })
+
+// 点击热区（每日期一个，不随系列重复）：锚在访问系列的 y 上
+const hitDots = computed(() =>
+  props.points.map((p, i) => ({ x: xOf(i), y: yOf(p.visit || 0), date: p.date }))
+)
 
 const gridYs = computed(() => {
   const m = maxValue.value
@@ -201,6 +222,9 @@ const rangeText = computed(() => {
 .area {
   fill: rgba(64, 158, 255, 0.08);
   stroke: none;
+}
+.hit-dot {
+  cursor: pointer;
 }
 .trend-empty {
   margin: 8px 0;

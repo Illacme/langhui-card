@@ -9,7 +9,7 @@ vi.mock('./request', () => ({ default: { get: mocks.httpGet } }))
 vi.mock('axios', () => ({ default: { create: () => ({ get: mocks.rawGet }) } }))
 
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { adminStats, exportStatsCsv, parseCsvFilename } from './stats'
+import { adminStats, adminStatsDetail, exportStatsCsv, parseCsvFilename } from './stats'
 
 describe('parseCsvFilename', () => {
   it('优先取 filename*（RFC 5987，中文名在这里）', () => {
@@ -57,6 +57,65 @@ describe('adminStats', () => {
     expect(r.summary).toEqual({ visit: 0, call: 0, save: 0 })
     expect(r.byStaff).toEqual([])
     expect(r.trend).toEqual([])
+  })
+})
+
+describe('adminStatsDetail', () => {
+  beforeEach(() => {
+    mocks.httpGet.mockReset()
+  })
+
+  it('筛选参数一起下沉：staffId/eventType 转成字符串参数', async () => {
+    mocks.httpGet.mockResolvedValue({ data: [], total: 0, page: 1, size: 20 })
+    await adminStatsDetail({
+      from: '2026-10-01',
+      to: '2026-10-07',
+      staffId: 3,
+      eventType: 'call',
+      page: 2,
+      size: 50,
+    })
+    expect(mocks.httpGet).toHaveBeenCalledWith('/admin/stats/detail', {
+      params: {
+        from: '2026-10-01',
+        to: '2026-10-07',
+        staffId: '3',
+        eventType: 'call',
+        page: '2',
+        size: '50',
+      },
+    })
+  })
+
+  it('空筛选不发 staffId/eventType（缺省即不过滤）', async () => {
+    mocks.httpGet.mockResolvedValue({ data: [], total: 0, page: 1, size: 20 })
+    await adminStatsDetail()
+    expect(mocks.httpGet).toHaveBeenCalledWith('/admin/stats/detail', {
+      params: { page: '1', size: '20' },
+    })
+  })
+
+  it('解包分页信封：list/total/page/size，缺字段回落', async () => {
+    mocks.httpGet.mockResolvedValue({
+      data: [{ id: 7, staffId: 1, name: '张三', eventType: 'visit' }],
+      total: 42,
+      page: 2,
+      size: 10,
+    })
+    const r = await adminStatsDetail({ page: 2, size: 10 })
+    expect(r.list).toHaveLength(1)
+    expect(r.list[0].name).toBe('张三')
+    expect(r.total).toBe(42)
+    expect(r.page).toBe(2)
+    expect(r.size).toBe(10)
+
+    // 后端异常回包（字段缺失）不能把界面打崩：回落空集合 + 第 1 页
+    mocks.httpGet.mockResolvedValue({})
+    const r2 = await adminStatsDetail()
+    expect(r2.list).toEqual([])
+    expect(r2.total).toBe(0)
+    expect(r2.page).toBe(1)
+    expect(r2.size).toBe(20)
   })
 })
 

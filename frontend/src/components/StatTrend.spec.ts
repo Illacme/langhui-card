@@ -68,8 +68,18 @@ describe('StatTrend', () => {
   it('单点只画圆点不画面积与折线路径', () => {
     const w = mountTrend([{ date: '2026-10-23', visit: 3, call: 1, save: 1 }])
     expect(w.findAll('polygon')).toHaveLength(0)
-    expect(w.findAll('circle')).toHaveLength(3)
+    // 三个系列数据点 + 一个点击热区（透明大圆，下钻当天明细用）
+    expect(w.findAll('circle:not(.hit-dot)')).toHaveLength(3)
+    expect(w.findAll('circle.hit-dot')).toHaveLength(1)
     expect(w.text()).toContain('2026-10-23')
+  })
+
+  it('点数据点热区发出 pick 事件（下钻当天的明细）', async () => {
+    const w = mountTrend(pts)
+    const hits = w.findAll('circle.hit-dot')
+    expect(hits).toHaveLength(3)
+    await hits[1].trigger('click')
+    expect(w.emitted('pick')).toEqual([['2026-10-22']])
   })
 
   it('无数据走空态文案，不渲染 SVG', () => {

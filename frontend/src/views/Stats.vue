@@ -26,6 +26,7 @@
             style="width: 260px"
           />
           <el-button :icon="Download" @click="onExport">导出</el-button>
+          <el-button :icon="Tickets" @click="openDetail()">数据明细</el-button>
           <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
         </div>
       </div>
@@ -47,8 +48,8 @@
       </div>
       <p class="range-tip">统计范围：{{ rangeLabel }}（日期按浏览器本地时区与后端 TZ 一致计算）</p>
 
-      <!-- 按天趋势：只含所选范围内有事件的日期 -->
-      <StatTrend :points="trend" />
+      <!-- 按天趋势：只含所选范围内有事件的日期；点某一天可下钻当天明细 -->
+      <StatTrend :points="trend" @pick="onTrendPick" />
 
       <el-table :data="paged" v-loading="loading" border stripe>
         <el-table-column prop="staffId" label="编号" width="80" align="center" />
@@ -57,6 +58,11 @@
         <el-table-column prop="visit" label="访问" width="110" align="right" sortable />
         <el-table-column prop="call" label="拨号" width="110" align="right" sortable />
         <el-table-column prop="save" label="保存" width="110" align="right" sortable />
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" @click="openDetail(row.staffId)">明细</el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <p class="tip">
         口径：只记前端点击、不校验真实结果（需求 §6）。想看某员工的名片实际效果，在小程序首页输入其编号即可预览。
@@ -72,15 +78,24 @@
         background
       />
     </el-card>
+
+    <!-- 明细抽屉：员工行「明细」与趋势图点某天都会打开它（分别带上 staffId / 收窄日期） -->
+    <StatDetail
+      v-model:open="detailOpen"
+      :range="rangeParam"
+      :staffs="staffOptions"
+      :staff-id="detailStaffId"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { Download, Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Refresh, Search, Tickets } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { adminStats, exportStatsCsv, type StatRange } from '@/api/stats'
 import StatTrend from '@/components/StatTrend.vue'
+import StatDetail from '@/components/StatDetail.vue'
 import { useTable } from '@/composables/useTable'
 
 const rows = ref<any[]>([])
@@ -117,20 +132,39 @@ const rangeLabel = computed(() =>
 )
 
 // 选择器的 [from, to] 元组 → 接口的 { from, to } 对象（直接传元组会被
-// axios 序列化成 from[]=... 的数组参数，后端收不到日期）
-function rangeParam(): StatRange {
-  return range.value ? { from: range.value[0], to: range.value[1] } : {}
-}
+// axios 序列化成 from[]=... 的数组参数，后端收不到日期）。
+// 取 computed 而非函数：作为 prop 传给明细抽屉时引用稳定，
+// 它的多源 watch 才不会在父组件每次重渲染时被误触发。
+const rangeParam = computed<StatRange>(() =>
+  range.value ? { from: range.value[0], to: range.value[1] } : {}
+)
 
 // 范围变化即重查（不含首次：首次由 onMounted 触发，避免双请求）
 watch(range, () => {
   load()
 })
 
+// 明细抽屉：员工行「明细」/「数据明细」按钮/趋势图点某天三个入口
+const detailOpen = ref(false)
+const detailStaffId = ref(0)
+// 员工下拉选项取全量 rows（不受关键字/分页影响）——筛明细时要能选到任何人
+const staffOptions = computed(() => rows.value.map((r) => ({ staffId: r.staffId, name: r.name })))
+
+function openDetail(staffId = 0) {
+  detailStaffId.value = staffId
+  detailOpen.value = true
+}
+
+// 点趋势图某天：范围收窄到当天 + 打开明细抽屉（一次点击完成「看某天有什么」）
+function onTrendPick(date: string) {
+  range.value = [date, date] // watch(range) 触发汇总重查；抽屉经 range 变化同步重查
+  openDetail()
+}
+
 async function load() {
   loading.value = true
   try {
-    const r = await adminStats(rangeParam())
+    const r = await adminStats(rangeParam.value)
     summary.value = r.summary
     rows.value = r.byStaff
     trend.value = r.trend
@@ -143,7 +177,7 @@ async function load() {
 
 async function onExport() {
   try {
-    await exportStatsCsv(rangeParam())
+    await exportStatsCsv(rangeParam.value)
   } catch (e) {
     // 业务失败（如登录失效）在 api 层已解析出 msg；网络异常走通用文案
     ElMessage.error((e as Error)?.message || '导出失败')

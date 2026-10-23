@@ -22,9 +22,10 @@ const mocks = vi.hoisted(() => ({
       { date: '2026-10-22', visit: 8, call: 2, save: 3 },
     ],
   })),
+  adminStatsDetail: vi.fn(async () => ({ list: [], total: 0, page: 1, size: 20 })),
   exportStatsCsv: vi.fn(async () => {}),
 }))
-const { adminStats, exportStatsCsv } = mocks
+const { adminStats, adminStatsDetail, exportStatsCsv } = mocks
 vi.mock('@/api/stats', () => mocks)
 
 const ElCard = defineComponent({ name: 'ElCard', template: `<div class="el-card"><slot /></div>` })
@@ -96,7 +97,17 @@ const ElTableColumn = defineComponent({
 const StatTrendStub = defineComponent({
   name: 'StatTrend',
   props: ['points'],
+  emits: ['pick'],
   template: `<div class="stat-trend-stub" />`,
+})
+
+// 明细抽屉同样有自己的单测（StatDetail.spec.ts）；这里把 props 暴露到
+// data 属性上，方便断言「打开时带了哪个员工 / 哪个日期范围」
+const StatDetailStub = defineComponent({
+  name: 'StatDetail',
+  props: ['open', 'range', 'staffs', 'staffId'],
+  emits: ['update:open'],
+  template: `<div class="stat-detail-stub" :data-open="String(open)" :data-staff-id="String(staffId)" />`,
 })
 
 const mountOpts = {
@@ -110,6 +121,7 @@ const mountOpts = {
       'el-pagination': ElPagination,
       'el-date-picker': ElDatePicker,
       StatTrend: StatTrendStub,
+      StatDetail: StatDetailStub,
     },
     directives: { loading: {} },
   },
@@ -125,6 +137,7 @@ async function flushLoad(w: ReturnType<typeof mount>) {
 describe('Stats', () => {
   beforeEach(() => {
     vi.mocked(adminStats).mockClear()
+    vi.mocked(adminStatsDetail).mockClear()
     vi.mocked(exportStatsCsv).mockClear()
     vi.mocked(ElMessage.error).mockClear()
   })
@@ -160,7 +173,7 @@ describe('Stats', () => {
     expect(w.text()).toContain('12')
   })
 
-  it('列定义含编号/姓名/职位/访问/拨号/保存六个统计列', async () => {
+  it('列定义含编号/姓名/职位/访问/拨号/保存/操作七个列', async () => {
     const w = mount(Stats, mountOpts)
     await flushLoad(w)
 
@@ -168,7 +181,7 @@ describe('Stats', () => {
     const labels = [
       ...new Set(w.findAllComponents(ElTableColumn).map((c) => c.props('label'))),
     ]
-    expect(labels).toEqual(['编号', '姓名', '职位', '访问', '拨号', '保存'])
+    expect(labels).toEqual(['编号', '姓名', '职位', '访问', '拨号', '保存', '操作'])
   })
 
   it('选日期范围后按 from/to 重新查询，范围文案同步更新', async () => {
@@ -238,5 +251,70 @@ describe('Stats', () => {
     await nextTick()
     await nextTick()
     expect(vi.mocked(ElMessage.error)).toHaveBeenCalledWith('登录已失效，请重新登录')
+  })
+
+  it('点员工行「明细」打开明细抽屉并带上该员工', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    const rowBtn = w.findAll('button').find((b) => b.text() === '明细')
+    expect(rowBtn).toBeTruthy()
+    await rowBtn!.trigger('click')
+    await nextTick()
+
+    const drawer = w.findComponent(StatDetailStub)
+    expect(drawer.props('open')).toBe(true)
+    expect(drawer.props('staffId')).toBe(1) // 第一行是张三
+    // 日期范围随页面当前口径传给抽屉（默认全部时间 = 空对象）
+    expect(drawer.props('range')).toEqual({})
+    // 员工下拉选项取全量 rows（不受关键字筛选影响）
+    expect(drawer.props('staffs')).toHaveLength(2)
+  })
+
+  it('点「数据明细」按钮打开抽屉（不带员工筛选）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    const btn = w.findAll('button').find((b) => b.text() === '数据明细')
+    expect(btn).toBeTruthy()
+    await btn!.trigger('click')
+    await nextTick()
+
+    const drawer = w.findComponent(StatDetailStub)
+    expect(drawer.props('open')).toBe(true)
+    expect(drawer.props('staffId')).toBe(0)
+  })
+
+  it('趋势图点某天：范围收窄到当天 + 打开明细抽屉', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+    expect(vi.mocked(adminStats)).toHaveBeenCalledTimes(1)
+
+    await w.findComponent(StatTrendStub).vm.$emit('pick', '2026-10-22')
+    await flushLoad(w)
+
+    // 汇总按当天重查
+    expect(vi.mocked(adminStats)).toHaveBeenLastCalledWith({
+      from: '2026-10-22',
+      to: '2026-10-22',
+    })
+    // 范围文案同步
+    expect(w.text()).toContain('2026-10-22 至 2026-10-22')
+    // 抽屉打开，且日期范围收窄到当天——明细与汇总是同一个口径
+    const drawer = w.findComponent(StatDetailStub)
+    expect(drawer.props('open')).toBe(true)
+    expect(drawer.props('range')).toEqual({ from: '2026-10-22', to: '2026-10-22' })
+  })
+
+  it('改页面日期范围时，抽屉拿到的范围同步更新（保持同口径）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+
+    await w.findComponent(ElDatePicker).vm.$emit('update:modelValue', ['2026-10-01', '2026-10-07'])
+    await flushLoad(w)
+    expect(w.findComponent(StatDetailStub).props('range')).toEqual({
+      from: '2026-10-01',
+      to: '2026-10-07',
+    })
   })
 })

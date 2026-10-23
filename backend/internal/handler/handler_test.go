@@ -29,6 +29,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -128,6 +129,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	RegisterAuth(r, db, cfg)
 	RegisterApply(r, db)
 	RegisterStatsExport(r, db) // 统计 CSV 导出（与 /api/admin/stats 同口径）
+	RegisterStatsDetail(r, db) // 埋点明细列表（聚合的下钻）
 	RegisterContent(r, db)
 	RegisterCompanies(r, db)
 	RegisterAdmins(r, db)    // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
@@ -404,6 +406,33 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 
 		// 坏日期参数 → code:1（而不是静默按全部时间查）
 		_, body = c.do("GET", "/api/admin/stats?from=2026-02-31", nil, adminToken)
+		require.EqualValues(t, 1, body["code"])
+
+		// 埋点明细（汇总的下钻）：MySQL 上必须与 SQLite 同形——
+		// ① stat_date 经 CAST 归一回 YYYY-MM-DD（DATE 列直扫会变成 RFC3339，
+		//    2026-10-23 parity 首跑抓过，故这里守门）；
+		// ② JOIN 带姓名 + 分页信封 {data,total,page,size} 形状一致
+		_, body = c.do("GET", "/api/admin/stats/detail?from="+today+"&to="+today, nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		require.GreaterOrEqual(t, int(body["total"].(float64)), 1)
+		detail := body["data"].([]interface{})
+		first := detail[0].(map[string]interface{})
+		require.Regexp(t, `^\d{4}-\d{2}-\d{2}$`, first["statDate"].(string))
+		require.Regexp(t, `^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$`, first["createdAt"].(string))
+		require.NotEmpty(t, first["name"], "JOIN 应带出员工姓名")
+
+		// 按员工筛选：只放行该员工的事件
+		_, body = c.do("GET", "/api/admin/stats/detail?staffId="+
+			strconv.FormatInt(newStaffID, 10)+"&from="+today+"&to="+today, nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		for _, it := range body["data"].([]interface{}) {
+			require.EqualValues(t, newStaffID, it.(map[string]interface{})["staffId"])
+		}
+
+		// 坏筛选参数 → code:1（白名单外事件类型 / 非数字 staffId）
+		_, body = c.do("GET", "/api/admin/stats/detail?eventType=hack", nil, adminToken)
+		require.EqualValues(t, 1, body["code"])
+		_, body = c.do("GET", "/api/admin/stats/detail?staffId=abc", nil, adminToken)
 		require.EqualValues(t, 1, body["code"])
 
 		// 员工登录（用重置后的密码）

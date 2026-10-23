@@ -28,6 +28,46 @@ export function adminStats(range: StatRange = {}) {
   }))
 }
 
+// ===== 埋点明细（聚合的下钻）=====
+// GET /api/admin/stats/detail：与 adminStats 同租户隔离、同日期口径，
+// 分页信封 {code:0,data,total,page,size}（全站约定，见 backend pagination.go）。
+// staffId/eventType 筛选一起下沉到服务端——明细表随运营时间单调增长，
+// 拉全表前端切片只会把「网络传了 1 万条」的代价藏起来。
+export interface StatDetailItem {
+  id: number
+  staffId: number
+  name: string
+  eventType: string // visit / call / save
+  statDate: string
+  /** "YYYY-MM-DD HH:mm:ss"，已按服务端 TZ 格式化——前端不再按时区换算，
+   *  否则跨时区浏览时明细时间会与趋势图的日期边界对不上 */
+  createdAt: string
+}
+
+export interface StatDetailQuery {
+  from?: string
+  to?: string
+  staffId?: number
+  eventType?: string
+  page?: number
+  size?: number
+}
+
+export function adminStatsDetail(query: StatDetailQuery = {}) {
+  const params: Record<string, string> = { ...cleanParams(query) }
+  if (query.staffId) params.staffId = String(query.staffId)
+  if (query.eventType) params.eventType = query.eventType
+  params.page = String(query.page ?? 1)
+  params.size = String(query.size ?? 20)
+  // 响应拦截器回传整包信封：data 是当前页数组，分页元信息在顶层
+  return http.get('/admin/stats/detail', { params }).then((r: any) => ({
+    list: (r.data ?? []) as StatDetailItem[],
+    total: Number(r.total ?? 0),
+    page: Number(r.page ?? 1),
+    size: Number(r.size ?? 20),
+  }))
+}
+
 // 导出走独立 axios 实例（无业务拦截器）：拦截器按 {code,msg} 信封解析，
 // 而 CSV 响应体不是 JSON——走拦截器会被误判成「业务失败」弹红条并 reject。
 // withCredentials 照旧带上（超管是 httpOnly Cookie 鉴权）。

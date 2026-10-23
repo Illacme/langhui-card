@@ -174,6 +174,108 @@ func statTrend(c *gin.Context, db *gorm.DB, from, to string) ([]statTrendRow, er
 	return rows, nil
 }
 
+// ===== 埋点明细列表 =====
+
+// statEventRaw 明细查询的原始行（数据库形状，供 Scan）。
+// stat_date 走 CAST 归一的理由同 statTrend（MySQL DATE 列扫进 string 会变 RFC3339）。
+// employees.name 由 JOIN 带出。用普通（非 LEFT）JOIN 是故意的：WHERE 子查询
+// 已把范围圈死在「当前存在的员工」上，员工不存在时其事件在明细与汇总中
+// 一致地不计入——明细是汇总的下钻，两边必须能对账（汇总说 100、明细列出
+// 105 条是最难排查的一类事故）。
+type statEventRaw struct {
+	ID        int64     `gorm:"column:id"`
+	StaffID   int64     `gorm:"column:staff_id"`
+	Name      string    `gorm:"column:name"`
+	EventType string    `gorm:"column:event_type"`
+	StatDate  string    `gorm:"column:stat_date"`
+	CreatedAt time.Time `gorm:"column:created_at"`
+}
+
+// statDetailItem 明细回包一行。
+// CreatedAt 是服务端格式化好的 "YYYY-MM-DD HH:mm:ss" 字符串：时区以服务端 TZ
+// 为权威口径（stat_date 的「今天」同样按它落库，见 compose TZ 约定）。
+// 前端若再按浏览器时区换算，跨时区使用时明细时间会与趋势图日期对不上。
+type statDetailItem struct {
+	ID        int64  `json:"id"`
+	StaffID   int64  `json:"staffId"`
+	Name      string `json:"name"`
+	EventType string `json:"eventType"`
+	StatDate  string `json:"statDate"`
+	CreatedAt string `json:"createdAt"`
+}
+
+// RegisterStatsDetail 注册埋点明细列表（GET /api/admin/stats/detail，按租户隔离）。
+//
+// 与 /api/admin/stats（聚合）互补：汇回答「谁有多少」，明答「都有什么」——
+// 排查「某个员工的访问量对不上」时必须能下钻到逐条事件，否则聚合数只是
+// 一个无法验证的黑盒。分页信封沿用全站约定 {code:0,data,total,page,size}
+// （pagination.go 是唯一权威实现）。
+//
+// 筛选参数均可缺省（缺省即不过滤）：
+//   from/to   日期范围，复用 statDateRange 的严格校验（坏值 code:1，不静默忽略）
+//   staffId   指定员工（别家员工的 id 查过来是空列表——租户隔离由子查询保证）
+//   eventType 指定事件类型，白名单外拒收（同埋点进水口：脏值会让「筛了却没生效」）
+func RegisterStatsDetail(r *gin.Engine, db *gorm.DB) {
+	r.GET("/api/admin/stats/detail", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
+		from, to, ok := statDateRange(c)
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "日期参数错误"})
+			return
+		}
+		eventType := c.Query("eventType")
+		if eventType != "" && !statEventTypes[eventType] {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "事件类型参数错误"})
+			return
+		}
+		var staffID int64
+		if v := c.Query("staffId"); v != "" {
+			n, err := strconv.ParseInt(v, 10, 64)
+			if err != nil || n <= 0 {
+				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "员工参数错误"})
+				return
+			}
+			staffID = n
+		}
+
+		page, size := pageParams(c)
+		q := db.Model(&model.StatEvent{}).
+			// 租户隔离：stat_events 不带 company_id，仍靠员工子查询建立边界
+			Where("stat_events.staff_id IN (?)",
+				db.Model(&model.Employee{}).Select("staff_id").Scopes(scopeCond(c))).
+			// JOIN 只为带出姓名（一页最多 100 行，比二次查 ID 列表省一轮往返）。
+			// 隔离不依赖 JOIN——WHERE 子查询已圈死范围；员工不存在时事件在
+			// 汇总里同样不计（byStaff 从员工表出发），两边口径一致才能对账
+			Joins("JOIN employees ON employees.staff_id = stat_events.staff_id").
+			Select("stat_events.id, stat_events.staff_id, employees.name, " +
+				"stat_events.event_type, " + statDateExpr + " AS stat_date, stat_events.created_at")
+		if from != "" {
+			q = q.Where("stat_date >= ?", from)
+		}
+		if to != "" {
+			q = q.Where("stat_date <= ?", to)
+		}
+		if staffID > 0 {
+			q = q.Where("stat_events.staff_id = ?", staffID)
+		}
+		if eventType != "" {
+			q = q.Where("event_type = ?", eventType)
+		}
+
+		var events []statEventRaw
+		total, page := pagedQuery(q, "stat_events.id desc", &events, page, size)
+
+		list := make([]statDetailItem, 0, len(events))
+		for _, e := range events {
+			list = append(list, statDetailItem{
+				ID: e.ID, StaffID: e.StaffID, Name: e.Name,
+				EventType: e.EventType, StatDate: e.StatDate,
+				CreatedAt: e.CreatedAt.Format("2006-01-02 15:04:05"),
+			})
+		}
+		pagedOK(c, list, total, page, size)
+	})
+}
+
 // RegisterStatsExport 注册统计 CSV 导出（超管，按租户隔离）。
 // 与 GET /api/admin/stats 同一套口径（scoped 员工 + stat_date 范围 + 零数据补 0），
 // 只是把表格搬进 Excel：运营做月报、或客户要求「把数据给我自己看」的场景都要这个。

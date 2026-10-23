@@ -17,6 +17,7 @@ backend/
 │   ├── handler/handler.go       # 首页相关 HTTP 接口（读，按租户：companyId 缺省落演示租户）
 │   ├── handler/auth.go          # 员工/管理员登录，签发 JWT + 刷新 + 登出（企业停用校验）
 │   ├── handler/apply.go         # 开通申请 / 名片修改审核 / 员工管理 / 统计（写 + 审核流，按租户隔离）
+│   ├── handler/stat.go          # 埋点统计共享件：track 限流+白名单 / 日期范围 / 按天趋势 / CSV 导出 / 明细列表
 │   ├── handler/content.go       # 企业内容管理（分类/项目/服务/简介…）按租户隔离 + 分类删除强校验
 │   ├── handler/companies.go     # 企业管理（平台超管）：开通/停用企业、企业管理员管理、/api/admin/me
 │   ├── handler/tenant.go        # 多租户助手：租户范围解析 / 目标租户 / 企业启停校验
@@ -309,6 +310,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码；按租户隔离） |
 | GET  | /api/admin/stats | 名片统计（汇总 + 按员工 + 按天趋势，零数据员工补 0；?from=&to= 日期范围；按租户隔离） |
 | GET  | /api/admin/stats/export | 统计 CSV 导出（同 stats 口径与租户隔离；UTF-8 BOM + 公式注入防护） |
+| GET  | /api/admin/stats/detail | 埋点明细列表（汇总的下钻：逐条事件，按 id 倒序分页 {code:0,data,total,page,size}；?staffId=&eventType=&from=&to= 筛选，白名单外值 code:1；同租户隔离） |
 | POST | /api/admin/employees/:id/disable | admin | 停用账号（按租户隔离；目标不存在/越权返回 code=1「未找到」，不再假装成功；记审计 employee.status） |
 | POST | /api/admin/employees/:id/enable | admin | 启用账号（同上，含审计） |
 | POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码；按租户隔离；目标不存在返回 code=1；记审计 employee.reset_password） |
