@@ -27,6 +27,11 @@ cd frontend && npm install && npm run dev     # 打开 http://localhost:5173
 
 ### B. 编译二进制 + nginx（贴近生产的运行形态，仍免 MySQL）
 
+> ⚠️ 下面这条 `cmd/devserver` 只为「免 MySQL 快速验证」存在：它每次启动都重建
+> 临时 SQLite，**重启即丢全部数据**，不能用于任何需要保留数据的部署。
+> 要保留数据请走路径 D（`cmd/server` + `DB_DSN=sqlite://<路径>`，表由启动时
+> AutoMigrate 维护）。生产上线一律用 `cmd/server`，不要用 devserver。
+
 ```bash
 cd backend && go build -o weichuan ./cmd/devserver   # 产出单文件二进制
 cd frontend && npm run build                         # 产物在 frontend/dist
@@ -40,11 +45,39 @@ server {
     root /path/to/weichuan-card/frontend/dist;
     index index.html;
     client_max_body_size 50m;
+
+    # 必须单列一条：不能让它落到下面的 SPA 兜底。try_files 会把 /healthz
+    # 回退成 index.html 并返回 200，于是后端已死、数据库连不上，这个地址照样 200——
+    # alert_check 的 R1/R4、preflight 第 10 节、LB 探针全部永远绿，最该报的故障不报。
+    location = /healthz {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 5s;
+    }
+
     location / { try_files $uri $uri/ /index.html; }
-    location /api/     { proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; }
-    location /uploads/ { proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        # 覆盖而非追加（$proxy_add_x_forwarded_for）：追加会把客户端自带的伪造值
+        # 留在链左侧，后端「跳过可信代理取第一个不可信地址」时正好取到它——
+        # 登录限流遂可被绕过（等效于超管口令可无限爆破）。详见 frontend/nginx.conf。
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+
+    location /uploads/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+    }
 }
 ```
+
+> 若这一层前面还有 CDN / 公网 LB：请用 `set_real_ip_from <CDN网段>; real_ip_header
+> X-Forwarded-For; real_ip_recursive on;` 让 `$remote_addr` 变成真实客户端 IP，
+> 上面两行不用改。**切勿 `set_real_ip_from 0.0.0.0/0`**——那等于让客户端自己决定
+> 他是谁，限流又回到可以随便换桶的状态。
 
 后端常驻，二选一：
 
@@ -155,7 +188,7 @@ export COOKIE_SECURE=true
 | 服务器    | Linux x86_64，2C4G+，磁盘 40G+ | 默认形态 backend + frontend 两容器（选 SQLite）；MySQL 形态（`--profile mysql`）三容器。名片类应用流量小，2C4G 足够 |
 | Docker | Docker 24+ 与 compose 插件    | `docker compose version` 验证                                                           |
 | 域名     | **已 ICP 备案**，A 记录指向服务器     | 微信小程序合法域名的硬性要求，未备案域名配不了                                                               |
-| 端口     | 80 / 443 对外                | 3306 **不要**对公网开放（compose 里 `3306:3306` 生产建议删掉或绑 127.0.0.1）                            |
+| 端口     | 80 / 443 对外                | 只有 frontend 的 8080（→80）该对外。mysql 的 3306 与 backend 的 8090 在 compose 里**已绑 127.0.0.1**：docker 端口映射会把所有外部来源 NAT 成桥接网关，而网关落在后端的可信反代网段里——端口一旦对外，谁都能自带伪造的 `X-Forwarded-For` 绕过登录限流。不需要直连调试就把这两行删掉 |
 | 微信     | 正式 AppID（提审阶段必须）           | 联调期可用测试号；`channel-video` 视频号渲染还需绑定视频号                                                 |
 
 ## 1. 获取代码与配置

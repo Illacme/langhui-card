@@ -66,7 +66,10 @@ services:
       # /app/server migrate` 手工跑），详见 docs/deploy-runbook.md §4。
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
     ports:
-      - "3306:3306" # 仅本机调试用；生产建议删掉或绑 127.0.0.1，勿对公网开放
+      # 仅本机调试用，故绑回环：写 "3306:3306" 会把数据库直接摊在公网上，
+      # 而 mysql 的 root 口令是可被弱口令爆破的（安装向导允许留空以外的任意值，
+      # 它只做最小长度校验）。生产建议整行删掉——backend 走 compose 内网即可。
+      - "127.0.0.1:3306:3306"
     healthcheck:
       # CMD-SHELL 形式让容器内 shell 展开 $MYSQL_ROOT_PASSWORD
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
@@ -100,9 +103,15 @@ services:
       STORAGE_DRIVER: local
       STORAGE_PUBLIC: "true"
       UPLOAD_DIR: /app/uploads
-      # 与下方 nginx 发布端口一致（宿主机访问地址）
-      UPLOAD_BASE_URL: http://localhost:8080/uploads
+      # 与下方 nginx 发布端口一致（宿主机访问地址）。
+      # 必须留变量壳：这是**对外地址**，生产要换成 https 域名，写死就等于
+      # 「.env 里怎么改都不生效」——而 preflight 查的是 .env，会给出虚假 PASS。
+      # （也可在后台「系统设置 → 文件存储」覆盖，该项标记为需重启生效。）
+      UPLOAD_BASE_URL: ${UPLOAD_BASE_URL:-http://localhost:8080/uploads}
       WXACODE_TTL_HOURS: "720"
+      # gin 的运行模式：不设就是 debug —— 每次启动把**全部路由表**打进日志，
+      # 且保留调试期开销。生产固定 release，本地排查可 GIN_MODE=debug 覆盖。
+      GIN_MODE: ${GIN_MODE:-release}
       # HTTPS 生产必须：httpOnly Cookie 加 Secure 标志（http 联调保持 false）
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       # 跨子域共享登录态才设（如前端 admin.xxx.com / 接口 api.xxx.com）
@@ -117,7 +126,13 @@ services:
     expose:
       - "8080"
     ports:
-      - "8090:8080" # 后端直连调试端口（绕过 nginx）
+      # 后端直连调试端口（绕过 nginx）。**必须绑回环**，不能写 "8090:8080"：
+      # docker 的端口映射会把所有外部来源 NAT 成桥接网关地址（172.x.0.1），
+      # 而网关落在后端的「可信反代网段」里 —— 于是任何能访问这个端口的人
+      # 自带一个伪造的 X-Forwarded-For 就能绕过登录限流（实测有效）。
+      # 绑 127.0.0.1 后该端口只有本机能连，外部再也伪造不了。
+      # 生产环境若不需要直连调试，把这两行整个删掉更干净。
+      - "127.0.0.1:8090:8080"
     healthcheck:
       # 依赖 /healthz 端点（见 handler.New），但「未配置模式」要例外：
       # 安装向导页期间 /healthz 如实返回 503（业务确实不可用），可进程是健康的——

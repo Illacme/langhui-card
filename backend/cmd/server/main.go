@@ -15,6 +15,8 @@ import (
 	"weichuan/internal/setting"
 	"weichuan/internal/setup"
 	"weichuan/internal/storage"
+
+	"github.com/gin-gonic/gin"
 )
 
 // usage 子命令说明。`server` 不带参数即正常起服务，带参数则是运维子命令。
@@ -28,6 +30,7 @@ migrate 子命令用于把它拆成发布流水线里的独立一步。
 `
 
 func main() {
+	initGinMode()
 	cfg := config.Load()
 
 	// 运维子命令：先于「未配置模式」判定处理——migrate 需要在没有服务监听的
@@ -177,6 +180,13 @@ func main() {
 	defer stopPurge()
 
 	r := handler.New(db)
+	// 可信反代：gin 的内置缺省是「信任所有代理」（启动日志自己会打一行
+	// "You trusted all proxies, this is NOT safe"）。那样 c.ClientIP() 直接采信
+	// 客户端自带 X-Forwarded-For 的**最左**一项，而这一项由客户端随意填写——
+	// 登录 / refresh / 小程序码三处限流全按这个 IP 分桶，于是「每次换一个伪造头」
+	// 就等于完全没有限流（超管口令可被无限次爆破，实测 15/15 放行）。
+	// 这里收窄到真实反代所在网段，见 config.DefaultTrustedProxies 的取舍说明。
+	applyTrustedProxies(r, cfg)
 	// 可观测性：请求 ID + 访问日志（方法/路径/状态/耗时/IP，5xx 单独前缀便于告警匹配）
 	r.Use(middleware.RequestID(), middleware.AccessLog())
 	// 指标端点：采集器始终注册，开关交给系统设置 metrics_enabled（留空回退 METRICS_ENABLED）——
@@ -241,6 +251,33 @@ func main() {
 	log.Printf("listen :%s (storage driver=%s)", cfg.Port, cfg.StorageDriver)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal(err)
+	}
+}
+
+// initGinMode 设定 gin 的运行模式：运维没显式给 GIN_MODE 时固定 release。
+//
+// 不设就是 debug——每次启动把**全部路由表**打进日志（几十行，把真正要看的安全告警
+// 与迁移日志挤到屏幕外），并且保留调试期开销。本地排查可以 GIN_MODE=debug 覆盖。
+// 必须早于 handler.New / setup.Engine：路由注册时就在按模式决定要不要打印。
+func initGinMode() {
+	if os.Getenv(gin.EnvGinMode) == "" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+}
+
+// applyTrustedProxies 把可信反代列表装到 gin 引擎上，决定 ClientIP() 是否采信
+// X-Forwarded-For。设置失败（CIDR 写错）不静默：打印告警并退回「一个都不信」——
+// 退回是最安全的方向（所有用户算成反代 IP，限流会偏严但不会被绕过），
+// 与「宁可误拦、不可漏放」一致。
+func applyTrustedProxies(r *gin.Engine, cfg config.Config) {
+	if err := r.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		log.Printf("[WARN] TRUSTED_PROXIES 配置无效（%v）：已退回「不信任任何代理」，"+
+			"ClientIP 一律取 TCP 对端地址；若前面确有反代，请改成反代的 IP/CIDR", err)
+		// 必须显式置空：gin 解析失败时会提前返回，engine 里仍留着那份**含无效项**
+		// 的原始列表，字符串形态的项还会继续参与匹配——不清掉就不算真的退回了。
+		if err := r.SetTrustedProxies(nil); err != nil {
+			log.Printf("[FATAL] 无法将可信代理列表重置为空：%v", err)
+		}
 	}
 }
 

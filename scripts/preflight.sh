@@ -150,18 +150,32 @@ if [ -f "$seed_file" ]; then
   if [ -z "$seed" ]; then
     skip "$seed_file 中未找到 DEFAULT_BASE_URL"
   else
-    case "$seed" in
-      *127.0.0.1*|*localhost*)
+    # 取主机名再判：直接对整串做 *10.* 之类的匹配会把 card10.example.com 也当成内网
+    seed_host="$(printf '%s' "$seed" | sed -e 's#^[A-Za-z][A-Za-z0-9+.-]*://##' -e 's#/.*$##' -e 's#^.*@##' -e 's#:.*$##')"
+    case "$seed_host" in
+      localhost|127.*|::1)
+        # 真机上 127.0.0.1 是手机自身，永远打不到电脑
         fail "种子基址是 ${seed}：真机上 127.0.0.1 是手机自身、不可达，首次请求失败后就永远拿不到后台下发的正确基址。真机联调换本机局域网 IP，生产换 https 域名"
         ;;
-      http://*)
-        warn "种子基址 ${seed} 是 http：真机需在开发者工具勾选「不校验合法域名」，正式版必须用 https"
-        ;;
-      https://*)
-        pass "种子基址 ${seed}"
+      192.168.*|10.*|172.1[6-9].*|172.2[0-9].*|172.3[01].*|169.254.*)
+        # 私有网段（RFC1918 / 链路本地）：开发机的局域网 IP 一旦随源码分发出去，
+        # 别人的部署就拿它当首连地址 —— 那是别人家的内网，请求必然超时。
+        # 而种子基址是**唯一入口**：拉不到 /api/public/settings 就永远拿不到正确基址，
+        # 后台怎么配 miniprogram_base_url 都救不回来，只能重新打包。
+        if [ "${PREFLIGHT_ALLOW_PRIVATE:-0}" = "1" ]; then
+          warn "种子基址 ${seed} 是私有网段地址（${seed_host}，已由 PREFLIGHT_ALLOW_PRIVATE=1 放行）：仅限本机真机联调，发布前必须换成线上 https 域名"
+        else
+          fail "种子基址 ${seed} 是私有网段地址（${seed_host}）：只在本机同一局域网内可用，他人部署 / 生产环境请求必然超时；而种子基址是拉取后台配置的唯一入口，超时后就再也拿不到正确地址（后台配 miniprogram_base_url 也救不回来）。发布前须改成线上 https 域名并重新打包小程序（本机真机联调可 PREFLIGHT_ALLOW_PRIVATE=1 跳过本项）"
+        fi
         ;;
       *)
-        warn "种子基址 ${seed} 既非 http 也非 https，请确认可解析"
+        case "$seed" in
+          https://*) pass "种子基址 ${seed}" ;;
+          http://*)
+            warn "种子基址 ${seed} 是 http：真机需在开发者工具勾选「不校验合法域名」，正式版必须用 https"
+            ;;
+          *) warn "种子基址 ${seed} 既非 http 也非 https，请确认可解析" ;;
+        esac
         ;;
     esac
   fi
@@ -280,6 +294,12 @@ if command -v curl >/dev/null 2>&1; then
     case "$body" in
       *'"db":"up"'*) pass "healthz 正常（db=up）" ;;
       *'"db":"down"'*) fail "healthz 报 db=down：数据库连不上，请查 DB_DSN 与实例状态" ;;
+      *'<!DOCTYPE'*|*'<html'*)
+        # 前端与后端共用端口时，/healthz 很容易被单页应用的兜底规则接走（try_files
+        # 全回退 index.html）。此时响应是 200 + HTML，**与后端死活无关**：
+        # 进程已死、数据库连不上，这个地址照样 200。探活从此形同虚设。
+        fail "$url 返回的是 HTML 页面而不是 JSON：这个地址被前端静态兜底接住了，探活对后端状态完全无感（后端已死也会显示正常）。反代需为 /healthz 单独透传后端，见 frontend/nginx.conf 的 location = /healthz"
+        ;;
       *) warn "healthz 返回非预期内容：$(printf '%s' "$body" | cut -c1-120)" ;;
     esac
   fi
@@ -336,11 +356,20 @@ fi
 # 这一节刻意从「外部地址」访问同一端点，覆盖的正是那类「本机全绿、用户全挂」的故障。
 sec "10. 对外 HTTPS 网关"
 pub="${PUBLIC_BASE_URL:-}"
+pub_src="PUBLIC_BASE_URL"
 if [ -z "$pub" ]; then
   # 回退：小程序种子基址（它就是外部访问后端的地址），或 https 形态的上传基址
-  if [ -n "${seed:-}" ]; then pub="$seed"; fi
+  if [ -n "${seed:-}" ]; then
+    pub="$seed"
+    pub_src="未设 PUBLIC_BASE_URL，沿用上面第 3 节的种子基址"
+  fi
   case "${UPLOAD_BASE_URL:-}" in
-    https://*) [ -n "$pub" ] || pub="${UPLOAD_BASE_URL}" ;;
+    https://*)
+      if [ -z "$pub" ]; then
+        pub="${UPLOAD_BASE_URL}"
+        pub_src="未设 PUBLIC_BASE_URL，沿用 UPLOAD_BASE_URL"
+      fi
+      ;;
   esac
 fi
 if [ -z "$pub" ]; then
@@ -352,9 +381,25 @@ else
       host="${hp%%:*}"
       [ "$hp" = "$host" ] && hp="$host:443"
       if command -v curl >/dev/null 2>&1; then
-        code="$(curl -sS -o /dev/null -m 10 -w '%{http_code}' "$pub/healthz" 2>/dev/null)" || code=""
+        # 同时取 Content-Type：只看状态码会被 SPA 兜底骗过去（200 + index.html）。
+        # 探针地址的响应必须是后端给的 JSON，「200 但内容是网页」等于没探。
+        meta="$(curl -sS -o /dev/null -m 10 -w '%{http_code} %{content_type}' "$pub/healthz" 2>/dev/null)" || meta=""
+        code="${meta%% *}"
+        ctype="${meta#* }"
         case "$code" in
-          200) pass "外部访问 $pub/healthz 返回 200" ;;
+          200)
+            case "$ctype" in
+              application/json*)
+                pass "外部访问 $pub/healthz 返回 200（JSON，确认是后端应答）"
+                ;;
+              text/html*|'')
+                fail "外部访问 $pub/healthz 返回 200 但内容是 HTML：反代把探针地址兜底成了单页应用首页，后端是否存活完全看不出来。alert_check 的 R1/R4、preflight 本项、以及 LB/k8s 的 HTTP 探针都会永远绿——最该报警的「后端挂了」恰恰不会报警。反代需为 /healthz 单独透传后端（见 frontend/nginx.conf）"
+                ;;
+              *)
+                warn "外部访问 $pub/healthz 返回 200，但 Content-Type 是 ${ctype}：请确认这是后端应答而不是反代的兜底页"
+                ;;
+            esac
+            ;;
           "")  fail "外部访问 $pub/healthz 无响应（域名未解析 / 防火墙未放行 / 反代未起）：小程序与后台的全部请求都会挂" ;;
           *)   fail "外部访问 $pub/healthz 返回 HTTP ${code}：网关或后端有问题（排除：反代 upstream、后端 /healthz、域名解析）" ;;
         esac
@@ -382,7 +427,7 @@ else
       fi
       ;;
     http://*)
-      fail "PUBLIC_BASE_URL=$pub 是 http：小程序正式版要求 https（真机还会被微信当作不合法域名拦截）"
+      fail "对外地址 ${pub}（来源：${pub_src}）是 http：小程序正式版要求 https（真机还会被微信当作不合法域名拦截）"
       ;;
     *)
       warn "PUBLIC_BASE_URL=$pub 既非 http 也非 https，无法判定外部可达性"

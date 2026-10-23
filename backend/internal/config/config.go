@@ -2,6 +2,7 @@ package config
 
 import (
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -66,6 +67,49 @@ type Config struct {
 	// RevokedPurgeInterval 过期会话黑名单（revoked_sessions）的定期清理间隔。
 	// 该表只按行存在判定吊销，过期行（refresh 令牌已自然失效）留着只会无限增长。
 	RevokedPurgeInterval time.Duration
+	// TrustedProxies 可信反代的地址/CIDR 列表，决定 c.ClientIP() 该不该相信
+	// X-Forwarded-For。留空时用 DefaultTrustedProxies（回环 + 私有网段）。
+	// 设成 TRUSTED_PROXIES=none 表示「前面没有反代」，一律用 TCP 对端地址。
+	TrustedProxies []string
+}
+
+// DefaultTrustedProxies 可信反代的缺省网段：回环 + 三类私有网段。
+//
+// 为什么必须有这个缺省值：gin 的内置缺省是 0.0.0.0/0（信任一切），启动日志会打印
+// 「You trusted all proxies, this is NOT safe」。在那种设置下 c.ClientIP() 直接取
+// X-Forwarded-For 的**最左**一项，而这一项完全由客户端决定——于是所有按 IP 分桶的
+// 限流（登录 / 刷新 / 小程序码）都能靠每次换一个伪造头绕过，锁定与防爆破形同虚设。
+//
+// 反过来若收得比实际更紧（例如错设成 none 但前面确有反代），所有用户会被算成
+// 同一个 IP、共用一个桶——一个人就能把整站限流打满。所以缺省取「私有网段」：
+// 容器网络、k8s 集群网络、同机 nginx、云 LB 的内网地址都落在里面，
+// 而公网来源永远不在里面（伪造头因此不被采信，取到的是 TCP 对端真实地址）。
+var DefaultTrustedProxies = []string{
+	"127.0.0.1/32", "::1/128", // 同机反代（宿主机 nginx / 裸机部署）
+	"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", // RFC1918：docker bridge、k8s、内网 LB
+	"fc00::/7", // IPv6 唯一本地地址
+}
+
+// parseTrustedProxies 解析 TRUSTED_PROXIES（逗号分隔的 IP 或 CIDR）。
+// 空值 → 缺省网段；"none"（不区分大小写）→ 空列表（gin 此时完全不读转发头）。
+func parseTrustedProxies(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return DefaultTrustedProxies
+	}
+	if strings.EqualFold(raw, "none") {
+		return nil
+	}
+	var out []string
+	for _, p := range strings.Split(raw, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return DefaultTrustedProxies
+	}
+	return out
 }
 
 func Load() Config {
@@ -107,6 +151,7 @@ func Load() Config {
 		// 默认 6 小时：refresh token 最长 30 天，黑名单行要到那时才「过期」，
 		// 故清理频率无需高，只要保证长期运行的表不会无限增长即可（启动还会跑一次）
 		RevokedPurgeInterval: time.Duration(atoi(getEnv("REVOKED_PURGE_MINUTES", "360"), 360)) * time.Minute,
+		TrustedProxies:       parseTrustedProxies(getEnv("TRUSTED_PROXIES", "")),
 	}
 }
 

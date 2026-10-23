@@ -29,13 +29,21 @@
   - **会话级**（`revoked_sessions` 黑名单）：令牌含 `sid`（会话 ID，一次登录一个，access/refresh 共享，刷新不换）。`POST /api/logout` 把当前会话 sid 写入黑名单，该设备所有令牌立即失效且无法靠刷新绕过；**不影响同一账号的其他设备登录**。
 - 上传：扩展名白名单 + 文件头魔法字节嗅探，单文件 ≤10MB；私有桶支持限时签名访问。
 - 登录限流：按客户端 IP 固定窗口限流，防爆破（刷新接口单独限流）。
+  **前提是客户端 IP 可信**：限流按 `ClientIP()` 分桶，而它读不读 `X-Forwarded-For`
+  取决于 `TRUSTED_PROXIES`。gin 的缺省是「信任所有代理」，那种设置下客户端只要
+  每次换一个伪造头就换一个桶——实测同一来源连打 15 次全部放行（正常应在第 10 次拦下），
+  等于防爆破不存在。本项目已收窄为「回环 + 三类私有网段」，并要求反代**覆盖**而非
+  追加 `X-Forwarded-For`（`frontend/nginx.conf` 与 runbook 均按此配置）。
+  同时 backend 的 8090 与 mysql 的 3306 都绑回环：docker 端口映射会把外部来源
+  NAT 成桥接网关，而网关正好落在可信网段里，端口一对外，这条防线就漏了。
 - 软删除：内容模型支持软删除，避免误删。
 
 ## 已知待加固项（尚未落地）
 
 - Cookie 为 `SameSite=Lax`（同源部署已足够缓解 CSRF）；若未来跨域部署或需更强保证，可加 double-submit CSRF Token。
 - 生产须设 `COOKIE_SECURE=true`（HTTPS）并前置反向代理；跨子域共享登录态才需设 `COOKIE_DOMAIN`。
-- 黑名单表 `revoked_sessions` 暂无自动清理任务，可后续加定时 SQL（按 `expires_at` 删除过期行）。
+- ~~黑名单表 `revoked_sessions` 暂无自动清理任务~~：**已落地**——`StartExpiredSessionPurge`
+  按 `REVOKED_PURGE_MINUTES`（默认 360）定期删除过期行，启动时另跑一次。
 - ~~无集中式密钥管理 / 审计日志 / 监控告警~~：**审计日志已落地**（`audit_log` 表 + 「平台管理 → 操作日志」），
   覆盖后台写操作与登录失败，敏感值脱敏不落明文、只提供查询。仍未落地的是集中式密钥管理与完整监控告警栈。
 - 多实例部署下，小程序码 / access_token 等内存缓存不共享，需引入 Redis。
@@ -45,4 +53,8 @@
 > 未设置则 mysql 容器启动即报错退出、不会带空口令悄悄启动（默认 SQLite 形态连 mysql 都不起，
 > 与该变量无关；`JWT_KEY` / `ADMIN_PASS` 留空即进安装向导、由向导现场生成强随机值）；
 > `cmd/server` 启动检测到缺省 / 过短的 `JWT_KEY` 或缺省口令时**拒绝启动**并打印 `[SECURITY][FATAL]`（本地联调加 `ALLOW_INSECURE=1` 放行，切勿用于生产）。
-> 部署前可先跑 `scripts/preflight.sh` 做静态自检（含小程序端 `DEFAULT_BASE_URL` 种子是否仍指向 127.0.0.1）。
+> 部署前可先跑 `scripts/preflight.sh` 做静态自检。它对小程序端 `DEFAULT_BASE_URL`
+> 的判定覆盖 127/localhost **与私有网段**（192.168./10./172.16-31.）——仓库里这个值
+> 是开发机的局域网 IP，他人 clone 后真机必然连不上，而种子基址是拉取后台配置的
+> 唯一入口，连不上就再也拿不到正确地址，只能重新打包。本机真机联调可用
+> `PREFLIGHT_ALLOW_PRIVATE=1` 放行该项。

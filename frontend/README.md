@@ -207,6 +207,24 @@ npm run test:watch  # 监听模式
 > 说明：CI 中 `frontend` job 执行 `npm ci` + `npm run build` + `npm test`（前端与小程序单测一并覆盖）。  
 > 严格类型检查（`npm run type-check` / `vue-tsc --noEmit`）历史上有 4 个 `@wangeditor/*` 相关错误（editor-for-vue 的 `exports` 未暴露 types、自定义节点 `registerNodeType` 的类型签名），已通过 tsconfig `paths` 指向其真实 d.ts + 精准断言收敛修复，**当前 0 错误**；CI 的 `frontend-typecheck` job 已从「预警（continue-on-error）」升级为**阻塞门禁**，后续不得引入新的类型错误。
 
+## 反向代理配置（`nginx.conf`）的两个要点
+
+线上由 `nginx.conf` 托管静态产物并反代后端。改这个文件时有两处**不是风格问题**：
+
+1. **`location = /healthz` 必须单列，不能落进 `location /` 的 SPA 兜底。**
+   `try_files $uri $uri/ /index.html` 会把 `/healthz` 回退成 `index.html` 并返回 200，
+   而那是 nginx 自己的静态文件——后端进程已死、数据库连不上、upstream 502，这个地址
+   照样 200。于是 `scripts/alert_check.sh` 的 R1（本地探活）/ R4（外部拨测）、
+   `preflight.sh` 第 10 节、以及外部 LB/k8s 的 HTTP 探针**全部永远绿**，
+   最该报警的故障恰恰不报警。实测：停掉 backend 后旧配置仍返回 `200 text/html`，
+   新配置返回 `504`。
+
+2. **`X-Forwarded-For` 要覆盖（`$remote_addr`），不能用 `$proxy_add_x_forwarded_for` 追加。**
+   追加会把客户端自带的伪造值留在链左侧；后端的可信代理网段是私有网段，而反代自己
+   正是其中一个地址，于是「跳过可信代理、取第一个不可信地址」取到的是那个伪造值。
+   登录 / 刷新 / 小程序码三处限流都按这个 IP 分桶，换一个伪造头就换一个桶——
+   实测 14/14 全部放行。改成覆盖后同一手法第 11 次即返回 `code:429`。
+
 ## 已知边界（与后端一致）
 
 - 分类 / 业绩项目 / 业务服务列表未分页（数量有界且需整表拖拽排序）；员工 / 企业 / 申请 / 账号 / 审计日志已服务端分页（`useServerTable` + 后端 `?page=&size=`）。

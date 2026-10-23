@@ -564,3 +564,26 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。
 - 密码使用 bcrypt 哈希，token 使用 HS256 签名（JWT_KEY 环境变量）。
+
+## 可信反代（`TRUSTED_PROXIES`）——限流的分桶依据
+
+登录 / `refresh` / 小程序码三处限流都按 `c.ClientIP()` 分桶，而这个值读不读
+`X-Forwarded-For` 由 gin 的 trusted proxies 决定：
+
+- gin 的**内置缺省是 `0.0.0.0/0`（信任所有代理）**，启动日志会打
+  `You trusted all proxies, this is NOT safe`。此时 `ClientIP()` 直接取 XFF 的
+  **最左**一项——那一项完全由客户端填写。实测：同一来源连打 15 次错误密码，
+  每次换一个伪造头，**15/15 全部放行**（正常应在第 10 次返回 `code:429`）。
+  也就是说「防爆破限流」在缺省配置下等于不存在。
+- 本项目缺省收窄为 `DefaultTrustedProxies`（回环 + 10/8 + 172.16/12 + 192.168/16
+  + `fc00::/7`），覆盖同机 nginx、docker bridge、k8s、内网 LB。
+  反代不在这些网段（如公网 LB）时用 `TRUSTED_PROXIES=1.2.3.0/24,...` 显式指定；
+  前面确实没有反代则设 `TRUSTED_PROXIES=none`（一律用 TCP 对端地址）。
+  配置写错不静默：打印 `[WARN]` 并退回「不信任任何代理」——偏严，但不会被绕过。
+- **只收窄后端不够，反代也必须改**：`X-Forwarded-For` 要**覆盖**而不是
+  `$proxy_add_x_forwarded_for` 追加。追加会把伪造值留在链左侧，而后端跳过可信代理
+  （反代自己）后正好取到它。实测只改后端、nginx 仍追加：伪造头 14/14 仍放行。
+  见 `frontend/nginx.conf`。
+- **端口暴露也是这条防线的一部分**：docker 端口映射会把所有外部来源 NAT 成桥接
+  网关地址，而网关落在可信网段里。所以 backend 的 8090 与 mysql 的 3306 在
+  `docker-compose.yml` 里都绑了 `127.0.0.1`；一旦改成对外发布，谁都能伪造来源 IP。
