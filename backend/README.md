@@ -283,7 +283,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/services/:id?companyId= | 业务服务详情（含 updatedAt） |
 | GET  | /api/home-layout?companyId= | 首页板块顺序（根级 `order`）+ 首页背景（根级 `bgImage` / `bgMask`；`bgImage` 为空串即不设背景） |
 | GET  | /api/company?companyId= | 企业公开信息（名称/简称/LOGO/状态）：小程序申请页展示申请目标、企业独立版自检配置用 |
-| POST | /api/stat/track | 埋点上报（staffId + eventType） |
+| POST | /api/stat/track | 埋点上报（staffId + eventType；公开接口但按 IP 限流 60 次/分并校验员工存在、事件类型白名单） |
 
 ### 写 + 审核流（员工 / 管理员，账号密码，JWT）
 | 方法 | 路径 | 鉴权 | 说明 |
@@ -296,7 +296,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | POST | /api/apply/open/avatar | 否 | 申请开通时上传头像（公开端点，仅图片，供访客在账号创建前设置头像） |
 | GET  | /api/employee/me | employee | 本人名片信息 |
 | PUT  | /api/employee/me | employee | 提交名片修改申请（待审，对外仍显旧信息；可含 landline） |
-| GET  | /api/employee/me/stat | employee | 本人访问/拨号/保存统计 |
+| GET  | /api/employee/me/stat | employee | 本人访问/拨号/保存统计（?from=&to= 日期范围 YYYY-MM-DD，可缺省=全部） |
 | PUT  | /api/employee/password | employee | 修改本人密码 |
 | GET  | /api/admin/apply/open | admin | 开通申请列表（按租户隔离；平台超管可用 ?companyId= 收窄） |
 | POST | /api/admin/apply/open/:id/approve | admin | 通过 → 自动建员工账号并生成初始密码（员工落到申请所属租户） |
@@ -307,7 +307,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/admin/employees | admin | 员工列表（按租户隔离；平台超管可用 ?companyId= 收窄） |
 | POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码；企业管理员落本企业，平台超管可用 ?companyId= 指定） |
 | PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码；按租户隔离） |
-| GET  | /api/admin/stats | admin | 名片统计（汇总 + 按员工，零数据员工补 0；按租户隔离） |
+| GET  | /api/admin/stats | 名片统计（汇总 + 按员工 + 按天趋势，零数据员工补 0；?from=&to= 日期范围；按租户隔离） |
+| GET  | /api/admin/stats/export | 统计 CSV 导出（同 stats 口径与租户隔离；UTF-8 BOM + 公式注入防护） |
 | POST | /api/admin/employees/:id/disable | admin | 停用账号（按租户隔离；目标不存在/越权返回 code=1「未找到」，不再假装成功；记审计 employee.status） |
 | POST | /api/admin/employees/:id/enable | admin | 启用账号（同上，含审计） |
 | POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码；按租户隔离；目标不存在返回 code=1；记审计 employee.reset_password） |

@@ -207,6 +207,7 @@ func main() {
 	}
 	handler.RegisterAuth(r, db, cfg) // 员工/超管登录（JWT 签发）+ 刷新 + 登出
 	handler.RegisterApply(r, db)     // 开通申请 / 名片修改审核 / 员工管理 / 统计
+	handler.RegisterStatsExport(r, db) // 统计 CSV 导出（与 /api/admin/stats 同口径，按租户隔离）
 	handler.RegisterContent(r, db)   // 企业内容管理（公司信息/简介/分类/项目/服务/布局，按租户隔离）
 	handler.RegisterCompanies(r, db) // 企业管理（平台超管）：开通/停用企业、企业管理员管理
 	handler.RegisterAdmins(r, db)    // 平台超管账号管理：列表/新增/改用户名/重置密码/删除

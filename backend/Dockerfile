@@ -16,6 +16,11 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/server ./cmd/server
 
 FROM alpine:3.19
+# tzdata 必须显式装：alpine 极简镜像不带时区数据库，而 Go 读不到
+# /usr/share/zoneinfo 时会**静默**退回 UTC（不报错、不打日志）——
+# 统计的 stat_date 按服务端本地日期落库，TZ 不生效意味着「今日」在每天
+# 00:00-08:00（北京时间）落到前一天，数字悄悄错位且无人察觉。
+RUN apk add --no-cache tzdata
 WORKDIR /app
 COPY --from=build /out/server /app/server
 # migrations 必须进运行镜像：MySQL 形态的表结构由 internal/migrate 按序应用

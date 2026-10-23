@@ -1,0 +1,101 @@
+// stats.ts 会 import ./request（HTTP 客户端 + 401 跳转），而它牵出 router / store /
+// element-plus 一整条依赖链——本机内存跑 vitest 会直接被 kill（exit 137），
+// 故把请求层打桩（同 audit.spec.ts 的取舍）；axios 只用到 create/get，一并桩掉。
+const mocks = vi.hoisted(() => ({
+  httpGet: vi.fn(),
+  rawGet: vi.fn(),
+}))
+vi.mock('./request', () => ({ default: { get: mocks.httpGet } }))
+vi.mock('axios', () => ({ default: { create: () => ({ get: mocks.rawGet }) } }))
+
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { adminStats, exportStatsCsv, parseCsvFilename } from './stats'
+
+describe('parseCsvFilename', () => {
+  it('优先取 filename*（RFC 5987，中文名在这里）', () => {
+    const disp = "attachment; filename=\"stats.csv\"; filename*=UTF-8''%E5%90%8D%E7%89%87%E7%BB%9F%E8%AE%A1_2026-10-01_2026-10-07.csv"
+    expect(parseCsvFilename(disp)).toBe('名片统计_2026-10-01_2026-10-07.csv')
+  })
+
+  it('回落 filename（老客户端不认 filename*）', () => {
+    expect(parseCsvFilename('attachment; filename="stats.csv"')).toBe('stats.csv')
+  })
+
+  it('没有头 / 空值 → 兜底名', () => {
+    expect(parseCsvFilename(undefined)).toBe('stats.csv')
+    expect(parseCsvFilename(null)).toBe('stats.csv')
+    expect(parseCsvFilename('attachment')).toBe('stats.csv')
+  })
+
+  it('filename* 百分号编码坏掉时不当崩，回落兜底名', () => {
+    expect(parseCsvFilename("attachment; filename*=UTF-8''%E4%B8")).toBe('stats.csv')
+  })
+})
+
+describe('adminStats', () => {
+  beforeEach(() => {
+    mocks.httpGet.mockReset()
+  })
+
+  it('把日期范围原样带给后端', async () => {
+    mocks.httpGet.mockResolvedValue({ data: { summary: {}, byStaff: [], trend: [] } })
+    await adminStats({ from: '2026-10-01', to: '2026-10-07' })
+    expect(mocks.httpGet).toHaveBeenCalledWith('/admin/stats', {
+      params: { from: '2026-10-01', to: '2026-10-07' },
+    })
+  })
+
+  it('空范围不发 from/to（全部时间口径）', async () => {
+    mocks.httpGet.mockResolvedValue({ data: { summary: {}, byStaff: [], trend: [] } })
+    await adminStats({})
+    expect(mocks.httpGet).toHaveBeenCalledWith('/admin/stats', { params: {} })
+  })
+
+  it('回包缺字段时回落空集合，不抛', async () => {
+    mocks.httpGet.mockResolvedValue({ data: {} })
+    const r = await adminStats()
+    expect(r.summary).toEqual({ visit: 0, call: 0, save: 0 })
+    expect(r.byStaff).toEqual([])
+    expect(r.trend).toEqual([])
+  })
+})
+
+describe('exportStatsCsv', () => {
+  beforeEach(() => {
+    mocks.rawGet.mockReset()
+    // jsdom 不实现 URL.createObjectURL，桩掉才能走下载分支
+    ;(globalThis as any).URL.createObjectURL = vi.fn(() => 'blob:fake')
+    ;(globalThis as any).URL.revokeObjectURL = vi.fn()
+  })
+
+  it('CSV 响应正常下载（不抛）', async () => {
+    mocks.rawGet.mockResolvedValue({
+      headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': "attachment; filename*=UTF-8''%E5%90%8D%E7%89%87.csv",
+      },
+      data: new Blob(['\xEF\xBB\xBF编号,姓名'], { type: 'text/csv' }),
+    })
+    await expect(exportStatsCsv({ from: '2026-10-01' })).resolves.toBeUndefined()
+    expect(mocks.rawGet).toHaveBeenCalledWith('/admin/stats/export', {
+      params: { from: '2026-10-01' },
+      responseType: 'blob',
+    })
+  })
+
+  it('业务失败信封不当 CSV 下载，而是抛出口袋里的 msg', async () => {
+    mocks.rawGet.mockResolvedValue({
+      headers: { 'content-type': 'application/json' },
+      data: { text: async () => JSON.stringify({ code: 401, msg: '未登录' }) },
+    })
+    await expect(exportStatsCsv()).rejects.toThrow('未登录')
+  })
+
+  it('失败信封不是合法 JSON 时用兜底文案', async () => {
+    mocks.rawGet.mockResolvedValue({
+      headers: { 'content-type': 'application/json' },
+      data: { text: async () => '<html>502</html>' },
+    })
+    await expect(exportStatsCsv()).rejects.toThrow('导出失败')
+  })
+})

@@ -92,6 +92,11 @@ services:
       # 想跳过向导就在这里（或 .env）显式给 DSN——给了 DSN 就永远不进安装模式。
       DB_DSN: ${DB_DSN:-}
       PORT: "8080"
+      # 服务端时区：统计的 stat_date 按服务端本地日期落库（time.Now().Format），
+      # 容器默认 UTC 会让「今日」在每天 00:00-08:00（北京时间）落到前一天——
+      # 不报错、只是数字悄悄错位。默认北京时间，海外部署在 .env 里覆盖。
+      # （运行镜像已装 tzdata，见 backend/Dockerfile；没有它 TZ 会被静默忽略。）
+      TZ: ${TZ:-Asia/Shanghai}
       # 不设时由安装向导现场生成随机值（写进配置文件而不是环境变量）；
       # 只有「自己写死配置、不用向导」的部署才需要在 .env 里给。
       JWT_KEY: ${JWT_KEY:-}

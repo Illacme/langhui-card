@@ -127,6 +127,7 @@ func buildEngine(t *testing.T, db *gorm.DB, cfg config.Config, up storage.Upload
 	r := New(db)
 	RegisterAuth(r, db, cfg)
 	RegisterApply(r, db)
+	RegisterStatsExport(r, db) // 统计 CSV 导出（与 /api/admin/stats 同口径）
 	RegisterContent(r, db)
 	RegisterCompanies(r, db)
 	RegisterAdmins(r, db)    // 平台超管账号管理（列表 / 新增 / 改用户名 / 重置密码 / 删除）
@@ -215,14 +216,17 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		}, "")
 		require.EqualValues(t, 0, body["code"])
 
-		// 埋点上报 → code:0
-		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
-			"staffId": 1, "eventType": "visit",
-		}, "")
-		require.EqualValues(t, 0, body["code"])
-
-		// 参数缺失的埋点 → code:1
+		// 埋点：参数缺失 → code:1；员工不存在 → code:1（进水口校验，见 stat.go）
 		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{"staffId": 1}, "")
+		require.EqualValues(t, 1, body["code"])
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": 99999, "eventType": "visit",
+		}, "")
+		require.EqualValues(t, 1, body["code"], "不存在的员工不应计入统计")
+		// 非法事件类型 → code:1（白名单外的值不进库）
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": 99999, "eventType": "hack",
+		}, "")
 		require.EqualValues(t, 1, body["code"])
 	})
 
@@ -253,6 +257,7 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 
 	// ===== 3. 开通申请审核流（通过→自动建员工） =====
 	var openApplyID int64
+	var newStaffID int64
 	t.Run("开通申请审核流", func(t *testing.T) {
 		_, body := c.do("GET", "/api/admin/apply/open", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
@@ -264,6 +269,13 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		require.EqualValues(t, 0, body["code"])
 		require.NotEmpty(t, body["initialPassword"])
 		require.NotEmpty(t, body["staffId"])
+		newStaffID = int64(body["staffId"].(float64))
+
+		// 员工已存在，此时上报才应被接受（后面统计汇总断言依赖这条 visit）
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": newStaffID, "eventType": "visit",
+		}, "")
+		require.EqualValues(t, 0, body["code"])
 
 		// 重复审核已处理的申请 → code:1
 		_, body = c.do("POST", fmt.Sprintf("/api/admin/apply/open/%d/approve", openApplyID), nil, adminToken)
@@ -360,7 +372,7 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		_, body = c.do("POST", fmt.Sprintf("/api/admin/employees/%d/enable", empID), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 
-		// 全局名片统计：汇总 + 按员工（前面公开接口已上报过一次 visit）
+		// 全局名片统计：汇总 + 按员工 + 按天趋势（审核通过后上报过一次 visit）
 		_, body = c.do("GET", "/api/admin/stats", nil, adminToken)
 		require.EqualValues(t, 0, body["code"])
 		stats := body["data"].(map[string]interface{})
@@ -377,6 +389,22 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 			sumVisit += int64(m["visit"].(float64))
 		}
 		require.EqualValues(t, summary["visit"], sumVisit)
+		// 趋势按天升序，且至少包含今天（上面那条 visit 落在今天）
+		trend := stats["trend"].([]interface{})
+		require.GreaterOrEqual(t, len(trend), 1)
+		last := trend[len(trend)-1].(map[string]interface{})
+		require.Equal(t, time.Now().Format("2006-01-02"), last["date"])
+
+		// 日期范围：只要今天 → 至少含上面那条 visit（MySQL 的 stat_date 是 DATE 列，
+		// 字符串范围条件 + 扫进 string 字段的行为必须与 SQLite 一致，故进 parity 流）
+		today := time.Now().Format("2006-01-02")
+		_, body = c.do("GET", "/api/admin/stats?from="+today+"&to="+today, nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		require.GreaterOrEqual(t, int(body["data"].(map[string]interface{})["summary"].(map[string]interface{})["visit"].(float64)), 1)
+
+		// 坏日期参数 → code:1（而不是静默按全部时间查）
+		_, body = c.do("GET", "/api/admin/stats?from=2026-02-31", nil, adminToken)
+		require.EqualValues(t, 1, body["code"])
 
 		// 员工登录（用重置后的密码）
 		_, body = c.do("POST", "/api/employee/login", map[string]interface{}{

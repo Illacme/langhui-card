@@ -197,14 +197,23 @@ func New(db *gorm.DB) *gin.Engine {
 		})
 	})
 
-	// 埋点上报
-	r.POST("/api/stat/track", func(c *gin.Context) {
+	// 埋点上报（公开接口：小程序访客产生，无登录态——也因此是统计数据的
+	// 唯一进水口，按「会被刷」设计，限流与校验的取舍见 stat.go 各函数注释）。
+	r.POST("/api/stat/track", statTrackLimiter(db).Handler(), func(c *gin.Context) {
 		var req struct {
 			StaffID   int64  `json:"staffId"`
 			EventType string `json:"eventType"`
 		}
-		if err := c.ShouldBindJSON(&req); err != nil || req.EventType == "" {
+		if err := c.ShouldBindJSON(&req); err != nil || req.StaffID <= 0 || !statEventTypes[req.EventType] {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
+			return
+		}
+		// 员工必须存在：否则任何脚本都能往统计表灌不存在员工的「访问量」，
+		// 而后台按员工汇总会照单全收（补 0 只兜「真员工没数据」这一种）。
+		// 停用与否不拦——名片页对停用员工根本不展示，走不到这里。
+		var emp model.Employee
+		if err := db.First(&emp, "staff_id = ?", req.StaffID).Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "员工不存在"})
 			return
 		}
 		if err := repository.TrackStat(db, req.StaffID, req.EventType); err != nil {

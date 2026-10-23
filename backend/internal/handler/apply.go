@@ -91,14 +91,37 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "已提交，等待审核"})
 	})
 
-	// 员工本人统计
+	// 员工本人统计（?from=&to= 日期范围，YYYY-MM-DD 闭区间，均可缺省=全部时间）。
+	// 一次 SUM(CASE) 拿三类计数，而不是三次 Count：三条 SQL 三条错误路径，
+	// 而这里要的只是「范围内三个数」。
 	r.GET("/api/employee/me/stat", middleware.AuthMiddleware(db, "employee"), func(c *gin.Context) {
 		staffID := c.GetInt64("staffId")
-		var visit, call, save int64
-		db.Model(&model.StatEvent{}).Where("staff_id = ? AND event_type = ?", staffID, "visit").Count(&visit)
-		db.Model(&model.StatEvent{}).Where("staff_id = ? AND event_type = ?", staffID, "call").Count(&call)
-		db.Model(&model.StatEvent{}).Where("staff_id = ? AND event_type = ?", staffID, "save").Count(&save)
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"visit": visit, "call": call, "save": save}})
+		from, to, ok := statDateRange(c)
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "日期参数错误"})
+			return
+		}
+		var row struct {
+			Visit int64 `gorm:"column:visit"`
+			Call  int64 `gorm:"column:call"`
+			Save  int64 `gorm:"column:save"`
+		}
+		q := db.Model(&model.StatEvent{}).Where("staff_id = ?", staffID).
+			Select("SUM(CASE WHEN event_type = 'visit' THEN 1 ELSE 0 END) AS `visit`, " +
+				"SUM(CASE WHEN event_type = 'call' THEN 1 ELSE 0 END) AS `call`, " +
+				"SUM(CASE WHEN event_type = 'save' THEN 1 ELSE 0 END) AS `save`")
+		if from != "" {
+			q = q.Where("stat_date >= ?", from)
+		}
+		if to != "" {
+			q = q.Where("stat_date <= ?", to)
+		}
+		// 零行时 Scan 不回错、row 保持零值——「没有事件」与「计数为 0」同形，正是要的
+		if err := q.Scan(&row).Error; err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"visit": row.Visit, "call": row.Call, "save": row.Save}})
 	})
 
 	// 员工修改本人密码
@@ -480,52 +503,54 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 	})
 
-	// 全局名片统计（超管）：汇总 + 按员工分组。
+	// 全局名片统计（超管）：汇总 + 按员工分组 + 按天趋势。
 	// 与 /api/employee/me/stat（仅本人）互补，供 PC 后台「数据统计」页使用。
 	// 实现要点：
 	//   1. 用 SUM(CASE WHEN ...) 而非 SUM(布尔表达式)——后者是 MySQL 方言，
 	//      SQLite 不认，MySQL parity 与 SQLite 会一边挂一边绿。
 	//   2. 分组结果与员工表合并：零数据的员工也要出现在列表里（补 0），
 	//      否则「有员工但没访问」在后台看不出来。
+	//   3. 别名必须加反引号：call 是 MySQL 8 保留字（存储过程关键字），
+	//      裸 AS call 直接 1064（SQLite 不保留所以潜伏——2026-10-21 parity 首跑抓出）。
+	//      反引号在 SQLite 同样合法（MySQL 兼容引用符），两边都能跑。
+	//   4. ?from=&to= 日期范围（YYYY-MM-DD 闭区间，可缺省）：stat_date 有索引，
+	//      字符串字典序即时间序，范围查询直接走索引；缺省即「全部时间」。
 	r.GET("/api/admin/stats", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
-		type statRow struct {
-			StaffID int64 `gorm:"column:staff_id"`
-			Visit   int64 `gorm:"column:visit"`
-			Call    int64 `gorm:"column:call"`
-			Save    int64 `gorm:"column:save"`
+		from, to, ok := statDateRange(c)
+		if !ok {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "日期参数错误"})
+			return
 		}
-		var rows []statRow
-		// 别名必须加反引号：call 是 MySQL 8 保留字（存储过程关键字），
-		// 裸 AS call 直接 1064（SQLite 不保留所以潜伏——2026-10-21 parity 首跑抓出）。
-		// 反引号在 SQLite 同样合法（MySQL 兼容引用符），两边都能跑。
-		db.Model(&model.StatEvent{}).
-			Select("staff_id, " +
-				"SUM(CASE WHEN event_type = 'visit' THEN 1 ELSE 0 END) AS `visit`, " +
-				"SUM(CASE WHEN event_type = 'call' THEN 1 ELSE 0 END) AS `call`, " +
-				"SUM(CASE WHEN event_type = 'save' THEN 1 ELSE 0 END) AS `save`").
-			Group("staff_id").Scan(&rows)
-		byStaff := map[int64]statRow{}
-		for _, r := range rows {
-			byStaff[r.StaffID] = r
+		rows, err := statRowsByStaff(c, db, from, to)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
 		}
-
-		var emps []model.Employee
-		db.Scopes(scopeCond(c)).Order("staff_id asc").Find(&emps)
-		list := make([]gin.H, 0, len(emps))
+		trend, err := statTrend(c, db, from, to)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
+		}
+		list := make([]gin.H, 0, len(rows))
 		var sumVisit, sumCall, sumSave int64
-		for _, e := range emps {
-			r := byStaff[e.StaffID]
+		for _, r := range rows {
 			sumVisit += r.Visit
 			sumCall += r.Call
 			sumSave += r.Save
 			list = append(list, gin.H{
-				"staffId": e.StaffID,
-				"name":    e.Name,
-				"title":   e.Title,
-				"avatar":  e.Avatar,
+				"staffId": r.StaffID,
+				"name":    r.Name,
+				"title":   r.Title,
+				"avatar":  r.Avatar,
 				"visit":   r.Visit,
 				"call":    r.Call,
 				"save":    r.Save,
+			})
+		}
+		trendList := make([]gin.H, 0, len(trend))
+		for _, t := range trend {
+			trendList = append(trendList, gin.H{
+				"date": t.Day, "visit": t.Visit, "call": t.Call, "save": t.Save,
 			})
 		}
 		c.JSON(http.StatusOK, gin.H{
@@ -533,6 +558,7 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			"data": gin.H{
 				"summary": gin.H{"visit": sumVisit, "call": sumCall, "save": sumSave},
 				"byStaff": list,
+				"trend":   trendList,
 			},
 		})
 	})

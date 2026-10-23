@@ -136,8 +136,17 @@ export JWT_KEY=$(openssl rand -base64 32)     # 上线前必改
 export ADMIN_PASS=$(openssl rand -base64 12)  # 上线前必改
 export UPLOAD_DIR=/var/lib/weichuan/uploads
 export COOKIE_SECURE=true
+export TZ=Asia/Shanghai                        # 统计按服务端本地日期落库，见下方说明
 ./weichuan-server                              # 日志首行会打印 database driver=sqlite
 ```
+
+> **TZ 与「今日」口径**：埋点的 `stat_date` 由服务端 `time.Now()` 按**本地时区**写日期。
+> 不设 `TZ` 时 Go 读不到系统时区数据库就**静默按 UTC**——表现是北京时间每天
+> 00:00–08:00 产生的访问落到前一天的桶里，数字悄悄错位且无人察觉（不报错）。
+> 故：Docker 部署 compose 已默认 `TZ=Asia/Shanghai`（运行镜像装了 tzdata）；
+> 原生部署（路径 C/D）请在 systemd unit 或环境里显式设 `TZ`，并把系统时区配对。
+> 管理后台的日期筛选按浏览器本地日期取「今天」，两边同处东八区时一致；
+> 跨时区运营以各自本地日期为准。
 
 与路径 A/B 的 devserver 区别：devserver 用**临时库 + 强制 seed 演示数据 + 写死 JWT 密钥**，  
 只能测功能；本路径是**真正的生产入口**，数据持久、走 `InsecureGates` 安全门槛。
