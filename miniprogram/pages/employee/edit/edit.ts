@@ -21,12 +21,16 @@ Page({
       return
     }
     if (r.data) {
+      // 头像为后端相对路径，端上拼绝对——<image src> 不认相对路径，
+      // 直接绑会是裂图（「我的」页一直是这么处理的，本页曾漏）
+      const data = r.data as any
+      data.avatar = assetUrl(data.avatar)
       this.setData({
-        form: r.data,
+        form: data,
         loading: false,
         pendingModify: !!r.pendingModify,
         // 已有备用号就展开，避免「存了值却看不到输入框」的困惑
-        showPhone2: !!(r.data as any).phone2,
+        showPhone2: !!data.phone2,
       })
     } else {
       this.setData({ loading: false })
@@ -62,7 +66,16 @@ Page({
           header: { Authorization: 'Bearer ' + (wx.getStorageSync('empToken') || '') },
           success(r: any) {
             wx.hideLoading()
-            const body = JSON.parse(r.data)
+            let body: any = {}
+            try {
+              body = JSON.parse(r.data)
+            } catch {
+              // 网关 502 / 反代返回 HTML 时响应体不是 JSON：先兜住再提示。
+              // 让 JSON.parse 的异常冒泡出 success 回调，用户只会看到卡住的
+              // 「上传中」——不知道发生了什么，也不知道能不能重试
+              wx.showToast({ title: '上传失败', icon: 'none' })
+              return
+            }
             if (body.code === 0 && body.data && body.data.urls && body.data.urls.length) {
               const form = that.data.form as any
               form.avatar = assetUrl(body.data.urls[0])

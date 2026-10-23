@@ -64,6 +64,9 @@ Page({
   },
   // 头像上传：调公开端点（无需登录），返回永久 URL 写回表单
   uploadAvatar(filePath: string) {
+    // wx.uploadFile 的 success 是普通函数回调，this 不是页面实例——
+    // 这里必须先存好引用（漏了会让「头像已设置」永远不生效，且抛错无声）
+    const that = this
     wx.showLoading({ title: '上传中' })
     wx.uploadFile({
       url: apiBaseUrl() + '/api/apply/open/avatar',
@@ -76,9 +79,9 @@ Page({
           body = JSON.parse(r.data)
         } catch {}
         if (body.code === 0 && body.data && body.data.urls && body.data.urls.length) {
-          const form = this.data.form as any
+          const form = that.data.form as any
           form.avatar = assetUrl(body.data.urls[0])
-          this.setData({ form })
+          that.setData({ form })
           wx.showToast({ title: '头像已设置' })
         } else {
           wx.showToast({ title: body.msg || '上传失败', icon: 'none' })
