@@ -54,3 +54,68 @@ func TestLoginRateLimiterInvalidLimitFallsBack(t *testing.T) {
 	lim2 := NewLoginRateLimiter(func() int { return -3 }, 7, time.Minute)
 	require.Equal(t, 7, lim2.limit())
 }
+
+// TestRateLimiterSweepsExpiredBuckets 过期桶必须被回收，否则 map 单调增长。
+//
+// 桶只在「同一个 key 再次访问」时才会被覆盖，一个 IP 只要不再来、它的过期桶就
+// 永久留在表里。公网服务每天遇到成百上千个新 IP，几周就能攒出一个可观的常驻内存，
+// 而且没有任何报错——只有 OOM 那天才发现。
+func TestRateLimiterSweepsExpiredBuckets(t *testing.T) {
+	lim := NewLoginRateLimiter(func() int { return 100 }, 100, 30*time.Millisecond)
+
+	// 50 个「来过一次就不再出现」的 key：正是真实流量里最常见的那一类
+	for i := 0; i < 50; i++ {
+		lim.allow("192.0.2."+string(rune('0'+i%10))+string(rune('a'+i%26)))
+	}
+	lim.mu.Lock()
+	before := len(lim.buckets)
+	lim.mu.Unlock()
+	require.Equal(t, 50, before, "50 个 key 各占一个桶")
+
+	// 等窗口过期，再触发一次任意 key 的判定 → 应顺带清理
+	time.Sleep(40 * time.Millisecond)
+	lim.allow("trigger-key")
+
+	lim.mu.Lock()
+	after := len(lim.buckets)
+	lim.mu.Unlock()
+	require.Equal(t, 1, after, "过期桶应被清掉，只剩刚写入的那一个")
+}
+
+// TestRateLimiterKeepsLiveBuckets 清理不能顺手把还在窗口内的桶删了，
+// 否则限流会被绕过（计数归零 = 又能再试满一轮）。
+func TestRateLimiterKeepsLiveBuckets(t *testing.T) {
+	lim := NewLoginRateLimiter(func() int { return 2 }, 2, 50*time.Millisecond)
+
+	require.True(t, lim.allow("10.0.0.9"))  // count=1
+	require.True(t, lim.allow("10.0.0.9"))  // count=2，撞上限
+	require.False(t, lim.allow("10.0.0.9")) // 窗口内，第 3 次仍应被拒
+
+	// 触发一次清理（用另一个 key，且它自己的窗口足够长不会过期）
+	lim.sweepEvery = 30 * time.Millisecond
+	lim.allow("other-key")
+
+	// 原 key 的计数必须还在：仍被拒，而不是「清理后归零」
+	require.False(t, lim.allow("10.0.0.9"), "清理不得删掉窗口内的桶，否则限流被绕过")
+}
+
+// TestRateLimiterSweepDoesNotResetCount 直接压 sweep：过期与未过期混在一起时，
+// 只删过期的。上面两个用例已覆盖主路径，这条守住「边界条件」这一半。
+func TestRateLimiterSweepDoesNotResetCount(t *testing.T) {
+	lim := NewLoginRateLimiter(func() int { return 100 }, 100, 20*time.Millisecond)
+	lim.allow("keep")
+	lim.allow("drop")
+	time.Sleep(30 * time.Millisecond)
+	lim.allow("keep") // 同一 key 再次访问 → 计数重置为 1，窗口也刷新，仍算「活着」
+
+	lim.mu.Lock()
+	lim.sweep(time.Now())
+	keys := make([]string, 0, len(lim.buckets))
+	for k := range lim.buckets {
+		keys = append(keys, k)
+	}
+	lim.mu.Unlock()
+
+	require.Len(t, keys, 1, "只该剩刚刷新过窗口的那个桶")
+	require.Equal(t, "keep", keys[0])
+}

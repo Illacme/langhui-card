@@ -23,6 +23,10 @@ type RateLimiter struct {
 	// keyFn 分桶键（默认客户端 IP）；msg 超限文案（默认通用文案）。
 	keyFn func(c *gin.Context) string
 	msg   string
+	// lastSweep 上次清理过期桶的时间；sweepEvery 清理间隔（取窗口量级）。
+	// 见 allow 里的说明——没有这个的话 buckets 会随唯一 key 数量单调增长。
+	lastSweep  time.Time
+	sweepEvery time.Duration
 }
 
 type rateBucket struct {
@@ -40,11 +44,13 @@ func NewRateLimiter(limitFn func() int, fallback int, window time.Duration) *Rat
 		window = time.Minute
 	}
 	return &RateLimiter{
-		buckets:  make(map[string]*rateBucket),
-		limitFn:  limitFn,
-		fallback: fallback,
-		window:   window,
-		msg:      "请求过于频繁，请稍后再试",
+		buckets:    make(map[string]*rateBucket),
+		limitFn:    limitFn,
+		fallback:   fallback,
+		window:     window,
+		msg:        "请求过于频繁，请稍后再试",
+		lastSweep:  time.Now(),
+		sweepEvery: window,
 	}
 }
 
@@ -81,10 +87,21 @@ func (l *RateLimiter) limit() int {
 }
 
 // allow 判断该 key 本次是否放行，并维护计数（窗口过期后自动重置）。
+//
+// 顺带负责清理过期桶。这是必须的：桶只在「同一个 key 再次访问」时才会被覆盖成
+// 新的计数，也就是说一个 IP 只要不再来，它的过期桶就永远留在 map 里。
+// 公网服务每天会遇到成百上千个新 IP，长期运行下这张表会单调增长——
+// 典型的「不报错、只在 OOM 那天被发现」的内存缓慢泄漏。
+// 清理用惰性触发（而不是后台 goroutine）：不需要为限流器额外管理生命周期，
+// 代价是每 sweepEvery 才做一次 O(n) 扫描，与请求处理共享同一把锁。
 func (l *RateLimiter) allow(key string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
+	if now.After(l.lastSweep.Add(l.sweepEvery)) {
+		l.sweep(now)
+		l.lastSweep = now
+	}
 	b, ok := l.buckets[key]
 	if !ok || now.After(b.resetAt) {
 		l.buckets[key] = &rateBucket{count: 1, resetAt: now.Add(l.window)}
@@ -95,6 +112,15 @@ func (l *RateLimiter) allow(key string) bool {
 	}
 	b.count++
 	return true
+}
+
+// sweep 删除已过期的桶（调用方须持有锁）。
+func (l *RateLimiter) sweep(now time.Time) {
+	for k, b := range l.buckets {
+		if now.After(b.resetAt) {
+			delete(l.buckets, k)
+		}
+	}
 }
 
 // Handler 返回 gin 中间件：超限返回 HTTP 200 + {code:429}，与现有鉴权约定（非 HTTP 状态）一致。
