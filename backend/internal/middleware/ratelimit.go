@@ -12,6 +12,9 @@ import (
 // 用于防爆破 / 防刷：同一 key 在窗口内超过上限即拒绝。
 // 注意：生产若后端位于反向代理之后，应在 gin 中设置 TrustedProxies 以正确识别真实 IP，
 // 否则此处取到的是代理 IP，限流粒度会变粗。
+//
+// 多副本注意：进程内的 buckets 是每副本一份，多副本下实际阈值会翻倍。
+// 要阈值与副本数无关，用 WithCounter 挂一个跨副本共享的计数后端（见 Counter）。
 type RateLimiter struct {
 	mu      sync.Mutex
 	buckets map[string]*rateBucket
@@ -27,6 +30,21 @@ type RateLimiter struct {
 	// 见 allow 里的说明——没有这个的话 buckets 会随唯一 key 数量单调增长。
 	lastSweep  time.Time
 	sweepEvery time.Duration
+	// counter 跨副本共享的计数后端；nil = 仅进程内。见 WithCounter。
+	counter Counter
+}
+
+// Counter 跨副本共享的限流计数后端。
+//
+// Hit 记录一次并返回该 key 在当前窗口内的累计次数（含本次）。
+// 典型实现是落到一张按窗口聚合的表（internal/repository.RateHit），
+// 这样同一 (key, 窗口) 在所有副本上是同一行，阈值与副本数无关。
+//
+// 实现方注意：Hit 出错时本中间件会**退回进程内计数**（见 allow），
+// 所以「存储故障」不会让限流消失，也不会把业务接口打挂——限流是防护，
+// 不能反过来变成单点故障。
+type Counter interface {
+	Hit(key string, window time.Duration) (int, error)
 }
 
 type rateBucket struct {
@@ -68,6 +86,15 @@ func (l *RateLimiter) WithKey(fn func(c *gin.Context) string) *RateLimiter {
 	return l
 }
 
+// WithCounter 挂一个跨副本共享的计数后端（如 DB）。nil = 保持进程内。
+// 多副本部署必须挂，否则每个副本各算一份、实际阈值翻倍。
+func (l *RateLimiter) WithCounter(c Counter) *RateLimiter {
+	if c != nil {
+		l.counter = c
+	}
+	return l
+}
+
 // WithMessage 覆盖超限提示文案
 func (l *RateLimiter) WithMessage(msg string) *RateLimiter {
 	if msg != "" {
@@ -94,6 +121,11 @@ func (l *RateLimiter) limit() int {
 // 典型的「不报错、只在 OOM 那天被发现」的内存缓慢泄漏。
 // 清理用惰性触发（而不是后台 goroutine）：不需要为限流器额外管理生命周期，
 // 代价是每 sweepEvery 才做一次 O(n) 扫描，与请求处理共享同一把锁。
+//
+// 计数来源分两级：
+//   - 挂了 counter（跨副本共享）时以它为准，进程内的桶只作为**降级兜底**；
+//   - counter 出错时退回进程内计数，绝不直接放行——否则存储一故障，
+//     限流就整体消失，而那正是最可能被盯上的时刻。
 func (l *RateLimiter) allow(key string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -101,6 +133,15 @@ func (l *RateLimiter) allow(key string) bool {
 	if now.After(l.lastSweep.Add(l.sweepEvery)) {
 		l.sweep(now)
 		l.lastSweep = now
+	}
+	if l.counter != nil {
+		if n, err := l.counter.Hit(key, l.window); err == nil {
+			// 共享计数里已经有这次命中，进程内不必再记（重复记会让兜底失真）
+			l.touchLocal(key, now)
+			return n <= l.limit()
+		}
+		// 落到这里说明共享存储不可用：继续走下面的进程内逻辑，
+		// 并顺手把这次命中记进去，避免降级期间计数偏小。
 	}
 	b, ok := l.buckets[key]
 	if !ok || now.After(b.resetAt) {
@@ -112,6 +153,18 @@ func (l *RateLimiter) allow(key string) bool {
 	}
 	b.count++
 	return true
+}
+
+// touchLocal 在共享计数已生效时，也把这次命中记进进程内的桶。
+// 不为判定服务（判定用的是共享计数），只为共享存储故障、降级到进程内的那一刻，
+// 计数不会从零开始——否则一次存储抖动就能换来一整轮免费尝试。
+func (l *RateLimiter) touchLocal(key string, now time.Time) {
+	b, ok := l.buckets[key]
+	if !ok || now.After(b.resetAt) {
+		l.buckets[key] = &rateBucket{count: 1, resetAt: now.Add(l.window)}
+		return
+	}
+	b.count++
 }
 
 // sweep 删除已过期的桶（调用方须持有锁）。

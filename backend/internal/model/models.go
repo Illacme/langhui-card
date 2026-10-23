@@ -259,3 +259,22 @@ type AuditLog struct {
 
 // TableName 显式指定表名（避免 GORM 复数化）。
 func (AuditLog) TableName() string { return "audit_log" }
+
+// RateLimitHit 限流计数（多副本共享用）。一行 = 一个分桶键在一个时间窗口内的累计次数。
+//
+// 为什么需要它：进程内限流器在多副本下每个副本各有一份桶，实际阈值会变成
+// 「单副本阈值 × 副本数」——防爆破从 10 次/分悄悄变成 30 次/分，而且不报错。
+// 把计数落到同一张表后，同一窗口内所有副本打的是同一行，阈值才与副本数无关。
+//
+// 设计取舍：
+//   - window_start 用 Unix 秒（对齐到窗口边界）而不是时间戳字符串：同一窗口内
+//     必然是同一个整数，天然成为主键的一部分，也不需要额外计算「窗口是否变化」。
+//   - 列名用 bucket_key 而不是 key：KEY 在 MySQL 属关键字，裸用要靠反引号兜底。
+//   - 只增不修：计数靠 UPSERT 自增，没有任何 UPDATE 业务字段的路径。
+//   - 单机（SQLite）形态也用这张表：行为一致，免得出现「MySQL 限流准、SQLite 不准」
+//     这种难以解释的差异；代价是每次登录多两次 IO，对登录接口无感。
+type RateLimitHit struct {
+	BucketKey   string `gorm:"primaryKey;column:bucket_key;size:191" json:"-"`
+	WindowStart int64  `gorm:"primaryKey;column:window_start" json:"-"`
+	Hits        int    `gorm:"column:hits" json:"-"`
+}

@@ -67,6 +67,9 @@ type Config struct {
 	// RevokedPurgeInterval 过期会话黑名单（revoked_sessions）的定期清理间隔。
 	// 该表只按行存在判定吊销，过期行（refresh 令牌已自然失效）留着只会无限增长。
 	RevokedPurgeInterval time.Duration
+	// RatePurgeInterval 限流计数表（rate_limit_hits）的定期清理间隔。
+	// 与上面同理：每行只在一个时间窗口内有意义，过期后不会自己消失。
+	RatePurgeInterval time.Duration
 	// TrustedProxies 可信反代的地址/CIDR 列表，决定 c.ClientIP() 该不该相信
 	// X-Forwarded-For。留空时用 DefaultTrustedProxies（回环 + 私有网段）。
 	// 设成 TRUSTED_PROXIES=none 表示「前面没有反代」，一律用 TCP 对端地址。
@@ -151,6 +154,7 @@ func Load() Config {
 		// 默认 6 小时：refresh token 最长 30 天，黑名单行要到那时才「过期」，
 		// 故清理频率无需高，只要保证长期运行的表不会无限增长即可（启动还会跑一次）
 		RevokedPurgeInterval: time.Duration(atoi(getEnv("REVOKED_PURGE_MINUTES", "360"), 360)) * time.Minute,
+		RatePurgeInterval:    time.Duration(atoi(getEnv("RATE_PURGE_MINUTES", "10"), 10)) * time.Minute,
 		TrustedProxies:       parseTrustedProxies(getEnv("TRUSTED_PROXIES", "")),
 	}
 }

@@ -32,7 +32,7 @@ backend/
 │   ├── storage/oss.go            # 阿里云 OSS 实现
 │   └── middleware/
 │       ├── auth.go              # JWT 鉴权 + 角色守卫 + 平台超管守卫 + 会话黑名单校验
-│       ├── ratelimit.go         # 登录 IP 限流（固定窗口 + 过期桶惰性清理）
+│       ├── ratelimit.go         # 登录 IP 限流（固定窗口 + 过期桶惰性清理 + 跨副本计数接口）
 │       └── observability.go     # 可观测三件套：RequestID / AccessLog / Metrics（/metrics）
 ├── migrations/0001_init.sql      # 建表 + 经典业绩 7 分类种子
 ├── migrations/0002_apply.sql    # 审核流表 + employee.staff_id 自增
@@ -374,7 +374,8 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 本骨架已落地以下安全基线（详见对应源码）：
 
 - **上传内容嗅探**：`storage.checkFile` 在校验扩展名白名单后，进一步按文件头（魔法字节）校验真实类型（PNG / JPG / GIF / WEBP / MP4），防止把可执行文件改名图片上传。`backend/internal/storage/storage_test.go` 覆盖各类型的合法/伪造场景。
-- **登录限流**：`middleware.NewLoginRateLimiter` 按客户端 IP 做固定窗口限流（默认每 IP 每分钟 10 次登录尝试），防爆破；超限返回 `{code:429}`（与现有鉴权约定一致）。桶表按 `sweepEvery` 惰性清理过期项（否则每个「来过一次就不再出现」的 IP 都会永久占用一项，长期运行下 map 单调增长）。`backend/internal/middleware/ratelimit_test.go` 覆盖计数、隔离、过期回收与「不得删掉窗口内桶」。
+- **登录限流**：`middleware.NewLoginRateLimiter` 按客户端 IP 做固定窗口限流（默认每 IP 每分钟 10 次登录尝试），防爆破；超限返回 `{code:429}`（与现有鉴权约定一致）。桶表按 `sweepEvery` 惰性清理过期项（否则每个「来过一次就不再出现」的 IP 都会永久占用一项，长期运行下 map 单调增长）。
+  **多副本**：进程内的桶是每副本一份，实际阈值会翻倍，故 `RegisterAuth` 通过 `WithCounter(dbRateCounter)` 把计数落到 `rate_limit_hits` 表——同一 (key, 窗口) 在所有副本上是同一行，阈值与副本数无关。存储故障时中间件自动降级到进程内计数（不会把登录接口打挂，也不会让限流消失）。`backend/internal/middleware/ratelimit_test.go` 覆盖计数、隔离、阈值热更新、非法阈值回落、过期桶回收、窗口内桶不被误删、共享计数生效与降级；`internal/handler/ratelimit_shared_test.go` 用两个 engine 共用一个库验证「总阈值仍是 10 次」。
 - **启动安全门槛（拒绝启动）**：`config.InsecureGates()` 命中「`JWT_KEY` 仍是缺省值 `change-me` 或长度 < 16」「`ADMIN_PASS` 仍是内置缺省口令」时，`cmd/server/main.go` 打印 `[SECURITY][FATAL]` 并 `log.Fatal` **拒绝启动**——这两个默认值连同演示账号写进了公开文档，属已知凭据，带它们上线等于把后台开放给所有人。自愈方式是改一个环境变量重启（不会像 `db_dsn` / `cookie_*` 那样把「改回来的入口」一起弄丢）；本地联调加 `ALLOW_INSECURE=1` 放行。测试见 `internal/config/config_test.go`。
 - **启动自检告警（只提示不拦）**：`config.InsecureWarnings()` 对「超管口令长度不足 8 位」打印 `[SECURITY]` 告警。与上面的门槛分工：口令是给人记的，强弱交给运维判断，不卡启动。
 - **健康检查（就绪探针）**：`GET /healthz` 先 `SELECT 1` 探活数据库——正常 `200 {status:"ok",db:"up"}`，DB 不可达 `503 {status:"degraded",db:"down",error:"..."}`；`docker-compose.yml` 已据此为 backend 配置 `healthcheck`（安装模式下 503 会二次确认 `/api/setup/status` 为 `configured=false`，按健康放行，避免装到一半被反复重启）。详见《运维与部署》。
@@ -461,7 +462,9 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   Size>60 截断、页码越界夹到最后一页，而不是把负下标喂给切片）、关键字匹配名称与标签、
   **styleCounts 必须先排除 style 自身的影响**（否则选中某调性后其余调性全变 0，前端把它们
   全隐藏，等于选一次就锁死）、ContentType 扩展名推断、ReadFile 的路径不可达与前后斜杠归一。
-- `internal/middleware/ratelimit_test.go`：登录限流计数、IP 隔离、阈值热更新、非法阈值回落、过期桶回收、窗口内桶不被误删。
+- `internal/middleware/ratelimit_test.go`：登录限流计数、IP 隔离、阈值热更新、非法阈值回落、过期桶回收、窗口内桶不被误删、共享计数生效 / 存储故障降级 / 降级期间计数接续。
+- `internal/repository/ratelimit_test.go`：跨副本计数的窗口内累加、key 隔离、翻页重置、窗口边界对齐、过期行清理、stop 幂等。
+- `internal/handler/ratelimit_shared_test.go`：两个 engine 共用一个库，验证总阈值仍是 10 次（不是每副本 10 次）。
 
 CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
   - `backend`（**默认必跑，零外部依赖**）：`go build` + `go vet` + `go test ./...`。
@@ -559,7 +562,9 @@ CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：
 - 存储增强已落地：直传预签名 / CDN 刷新 / 私有桶限时签名（见上文「存储增强」）
 - 内容模型软删除已落地（见「安全加固」），如需「回收站 / 恢复」可在此基础上扩展
 - 可观测性已落地：RequestID / AccessLog / Metrics + 黑名单定期清理（启动时一次 + 后台每 6h）+ 备份脚本（见「安全加固」与仓库根 `scripts/backup.sh`）
-- 后续可按需补充：更多 CDN 厂商、上传进度/断点续传、多实例会话共享（Redis）、完整监控栈（Prometheus + Alertmanager）、PITR（binlog）等
+- 后续可按需补充：更多 CDN 厂商、上传进度/断点续传、完整监控栈（Prometheus + Alertmanager）、PITR（binlog）等
+  （**登录限流的多副本共享已落地**，走 `rate_limit_hits` 表 + 进程内降级兜底，不需要 Redis；
+   仍未共享的是小程序码缓存与 access_token，多副本下会各打各的微信接口。）
 
 ## 说明
 - 需求使用「账号 + 密码」登录，不走微信 openid 免鉴权，因此自研部署完全够用；若日后迁云托管，仅需容器化 + 配置外置（已在 config 中预留），不依赖微信云能力。

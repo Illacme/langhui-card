@@ -16,22 +16,43 @@ import (
 	"gorm.io/gorm"
 )
 
+// dbRateCounter 把限流计数落到数据库，使多副本部署下各副本共享同一份计数。
+//
+// 为什么不放在 middleware 包里：那个包只依赖 Counter 接口，不需要知道计数存在
+// 哪里（数据库 / Redis / 别的）。反过来让 middleware 去认 repository 会把依赖
+// 方向弄反，也会把 ORM 拖进一个本来很轻的包。
+//
+// 为什么只给登录 / 刷新挂，小程序码（RegisterWechat）不挂：小程序码限流前面还有
+// 进程内缓存挡着（命中缓存的请求根本到不了限流器），多副本下阈值翻倍的影响面小；
+// 而登录限流是防爆破的唯一闸门，翻倍等于直接削弱安全边界，优先级最高。
+// 小程序码那边要挂的话，得先给 RegisterWechat 传 db（改 4 个调用点）。
+type dbRateCounter struct{ db *gorm.DB }
+
+func (c dbRateCounter) Hit(key string, window time.Duration) (int, error) {
+	return repository.RateHit(c.db, key, window)
+}
+
 // RegisterAuth 注册登录 / 刷新 / 登出接口。
 //   - 员工登录（小程序端）：Bearer 头鉴权，token 走响应体；
 //   - 超管登录（PC 后台）：httpOnly Cookie 鉴权，token 不下发到响应体；
 //   - /api/refresh：Cookie 流（读 refresh_token Cookie）或 Body 流（传 refreshToken）二选一；
 //   - /api/logout：吊销当前会话 sid（单设备精确吊销）并清除 httpOnly Cookie。
 //
-// 两个登录接口均叠加登录限流中间件（按客户端 IP 固定窗口计数，防爆破）。
+// 两个登录接口均叠加登录限流中间件（按客户端 IP 固定窗口计数，防爆破），
+// 且计数走数据库共享——多副本下每个副本各算一份会让实际阈值翻倍。
 func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 	// 限流阈值取自系统设置（后台「系统设置 → 登录与令牌」可改，即时生效）；
 	// 缺省值同时是兜底：界面填 0 / 负数时仍按 10 / 60 次每分钟限流，不会把防爆破关掉。
 	loginLimiter := middleware.NewLoginRateLimiter(func() int {
 		return setting.GetInt("login_rate_limit_per_min", 10)
-	}, 10, time.Minute)
+	}, 10, time.Minute).
+		// 跨副本共享计数：否则每个副本各算一份，实际阈值 = 单副本阈值 × 副本数。
+		// 存储故障时中间件会自动降级到进程内计数，不会把登录接口打挂。
+		WithCounter(dbRateCounter{db: db})
 	refreshLimiter := middleware.NewLoginRateLimiter(func() int {
 		return setting.GetInt("refresh_rate_limit_per_min", 60)
-	}, 60, time.Minute)
+	}, 60, time.Minute).
+		WithCounter(dbRateCounter{db: db})
 
 	// 员工登录（按手机号）——小程序端，Bearer 头鉴权
 	r.POST("/api/employee/login", loginLimiter.Handler(), func(c *gin.Context) {

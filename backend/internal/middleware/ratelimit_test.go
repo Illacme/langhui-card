@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -118,4 +119,77 @@ func TestRateLimiterSweepDoesNotResetCount(t *testing.T) {
 
 	require.Len(t, keys, 1, "只该剩刚刷新过窗口的那个桶")
 	require.Equal(t, "keep", keys[0])
+}
+
+// ── 跨副本共享计数（WithCounter）──
+
+// fakeCounter 可控的共享计数后端：calls 记录被调用次数，n 是返回值，err 是错误。
+type fakeCounter struct {
+	calls int
+	n     int
+	err   error
+	// seen 记录每次收到的 key，用来验证「key 传对了」
+	seen []string
+}
+
+func (f *fakeCounter) Hit(key string, _ time.Duration) (int, error) {
+	f.calls++
+	f.seen = append(f.seen, key)
+	return f.n, f.err
+}
+
+// 挂了共享计数时，判定必须以它为准——这才是「多副本下阈值不翻倍」的那一半。
+func TestRateLimiterUsesSharedCounter(t *testing.T) {
+	fc := &fakeCounter{n: 3}
+	lim := NewLoginRateLimiter(func() int { return 10 }, 10, time.Minute).WithCounter(fc)
+
+	require.True(t, lim.allow("1.2.3.4"))
+	require.Equal(t, 1, fc.calls, "判定应走共享计数")
+	require.Equal(t, []string{"1.2.3.4"}, fc.seen, "key 要原样传给共享计数")
+
+	// 共享计数超过上限 → 拒绝（即使进程内一次都没记过）
+	fc.n = 11
+	require.False(t, lim.allow("1.2.3.4"), "应以共享计数为准，而不是进程内那份")
+}
+
+// counter 出错时必须降级到进程内，**绝不能直接放行**。
+//
+// 这条守的是最坏情况：共享存储故障时若放行，限流整体消失，而那正是最可能被盯上的
+// 时刻（攻击者不需要打垮存储，只要等到它抖动）。进程内计数此时充当兜底，
+// 至少还能挡住来自同一个副本的高频尝试。
+func TestRateLimiterFallsBackToLocalOnCounterError(t *testing.T) {
+	fc := &fakeCounter{err: errors.New("db down")}
+	lim := NewLoginRateLimiter(func() int { return 2 }, 2, time.Minute).WithCounter(fc)
+
+	require.True(t, lim.allow("1.2.3.4"), "降级后第一次仍应放行")
+	require.True(t, lim.allow("1.2.3.4"), "第二次放行")
+	require.False(t, lim.allow("1.2.3.4"), "存储故障不该让限流失效：第三次应被进程内兜底拦住")
+	require.Equal(t, 3, fc.calls, "每次仍应尝试共享计数（故障恢复后自动回到共享口径）")
+}
+
+// 共享计数生效期间，进程内也要记账——为的是存储故障、降级到进程内的那一刻
+// 计数不会从零开始，否则一次存储抖动就能换来一整轮免费尝试。
+func TestRateLimiterKeepsLocalCountAlongsideShared(t *testing.T) {
+	fc := &fakeCounter{n: 5} // 共享口径：已经 5 次了
+	lim := NewLoginRateLimiter(func() int { return 10 }, 10, time.Minute).WithCounter(fc)
+
+	for i := 0; i < 5; i++ {
+		lim.allow("1.2.3.4")
+	}
+
+	// 存储此刻故障：降级到进程内。若期间没记账，这里会从 0 开始
+	// （等于白送 10 次）；记了账则应剩 10-5=5 次
+	fc.err = errors.New("db down")
+	for i := 0; i < 5; i++ {
+		require.True(t, lim.allow("1.2.3.4"), "前 5 次放行（进程内已有 5 次）")
+	}
+	require.False(t, lim.allow("1.2.3.4"), "第 6 次应被拦：进程内计数接着共享口径，而不是重新开始")
+}
+
+// WithCounter(nil) 不应把已有 counter 冲掉（链式调用的常见写法）。
+func TestRateLimiterWithCounterIgnoresNil(t *testing.T) {
+	fc := &fakeCounter{n: 1}
+	lim := NewLoginRateLimiter(func() int { return 10 }, 10, time.Minute).WithCounter(fc).WithCounter(nil)
+	lim.allow("k")
+	require.Equal(t, 1, fc.calls, "传 nil 不该覆盖已挂上的 counter")
 }

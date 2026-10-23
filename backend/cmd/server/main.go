@@ -179,6 +179,11 @@ func main() {
 	stopPurge := repository.StartExpiredSessionPurge(db, cfg.RevokedPurgeInterval)
 	defer stopPurge()
 
+	// 限流计数表同样只增不减：每一行只在一个窗口内有意义，但不会自己消失。
+	// 不清理的话长期运行下按「每分钟一批新行」的速度增长（详见该函数注释）。
+	stopRatePurge := repository.StartRateLimitPurge(db, cfg.RatePurgeInterval)
+	defer stopRatePurge()
+
 	r := handler.New(db)
 	// 可信反代：gin 的内置缺省是「信任所有代理」（启动日志自己会打一行
 	// "You trusted all proxies, this is NOT safe"）。那样 c.ClientIP() 直接采信

@@ -17,5 +17,6 @@ func All() []interface{} {
 		&OpenApply{}, &CardModifyApply{},
 		&RevokedSession{}, &Company{},
 		&AuditLog{}, // 操作审计日志（后台写操作与登录失败留痕）
+		&RateLimitHit{}, // 限流计数（多副本共享，见该类型注释）
 	}
 }
