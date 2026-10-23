@@ -159,11 +159,23 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**、**风格行只渲染 count>0 的档位**、**切换风格带 style 请求**、**单一调性分类隐藏风格行**、**已选调性无素材时自动回落全部**（11 例）。
 - `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
 - `src/router/index.spec.ts`（11 例）：路由守卫门禁——未登录跳登录页、已登录访问登录页回后台、企业管理员访问平台级页面挡回审核页、平台超管放行、未知路径落默认页、登出后门禁立即生效；另守路由表本身（平台管理分组必须都标 `platformOnly`、仅登录页 public、业务页都要有 title）。做法是真实 routes + 桩组件 + 内存 history，挂的是生产同一个 `registerGuards`。
-- `src/views/content/Categories.spec.ts`（10 例）：企业内容页代表用例——列表渲染与锁定态、关键字过滤、**首行上移 / 末行下移按钮的禁用条件**、下移后按新顺序批量持久化 sort、新增校验不通过不提交、编辑走 update 而非 create、删除二次确认（取消不调接口）、列表接口失败不崩。
+- `src/layout/AdminLayout.spec.ts`（16 例）：后台外壳——**企业管理员看不到「平台管理」组**、平台超管能看到全部入口、品牌名三级回落（企业简称 → 系统设置品牌 → 「· 管理后台」后缀）、顶部标题取路由 `meta.title`、当前菜单跟随路由；刷新后 `profileLoaded=false` 时用 `/api/admin/me` 取回身份（已恢复则不重复请求，失败保留本地身份）；登出（接口失败也要本地登出）、改密弹层、手机端收进头像下拉、路由切换收起窄屏抽屉。
+- `src/views/content/` 六个企业内容页全覆盖：
+  - `Categories.spec.ts`（10 例）：列表与锁定态、关键字过滤、**首行上移 / 末行下移禁用条件**、下移后按新顺序批量持久化 sort、新增校验不通过不提交、编辑走 update、删除二次确认、列表失败不崩。
+  - `CompanyInfo.spec.ts`（7 例）：回填、**保存只提交 5 个可编辑字段（不带 id）**、LOGO 随保存提交、成功提示、失败不误报成功。
+  - `CompanyProfile.spec.ts`（16 例）：视频来源五档的动态字段、**存储不支持视频时上传档禁用并给原因**、保存前三道拦截（视频号档缺 feedId/feedToken、直链档缺地址、开了兜底却没填地址）、payload 恰好九字段、能力探测失败降级且**不漏 unhandled rejection**。
+  - `HomeLayout.spec.ts`（12 例）：板块顺序与「当前顺序」联动、**保存提交完整顺序数组**、无背景图时滑块禁用且不显示预览、**清除背景要把遮罩一起归零**、预览放大与关闭、拉取失败保留默认布局。
+  - `Projects.spec.ts`（12 例）：分类名反查（分类被删显示占位）、精选/上架标签、分类与关键字过滤、**payload 恰好九字段**、**编辑回填相册是拷贝（改表单不污染列表行）**、删除确认、加载失败不崩。
+  - `Services.spec.ts`（13 例）：摘要去 HTML 并截断（空内容显示「（空）」）、首末行禁用与批量持久化、新增/编辑/删除、校验不通过不提交、加载失败不崩。
 
 > 写表格类视图用例时注意：`el-table` 的行上下文 stub 若用 `provide(行对象)`，setup 只执行一次，
 > 行数变少时实例复用会拿到**上一行的数据**（表现为筛选后仍显示旧行）。应 provide 一个
 > `computed`，由列在渲染时取值。
+>
+> 另两个高频坑：`el-form` 的 stub 必须真的渲染默认插槽（写成 `h('slot')` 会得到一个无效元素，
+> 表单里的输入框全都不进 DOM，断言就变成「对着空气验证」）；`el-button` 的 stub 不要再
+> `$emit('click')`，stub 根元素若是真 `<button>`，一次点击会同时触发原生冒泡与自定义事件，
+> 结果是接口被调两遍。
 
 小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：
 
@@ -172,6 +184,17 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `miniprogram/tests/poster.spec.ts`（6 例）：分享海报页。桩掉全局 `Page` 捕获页面选项，再手工驱动 `onLoad`，
   覆盖「带 staffId 进入」「**扫码 scene 解析**（含混参 / 无参归 0）」「头像与小程序码转绝对 URL」
   「小程序码接口无 data 时不崩」。选它是因为 scene 解析只在真机扫码才走得到，本地开发永远复现不了。
+
+其余 9 个页面（共 125 例）用同一套手法，公共桩在 `miniprogram/tests/helpers/harness.ts`
+（`installPageCapture` / `makeInstance` / `installWx` / `installApp` / `flush`）：
+
+- `index_home.spec.ts`（31 例）：scene 与 `globalData.myStaffId` 解析、自定义顶栏避让、四次并行请求的**根级**字段拼装、停用/不存在/异常三态、**访问埋点去重**、查看案例「滚动 or 跳转」、分享标题与路径、顶部遮罩渐变与 0.01 死区。
+- `apply_open.spec.ts`（17 例）：企业名简称回落、头像上传三种响应（成功 / 业务错误 / 非 JSON）、昵称授权、提交校验与 `saving` 复位、返回兜底。
+- `employee_me.spec.ts`（14 例）：未登录与失效回退、头像绝对化 + `globalData` 回写、改密三条校验、**改密成功后延时静默登出**、退出清两个令牌。
+- `employee_edit.spec.ts`（13 例）：回填与头像绝对化、备用手机号**收起即清空**、上传三条支线、提交待审。
+- `project_list.spec.ts`（15 例）：分类根级、`toView` 滚动定位、标题回显与三种回落、切换分类去重。
+- `project_detail.spec.ts`（12 例）/ `service_detail.spec.ts`（8 例）：绝对 URL、富文本片段、时间格式化、空态文案、分享回带 `companyId`、相册预览。
+- `employee_login.spec.ts`（9 例）/ `employee_stat.spec.ts`（6 例）：空值校验、成功/失败/401 分流、`submitting` 复位。
 
 配置见 `vitest.config.ts`（jsdom 环境 + `@` 别名 + vue 插件 + 小程序 spec 纳管）。运行：
 

@@ -454,6 +454,13 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
   **refresh 令牌当 access 用 401**、token_version 过期 401、sid 在黑名单 401、角色不符 403、
   企业管理员进平台接口 403；令牌来源 Authorization 头优先于 Cookie（Cookie 通道也要能放行，
   PC 后台正是走 httpOnly Cookie）；`TokenVersion` 取不到用户必须报错（否则 vid=0 会放行已不存在的用户）。
+- `internal/assets/assets_test.go`：开源素材库（`go:embed` 内嵌，随二进制分发）。
+  **清单里的每一条 File/Thumb 都必须真能读到**——素材由 `gen_library.py` 生成，
+  清单先落盘、文件后拷贝，中途漏一步线上就是一片裂图；另守清单外的 category/style
+  不会出现（否则素材「消失在所有筛选里」）、分页边界（Page<1/Size<1 走缺省、
+  Size>60 截断、页码越界夹到最后一页，而不是把负下标喂给切片）、关键字匹配名称与标签、
+  **styleCounts 必须先排除 style 自身的影响**（否则选中某调性后其余调性全变 0，前端把它们
+  全隐藏，等于选一次就锁死）、ContentType 扩展名推断、ReadFile 的路径不可达与前后斜杠归一。
 - `internal/middleware/ratelimit_test.go`：登录限流计数与 IP 隔离。
 
 CI：见仓库根 `.github/workflows/ci.yml`，共四个 job：

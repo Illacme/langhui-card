@@ -170,7 +170,14 @@ async function load() {
 }
 
 async function loadCapability() {
-  cap.value = await getUploadCapability()
+  try {
+    cap.value = await getUploadCapability()
+  } catch {
+    // 探测失败按「不可用」处理。这里必须自己兜住：onMounted 里是裸调用，
+    // 让 rejection 冒出去会变成浏览器的 Uncaught (in promise)，在前端监控里
+    // 就是一条看不出所以然的错误；同时给出可读原因，别只留默认文案。
+    cap.value = { ...cap.value, videoUpload: false, reason: '存储能力探测失败，暂时无法上传视频' }
+  }
 }
 
 async function save() {
