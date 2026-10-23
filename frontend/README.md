@@ -158,11 +158,20 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 - `src/views/Employees.spec.ts`：员工管理页视图层用例——列表渲染、启用/停用/重置密码的弹窗确认与接口调用、`el-table` 行上下文（provide/inject 复刻列槽 `{ row }`）等。
 - `src/components/AssetPicker.spec.ts`：素材选择器用例——清单渲染、`defaultCategory` 定位、单选即采用、多选批量、超限拦截、**翻页带新页码重新请求**、**搜索防抖后走服务端过滤**、**风格行只渲染 count>0 的档位**、**切换风格带 style 请求**、**单一调性分类隐藏风格行**、**已选调性无素材时自动回落全部**（11 例）。
 - `src/components/UploadField.spec.ts`：上传组件用例——直传/回退分支、素材库入口与 `library-type` 透传、单选替换、多选追加、超限截断。
+- `src/router/index.spec.ts`（11 例）：路由守卫门禁——未登录跳登录页、已登录访问登录页回后台、企业管理员访问平台级页面挡回审核页、平台超管放行、未知路径落默认页、登出后门禁立即生效；另守路由表本身（平台管理分组必须都标 `platformOnly`、仅登录页 public、业务页都要有 title）。做法是真实 routes + 桩组件 + 内存 history，挂的是生产同一个 `registerGuards`。
+- `src/views/content/Categories.spec.ts`（10 例）：企业内容页代表用例——列表渲染与锁定态、关键字过滤、**首行上移 / 末行下移按钮的禁用条件**、下移后按新顺序批量持久化 sort、新增校验不通过不提交、编辑走 update 而非 create、删除二次确认（取消不调接口）、列表接口失败不崩。
+
+> 写表格类视图用例时注意：`el-table` 的行上下文 stub 若用 `provide(行对象)`，setup 只执行一次，
+> 行数变少时实例复用会拿到**上一行的数据**（表现为筛选后仍显示旧行）。应 provide 一个
+> `computed`，由列在渲染时取值。
 
 小程序纯逻辑（`miniprogram/tests/`，经本目录 Vitest 运行，桩化 `getApp`/`wx` 全局）：
 
 - `miniprogram/tests/richtext.spec.ts`：`<wx-video>` 富文本拆分（自闭合 / 成对 / 属性顺序无关）、无视频号时整体走 `rich-text` 等。
 - `miniprogram/tests/request.spec.ts`：`wx.request` 封装的 token 注入、`code=401` 静默 refresh 重试一次、失败清 token 等。
+- `miniprogram/tests/poster.spec.ts`（6 例）：分享海报页。桩掉全局 `Page` 捕获页面选项，再手工驱动 `onLoad`，
+  覆盖「带 staffId 进入」「**扫码 scene 解析**（含混参 / 无参归 0）」「头像与小程序码转绝对 URL」
+  「小程序码接口无 data 时不崩」。选它是因为 scene 解析只在真机扫码才走得到，本地开发永远复现不了。
 
 配置见 `vitest.config.ts`（jsdom 环境 + `@` 别名 + vue 插件 + 小程序 spec 纳管）。运行：
 

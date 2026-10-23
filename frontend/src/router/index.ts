@@ -1,7 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { Router } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 
-const routes = [
+export const routes = [
   {
     path: '/login',
     name: 'login',
@@ -117,26 +118,30 @@ const routes = [
   { path: '/:pathMatch(.*)*', redirect: '/apply/open' },
 ]
 
-const router = createRouter({
+export const router = createRouter({
   history: createWebHistory(),
   routes,
 })
 
-// 路由守卫：未登录访问非公开页 → /login；已登录访问 /login → 后台首页
-// （令牌在 httpOnly Cookie 中，JS 以非敏感登录标记 loggedIn 判断）
-// platformOnly 页面（企业管理）仅放行平台超管；企业管理员直接回后台首页
-// （后端接口同样有 PlatformAdminMiddleware 兜底，双保险）。
-router.beforeEach((to) => {
-  const auth = useAuthStore()
-  if (!to.meta.public && !auth.loggedIn) {
-    return { path: '/login' }
-  }
-  if (to.path === '/login' && auth.loggedIn) {
-    return { path: '/' }
-  }
-  if (to.meta.platformOnly && !auth.isPlatform) {
-    return { path: '/apply/open' }
-  }
-})
+// registerGuards 挂路由守卫，抽成函数是为了单测能用内存 history + 桩组件
+// 单独验证门禁（不必真的加载每一个页面组件，也不依赖浏览器 history）。
+// 门禁是后台的第一道防线：未登录 / 越权访问必须在前端就被挡住
+// （后端还有 AuthMiddleware / PlatformAdminMiddleware 兜底，双保险）。
+export function registerGuards(r: Router) {
+  r.beforeEach((to) => {
+    const auth = useAuthStore()
+    if (!to.meta.public && !auth.loggedIn) {
+      return { path: '/login' }
+    }
+    if (to.path === '/login' && auth.loggedIn) {
+      return { path: '/' }
+    }
+    if (to.meta.platformOnly && !auth.isPlatform) {
+      return { path: '/apply/open' }
+    }
+  })
+}
+
+registerGuards(router)
 
 export default router
