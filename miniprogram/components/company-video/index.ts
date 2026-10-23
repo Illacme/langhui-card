@@ -13,6 +13,12 @@
 //               走的就是这条。feed-id 优先：两个都填时只认 feed-id。
 //
 // 渲染档位：channels / channels-token 用 channel-video；mp4 用 video；none 回封面占位。
+//
+// 播放埋点（video_play）只覆盖 mp4 档：官方 channel-video 组件只开放 binderror
+// 一个事件，没有播放回调（video 组件自 1.0.0 起有 bindplay）——视频号档的播放
+// 统计缺失是文档级边界，不是漏接；要补只能等官方开放事件，或改用页面级
+// 「视频区曝光」近似（那会把「看到没播」算成兴趣，口径变浑，故意不做）。
+import { track } from '../../utils/track'
 function pickMode(
   source: string,
   feedId: string,
@@ -46,13 +52,20 @@ Component({
     videoUrl: String,
     fallback: Boolean,
     cover: String,
+    // 埋点归属：视频播放计到哪位员工的名片账上（首页透传）
+    staffId: Number,
   },
   data: {
     mode: 'none',
     failed: false,
+    // 播放埋点去重标记：同一组件实例只报一次。微信 video 的 bindplay 在
+    // 「暂停后继续播放」时会再次触发，不去重的话一次观看被记成多次——
+    // 「访客反复看了几遍」与「手滑暂停再播」在统计里无法区分。
+    playTracked: false,
   },
   observers: {
-    // 任一入参变化都重算档位（后台改配置后刷新即可生效，无需重新进入页面）
+    // 任一入参变化都重算档位（后台改配置后刷新即可生效，无需重新进入页面）。
+    // 同时重置去重标记：档位变了等于换了一段视频，应当允许再计一次播放。
     'videoSource, feedId, feedToken, videoUrl, fallback': function (
       videoSource: string,
       feedId: string,
@@ -62,11 +75,19 @@ Component({
     ) {
       this.setData({
         failed: false,
+        playTracked: false,
         mode: pickMode(videoSource || '', feedId || '', feedToken || '', videoUrl || '', !!fallback, false),
       })
     },
   },
   methods: {
+    // video_play 埋点（mp4 档；channel-video 无播放事件，见文件头说明）。
+    // 组件实例级去重：暂停恢复再播不重复计。
+    onVideoPlay() {
+      if (this.data.playTracked) return
+      this.setData({ playTracked: true })
+      track('video_play', this.data.staffId || 0)
+    },
     onVideoError() {
       const s: any = this.data
       // upload / url 两档本来就是 MP4，再回落没有意义；只处理视频号主源失败

@@ -146,11 +146,14 @@ func GetHomeLayout(db *gorm.DB, companyID int64) (model.HomeLayout, error) {
 	return l, err
 }
 
-// TrackStat 写入埋点事件（仅记点击，不校验真实结果）
-func TrackStat(db *gorm.DB, staffID int64, eventType string) error {
+// TrackStat 写入埋点事件（仅记点击，不校验真实结果）。
+// targetID 为关联业务对象 id（案例 / 服务），无关联对象的事件传 0；
+// 进水口的取值校验见 handler.validateStatTarget。
+func TrackStat(db *gorm.DB, staffID int64, eventType string, targetID int64) error {
 	ev := model.StatEvent{
 		StaffID:   staffID,
 		EventType: eventType,
+		TargetID:  targetID,
 		StatDate:  time.Now().Format("2006-01-02"),
 	}
 	return db.Create(&ev).Error

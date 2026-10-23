@@ -17,7 +17,7 @@ backend/
 │   ├── handler/handler.go       # 首页相关 HTTP 接口（读，按租户：companyId 缺省落演示租户）
 │   ├── handler/auth.go          # 员工/管理员登录，签发 JWT + 刷新 + 登出（企业停用校验）
 │   ├── handler/apply.go         # 开通申请 / 名片修改审核 / 员工管理 / 统计（写 + 审核流，按租户隔离）
-│   ├── handler/stat.go          # 埋点统计共享件：track 限流+白名单 / 日期范围 / 按天趋势 / CSV 导出 / 明细列表
+│   ├── handler/stat.go          # 埋点统计共享件：track 限流+白名单 / targetId 校验 / 日期范围 / 按天趋势 / CSV 导出 / 明细列表 / TOP 榜
 │   ├── handler/content.go       # 企业内容管理（分类/项目/服务/简介…）按租户隔离 + 分类删除强校验
 │   ├── handler/companies.go     # 企业管理（平台超管）：开通/停用企业、企业管理员管理、/api/admin/me
 │   ├── handler/tenant.go        # 多租户助手：租户范围解析 / 目标租户 / 企业启停校验
@@ -284,7 +284,7 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/services/:id?companyId= | 业务服务详情（含 updatedAt） |
 | GET  | /api/home-layout?companyId= | 首页板块顺序（根级 `order`）+ 首页背景（根级 `bgImage` / `bgMask`；`bgImage` 为空串即不设背景） |
 | GET  | /api/company?companyId= | 企业公开信息（名称/简称/LOGO/状态）：小程序申请页展示申请目标、企业独立版自检配置用 |
-| POST | /api/stat/track | 埋点上报（staffId + eventType；公开接口但按 IP 限流 60 次/分并校验员工存在、事件类型白名单） |
+| POST | /api/stat/track | 埋点上报（staffId + eventType + targetId；公开接口但按 IP 限流 60 次/分并校验员工存在、事件类型白名单、targetId 存在且同租户） |
 
 ### 写 + 审核流（员工 / 管理员，账号密码，JWT）
 | 方法 | 路径 | 鉴权 | 说明 |
@@ -308,9 +308,9 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 | GET  | /api/admin/employees | admin | 员工列表（按租户隔离；平台超管可用 ?companyId= 收窄） |
 | POST | /api/admin/employees | admin | 新增员工（生成账号+初始密码；企业管理员落本企业，平台超管可用 ?companyId= 指定） |
 | PUT  | /api/admin/employees/:id | admin | 编辑员工资料（即时生效，不经审核流；姓名/手机必填，不含状态与密码；按租户隔离） |
-| GET  | /api/admin/stats | 名片统计（汇总 + 按员工 + 按天趋势，零数据员工补 0；?from=&to= 日期范围；按租户隔离） |
-| GET  | /api/admin/stats/export | 统计 CSV 导出（同 stats 口径与租户隔离；UTF-8 BOM + 公式注入防护） |
-| GET  | /api/admin/stats/detail | 埋点明细列表（汇总的下钻：逐条事件，按 id 倒序分页 {code:0,data,total,page,size}；?staffId=&eventType=&from=&to= 筛选，白名单外值 code:1；同租户隔离） |
+| GET  | /api/admin/stats | 名片统计（汇总 + 按员工 + 按天趋势 + TOP 案例/服务榜，零数据员工补 0；趋势与按员工均含八项指标；?from=&to= 日期范围；按租户隔离） |
+| GET  | /api/admin/stats/export | 统计 CSV 导出（同 stats 口径与租户隔离；UTF-8 BOM + 公式注入防护；含内容意向五列） |
+| GET  | /api/admin/stats/detail | 埋点明细列表（汇总的下钻：逐条事件，按 id 倒序分页 {code:0,data,total,page,size}；?staffId=&eventType=&targetId=&from=&to= 筛选，白名单外值 code:1；同租户隔离） |
 | POST | /api/admin/employees/:id/disable | admin | 停用账号（按租户隔离；目标不存在/越权返回 code=1「未找到」，不再假装成功；记审计 employee.status） |
 | POST | /api/admin/employees/:id/enable | admin | 启用账号（同上，含审计） |
 | POST | /api/admin/employees/:id/reset-password | admin | 重置密码（返回新初始密码；按租户隔离；目标不存在返回 code=1；记审计 employee.reset_password） |
@@ -371,6 +371,27 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 > 小程序码缓存 TTL：生成的图片通过当前存储驱动的 `SaveBytes` 写入（local → `uploads/wxacode/<staffId>.jpg`；minio/oss → 对应对象）。返回策略：公开桶/本地直接返回公开 URL；**私有桶**（`STORAGE_PUBLIC=false` 且存储支持签名）返回**每次重新签发的 1 小时限时签名 URL**。二维码内容按 `WXACODE_TTL_HOURS`（默认 720h=30 天）做内存 TTL 缓存，过期才重新调微信生成，既避免反复消耗微信配额，也支持变更样式/落地页后自然刷新。`access_token` 服务端内存缓存并在 40001/42001 时自动刷新重试。
 > 鉴权方式：请求头 `Authorization: Bearer <token>`（admin 接口）。小程序码接口为公开（分享用），未配置 `WX_APPID/WX_APPSECRET` 时返回明确错误。
+
+## 埋点事件与内容意向（统计口径）
+
+事件白名单（权威定义见 `internal/handler/stat.go` 文件头）分两类，回答两个不同问题：
+
+| 事件 | 语义 | targetId | 类别 |
+|---|---|---|---|
+| visit | 访问名片（小程序首页） | 0 | 转化 |
+| call | 点击拨号 | 0 | 转化 |
+| save | 点击保存（存通讯录） | 0 | 转化 |
+| project_view | 浏览案例详情 | 案例 ID（强制） | 意向 |
+| service_view | 浏览服务详情 | 服务 ID（强制） | 意向 |
+| video_play | 播放公司视频（组件级去重） | 0 | 意向 |
+| share | 转发（名片 / 案例 / 服务） | 0 或对象 ID（不强制存在） | 意向 |
+| poster_save | 保存海报 | 0 | 意向 |
+
+- **进水口校验**：`validateStatTarget` 对 `project_view` / `service_view` 强制要求 targetId 存在且**与员工同租户**（`ProjectCase`/`BizService` 都带 `company_id`）；查不到或跨租户一律 `code:1`（同一句回包，不泄露别家对象是否存在）。这是防伪造——放过一个别家 targetId，别家案例名就会出现在自家 TOP 榜上。
+- **target_id 列**：`migrations/0021_stat_events_target_id.sql`（MySQL）+ 模型 `StatEvent.TargetID`（SQLite 由 AutoMigrate 补齐）。
+- **趋势与按员工都给八项**：`statTrend` 与 `statRowsByStaff` 一次聚合八类事件（同一白名单），前端图例可点选——勾到哪个指标都要有线，否则「勾了却没线」就是静默缺数据。两条 SQL 的**别名必须 snake_case**（`project_view`），写驼峰会静默扫不进来、计数恒 0 不报错（`handler_test.go` 的「内容意向埋点与 TOP 榜」parity 断言守着这条）。
+- **口径一致性**：TOP 榜用 `LEFT JOIN` + `deleted_at IS NULL` + `COALESCE(name,'已删除')`——对象被删除后行仍在、计数不减，避免「汇总 3 条、榜单加起来 2 条」这类最难排查的对账事故。明细的「对象」列与榜单同源（`statTargetName`）。
+- **限流分桶**：埋点限流器的桶键带 `track:` 前缀，与 `login:` / `refresh:` 分开计数——三者共用 `rate_limit_hits` 表，键不隔离时办公网 NAT 下的访客埋点会把管理员登录挤到 429（回归测试 `TestTrackDoesNotStarveLogin`）。
 
 ## 安全加固
 

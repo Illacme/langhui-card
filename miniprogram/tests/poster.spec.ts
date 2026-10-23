@@ -28,6 +28,10 @@ beforeEach(() => {
       select: () => ({ fields: () => ({ exec: (cb: any) => cb([]) }) }),
     }),
     getSystemInfoSync: () => ({ pixelRatio: 2 }),
+    showToast: vi.fn(),
+    showModal: vi.fn(),
+    // 保存相册：默认走成功回调（个别用例改成 fail 覆盖）
+    saveImageToPhotosAlbum: vi.fn((o: any) => o.success({})),
   })
   mocks.request.mockClear()
   mocks.assetUrl.mockClear()
@@ -127,5 +131,61 @@ describe('poster 页', () => {
     await new Promise((r) => setTimeout(r, 0))
     expect(page.data.qrUrl).toBe('')
     expect(page.data.card).toBeTruthy()
+  })
+
+  // ---- 海报保存埋点 ----
+
+  // 保存成功才计 poster_save：用户愿意把海报存进相册，说明有线下发送的意图，
+  // 比「打开过海报页」强得多的意向信号（后台意向指标卡之一）
+  it('海报保存成功后上报 poster_save', async () => {
+    const opts = await loadPage()
+    mockApis()
+    const page = instance(opts)
+    await page.onLoad({ staffId: '42' })
+    await new Promise((r) => setTimeout(r, 0))
+    page.setData({ tempFilePath: 'wxfile://tmp.png' })
+    mocks.request.mockClear()
+
+    page.save()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0][2]).toEqual({ staffId: 42, eventType: 'poster_save' })
+  })
+
+  // 保存失败（权限拒绝 / 写入失败）不计：没做成不等于没意愿，
+  // 计了会让「保存海报数」虚高、运营按这个数评估线下发放量就偏了
+  it('海报保存失败：不上报 poster_save', async () => {
+    const opts = await loadPage()
+    mockApis()
+    const page = instance(opts)
+    await page.onLoad({ staffId: '42' })
+    await new Promise((r) => setTimeout(r, 0))
+    page.setData({ tempFilePath: 'wxfile://tmp.png' })
+    ;(globalThis as any).wx.saveImageToPhotosAlbum = vi.fn((o: any) =>
+      o.fail({ errMsg: 'saveImageToPhotosAlbum:fail auth deny' })
+    )
+    mocks.request.mockClear()
+
+    page.save()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(0)
+  })
+
+  // 海报还没画完就点保存：连保存动作都没发生，更不该有埋点
+  it('海报未生成时保存：直接提示，不上报', async () => {
+    const opts = await loadPage()
+    mockApis()
+    const page = instance(opts)
+    await page.onLoad({ staffId: '42' })
+    await new Promise((r) => setTimeout(r, 0))
+    mocks.request.mockClear()
+
+    page.save()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(0)
+    expect((globalThis as any).wx.saveImageToPhotosAlbum).not.toHaveBeenCalled()
   })
 })

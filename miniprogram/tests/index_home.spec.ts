@@ -396,6 +396,34 @@ describe('index 首页', () => {
     expect(p.onShareAppMessage().path).toBe('/pages/index/index?staffId=42')
   })
 
+  // 转发名片埋点（targetId=0，区别于案例/服务详情的转发）：
+  // 转发量是「员工愿不愿意把这张名片推出去」的直接信号
+  it('分享名片：上报 share（不带 targetId）', async () => {
+    mockApis()
+    const p = await page({ staffId: '42' })
+    mocks.request.mockClear() // 清掉加载过程的访问埋点，只看分享这一条
+
+    p.onShareAppMessage()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0][2]).toEqual({ staffId: 42, eventType: 'share' })
+  })
+
+  // 每次转发都计一次（不去重）：转发意愿的频次本身就是信号，
+  // 与 visit 的页面实例级去重不是一回事
+  it('多次分享各计一次 share', async () => {
+    mockApis()
+    const p = await page({ staffId: '42' })
+    mocks.request.mockClear()
+
+    p.onShareAppMessage()
+    p.onShareAppMessage()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(2)
+  })
+
   // ---- 顶部滚动遮罩 ----
 
   it('滚动遮罩随 scrollTop 渐显，并裁到 0~1', async () => {

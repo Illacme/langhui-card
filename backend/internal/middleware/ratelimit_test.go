@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"errors"
+	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
@@ -192,4 +194,31 @@ func TestRateLimiterWithCounterIgnoresNil(t *testing.T) {
 	lim := NewLoginRateLimiter(func() int { return 10 }, 10, time.Minute).WithCounter(fc).WithCounter(nil)
 	lim.allow("k")
 	require.Equal(t, 1, fc.calls, "传 nil 不该覆盖已挂上的 counter")
+}
+
+// 共用同一张计数表（rate_limit_hits）的多个限流器，桶键必须带动作前缀各自分家。
+// 生产上 login/refresh/track 三个限流器都挂 DB 计数：若键都退化成裸 IP，
+// 它们会挤进同一行互相挤占额度——访客埋点刷够 10 条/分就能把同 IP 的登录
+// 打到 429（办公网 NAT 共享出口 IP 时完全可达，2026-10-23 实测抓过：
+// 现象是「登录莫名被限流」，而代码里两个限流器看起来毫不相干）。
+func TestRateLimiterKeyPrefixSeparatesBuckets(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	fc := &fakeCounter{n: 1}
+
+	newCtx := func() *gin.Context {
+		c, _ := gin.CreateTestContext(httptest.NewRecorder())
+		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Request.RemoteAddr = "1.2.3.4:5678"
+		return c
+	}
+	login := NewLoginRateLimiter(func() int { return 10 }, 10, time.Minute).
+		WithKey(func(c *gin.Context) string { return "login:" + c.ClientIP() }).WithCounter(fc)
+	track := NewRateLimiter(func() int { return 60 }, 60, time.Minute).
+		WithKey(func(c *gin.Context) string { return "track:" + c.ClientIP() }).WithCounter(fc)
+
+	login.Handler()(newCtx())
+	track.Handler()(newCtx())
+
+	require.Equal(t, []string{"login:1.2.3.4", "track:1.2.3.4"}, fc.seen,
+		"键必须带各自的动作前缀，否则在共享计数表里挤同一行、互相挤占额度")
 }

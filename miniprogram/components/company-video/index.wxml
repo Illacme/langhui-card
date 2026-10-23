@@ -20,7 +20,8 @@
 
   <!-- 云存储上传 / 外部直链 / 兜底：三者共用同一个 videoUrl，走标准 video 播放。
        注意：腾讯视频档（vid）未接线——插件必须在 app.json 静态声明，未声明时渲染会直接
-       报「组件未找到」。字段已预留，部署方声明插件后在此加一个 wx:elif 分支即可。 -->
+       报「组件未找到」。字段已预留，部署方声明插件后在此加一个 wx:elif 分支即可。
+       bindplay 接播放埋点（video_play）：channel-video 官方无播放事件，只有 video 有。 -->
   <video
     wx:elif="{{mode === 'mp4'}}"
     src="{{videoUrl}}"
@@ -28,6 +29,7 @@
     object-fit="contain"
     show-fullscreen-btn
     enable-progress-gesture
+    bindplay="onVideoPlay"
     binderror="onVideoError"
   />
 

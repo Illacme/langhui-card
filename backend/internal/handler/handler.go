@@ -203,8 +203,13 @@ func New(db *gorm.DB) *gin.Engine {
 		var req struct {
 			StaffID   int64  `json:"staffId"`
 			EventType string `json:"eventType"`
+			TargetID  int64  `json:"targetId"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil || req.StaffID <= 0 || !statEventTypes[req.EventType] {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
+			return
+		}
+		if req.TargetID < 0 {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
 			return
 		}
@@ -216,7 +221,14 @@ func New(db *gorm.DB) *gin.Engine {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "员工不存在"})
 			return
 		}
-		if err := repository.TrackStat(db, req.StaffID, req.EventType); err != nil {
+		// targetId 校验（project_view/service_view 强制「存在 + 同租户」）：
+		// 这两个事件的 target 会进后台 TOP 榜的对象名 JOIN，放过一个别家
+		// targetId 就把别家案例名泄进了本家榜单
+		if err := validateStatTarget(db, req.EventType, req.TargetID, emp.CompanyID); err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+			return
+		}
+		if err := repository.TrackStat(db, req.StaffID, req.EventType, req.TargetID); err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "上报失败"})
 			return
 		}

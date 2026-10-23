@@ -1,5 +1,6 @@
 import { request, assetUrl } from '../../utils/request'
 import { bindCompanyFromScene, getCompanyId } from '../../utils/tenant'
+import { track } from '../../utils/track'
 
 Page({
   data: {
@@ -120,7 +121,7 @@ Page({
     const sid = this.data.staffId
     if (!sid || sid === this.data.lastVisitStaffId) return
     this.setData({ lastVisitStaffId: sid })
-    request('POST', '/api/stat/track', { staffId: sid, eventType: 'visit' })
+    track('visit', sid)
   },
   // 输入员工编号进入名片（生产环境入口一般为分享链接 / 扫码，此处作为缺省兜底）
   promptStaffId() {
@@ -233,6 +234,9 @@ Page({
     // 分享链接带上 companyId（平台模式）：对方设备首次打开即落到同一企业，
     // 不依赖本机粘滞。独立版恒带锁定值，无害。
     const cid = getCompanyId()
+    // 转发名片埋点（targetId=0，区别于案例/服务详情的转发）。
+    // 转发量是「员工愿不愿意把这张名片推出去」的直接信号——销售动力指标。
+    track('share', this.data.staffId)
     return {
       title: (c && (c.shortName || c.fullName)) || '朗汇机电',
       path:

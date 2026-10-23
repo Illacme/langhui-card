@@ -170,6 +170,10 @@ type StatEvent struct {
 	ID        int64     `gorm:"primaryKey;column:id;autoIncrement" json:"id"`
 	StaffID   int64     `gorm:"column:staff_id;index" json:"staffId"`
 	EventType string    `gorm:"column:event_type;index" json:"eventType"`
+	// TargetID 关联业务对象的 id（案例 / 服务），无关联对象的事件记 0。
+	// 事件类型清单与各类型的 target 约定见 stat.go 的 statEventTypes 注释；
+	// 列由 migrations/0021 增加（MySQL），SQLite 走 AutoMigrate。
+	TargetID  int64     `gorm:"column:target_id;default:0" json:"targetId"`
 	StatDate  string    `gorm:"column:stat_date;index" json:"statDate"` // YYYY-MM-DD
 	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
 }

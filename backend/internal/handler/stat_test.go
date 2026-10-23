@@ -20,13 +20,15 @@ import (
 	"gorm.io/gorm"
 )
 
-// ===== 统计模块（埋点进水口 + 日期维度 + 导出）专项测试 =====
+// ===== 统计模块（埋点进水口 + 日期维度 + 导出 + 内容意向）专项测试 =====
 //
-// 覆盖本轮改造的四个面：
-//  1. 进水口：/api/stat/track 限流（按 IP）+ staffId 存在校验 + 事件白名单；
-//  2. 查询：/api/admin/stats 与 /api/employee/me/stat 的 from/to 日期范围 + 按天趋势；
-//  3. 导出：/api/admin/stats/export 的 BOM / 转义 / 公式注入 / 租户隔离；
-//  4. 明细：/api/admin/stats/detail 的倒序分页 / 三类筛选 / 租户隔离 / 坏参数拒收。
+// 覆盖本轮改造的五个面：
+//  1. 进水口：/api/stat/track 限流（按 IP）+ staffId 存在校验 + 事件白名单
+//     + targetId 校验（project_view/service_view 强制存在且同租户）；
+//  2. 查询：/api/admin/stats 与 /api/employee/me/stat 的 from/to 日期范围 + 按天趋势
+//     + 内容意向汇总与 TOP 榜；
+//  3. 导出：/api/admin/stats/export 的 BOM / 转义 / 公式注入 / 租户隔离 / 意向列；
+//  4. 明细：/api/admin/stats/detail 的倒序分页 / 四类筛选 / 对象名 / 租户隔离 / 坏参数拒收。
 //
 // setupSQLiteEngine 只回引擎，而统计测试需要直写**任意日期**的埋点行
 // （track 接口只能写今天），故这里自建一套并回传 db。
@@ -78,11 +80,32 @@ func mkStatEmployee(t *testing.T, db *gorm.DB, companyID int64, name, title, pho
 }
 
 // mkStatEvent 直写一条指定日期的埋点（track 接口只能写今天）。
-func mkStatEvent(t *testing.T, db *gorm.DB, staffID int64, eventType, date string) {
+// targetID 可选（内容事件用）：缺省 0，与「无关联对象」事件的进水口形态一致。
+func mkStatEvent(t *testing.T, db *gorm.DB, staffID int64, eventType, date string, targetID ...int64) {
 	t.Helper()
+	var tid int64
+	if len(targetID) > 0 {
+		tid = targetID[0]
+	}
 	require.NoError(t, db.Create(&model.StatEvent{
-		StaffID: staffID, EventType: eventType, StatDate: date,
+		StaffID: staffID, EventType: eventType, StatDate: date, TargetID: tid,
 	}).Error)
+}
+
+// mkStatCase 直建一个案例（统计测试只关心 target 存在与租户归属）。
+func mkStatCase(t *testing.T, db *gorm.DB, companyID int64, name string) int64 {
+	t.Helper()
+	pc := model.ProjectCase{CompanyID: companyID, Name: name, Enabled: true}
+	require.NoError(t, db.Create(&pc).Error)
+	return pc.ID
+}
+
+// mkStatService 直建一个服务（BizService 的名字列是 title）。
+func mkStatService(t *testing.T, db *gorm.DB, companyID int64, title string) int64 {
+	t.Helper()
+	sv := model.BizService{CompanyID: companyID, Title: title}
+	require.NoError(t, db.Create(&sv).Error)
+	return sv.ID
 }
 
 // exportCSVRecords 打导出接口并解析成 CSV 记录（校验 BOM 后交给标准解析器）。
@@ -173,6 +196,112 @@ func TestTrackRateLimitedByIP(t *testing.T) {
 	require.EqualValues(t, 3, n, "被限流挡下的请求不应落库")
 }
 
+// TestTrackTargetValidation：内容事件的 targetId 校验。
+// project_view/service_view 的 target 直接进后台 TOP 榜的对象名 JOIN——
+// 放别家 targetId 进去，别家的案例名就会出现在本家榜单里（跨租户泄露的
+// 静默形态），故强制「存在 + 同租户」；share 允许任意非负值（不进 TOP 榜）。
+func TestTrackTargetValidation(t *testing.T) {
+	r, db := setupStatEngine(t)
+	s1 := mkStatEmployee(t, db, 1, "意向", "测试", "13800000080")
+	case1 := mkStatCase(t, db, 1, "朗汇案例A")
+	case2 := mkStatCase(t, db, 2, "乙公司案例B") // 别家案例
+	svc1 := mkStatService(t, db, 1, "朗汇服务A")
+
+	c := newTestClient(r, t)
+
+	// project_view 不带 targetId → 参数错误
+	_, body := c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "project_view",
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+
+	// 不存在的 target → 对象不存在
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "project_view", "targetId": 99999,
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+	require.Equal(t, "对象不存在", body["msg"])
+
+	// 别家案例 → 同样「对象不存在」（同一句回，不泄露别家存在性）
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "project_view", "targetId": case2,
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+	require.Equal(t, "对象不存在", body["msg"])
+
+	// service_view 不带 target / 别家服务 → 同样拒收
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "service_view",
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "service_view", "targetId": 88888,
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+
+	// 已软删的案例 → 对象不存在（详情页根本走不到，进水口也不放行）
+	require.NoError(t, db.Delete(&model.ProjectCase{}, case1).Error)
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "project_view", "targetId": case1,
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+
+	// 负 targetId 一律参数错误（share 也不收）
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": s1, "eventType": "share", "targetId": -5,
+	}, "")
+	require.EqualValues(t, 1, body["code"])
+
+	// 合法组合全部放行（share 带一个别家 id 也放行——不进 TOP 榜，不强制存在）
+	newCase := mkStatCase(t, db, 1, "朗汇案例C")
+	for _, tc := range []struct {
+		event  string
+		target int64
+	}{
+		{"project_view", newCase}, {"service_view", svc1},
+		{"video_play", 0}, {"share", 0}, {"share", case2}, {"poster_save", 0},
+	} {
+		payload := map[string]interface{}{"staffId": s1, "eventType": tc.event}
+		if tc.target > 0 {
+			payload["targetId"] = tc.target
+		}
+		_, body = c.do("POST", "/api/stat/track", payload, "")
+		require.EqualValues(t, 0, body["code"], "%s/%d 应放行", tc.event, tc.target)
+	}
+
+	// 落库的 target_id 与上报一一对应（顺序即插入顺序）
+	var rows []model.StatEvent
+	require.NoError(t, db.Order("id asc").Find(&rows).Error)
+	require.Len(t, rows, 6)
+	wantTargets := []int64{newCase, svc1, 0, 0, case2, 0}
+	for i, row := range rows {
+		require.Equal(t, wantTargets[i], row.TargetID, "第 %d 条的 target_id", i+1)
+	}
+}
+
+// TestTrackDoesNotStarveLogin：埋点（track: 桶，60/分）与登录（login: 桶，
+// 10/分）共用 rate_limit_hits 表但必须分开计数。若桶键退化成裸 IP，同一行
+// 计数被两个限流器互相挤占——访客埋点刷够 10 条/分就能把同 IP（办公网
+// NAT 出口）的管理员登录打到 429，而排查时两个限流器看起来毫不相干。
+// 2026-10-23 加意向子测试后全量包跑挂，根因即此；这条测试钉住修复。
+func TestTrackDoesNotStarveLogin(t *testing.T) {
+	r, db := setupStatEngine(t)
+	s1 := mkStatEmployee(t, db, 1, "限流隔离", "测试", "13800000099")
+	c := newTestClient(r, t)
+
+	// 打超过登录阈值（10）的埋点：埋点自身上限是 60/分，应全部放行
+	for i := 0; i < 12; i++ {
+		_, body := c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": s1, "eventType": "visit",
+		}, "")
+		require.EqualValues(t, 0, body["code"], "第 %d 条埋点应放行（埋点上限 60/分）", i+1)
+	}
+
+	// 同一 IP 上登录必须仍然可用：埋点的 12 次不能算进登录的 10/分桶
+	admin := loginAdmin(t, c)
+	require.NotEmpty(t, admin)
+}
+
 // ===== 2. 日期维度与趋势 =====
 
 // TestAdminStatsDateRangeAndTrend：from/to 只放行范围内事件；趋势按天升序；
@@ -190,6 +319,10 @@ func TestAdminStatsDateRangeAndTrend(t *testing.T) {
 	mkStatEvent(t, db, s1, "call", d0)
 	mkStatEvent(t, db, s2, "visit", d2)
 	mkStatEvent(t, db, s2, "save", d0)
+	// 意向事件也进趋势：d1 有 1 次案例浏览 + 1 次服务浏览，d0 有 1 次案例浏览
+	mkStatEvent(t, db, s1, "project_view", d1, 101)
+	mkStatEvent(t, db, s1, "service_view", d1, 201)
+	mkStatEvent(t, db, s2, "project_view", d0, 101)
 
 	c := newTestClient(r, t)
 	admin := loginAdmin(t, c)
@@ -207,6 +340,10 @@ func TestAdminStatsDateRangeAndTrend(t *testing.T) {
 	for i, want := range []string{d2, d1, d0} {
 		require.Equal(t, want, trend[i].(map[string]interface{})["date"])
 	}
+	// 趋势行带意向计数（前端图例点选后要有线可画）：d1 = 案例浏览 1 / 服务浏览 1
+	require.EqualValues(t, 1, trend[1].(map[string]interface{})["projectView"])
+	require.EqualValues(t, 1, trend[1].(map[string]interface{})["serviceView"])
+	require.EqualValues(t, 0, trend[1].(map[string]interface{})["videoPlay"])
 	// 零数据员工出现在列表里（计数 0）
 	var zeroFound bool
 	for _, it := range stats["byStaff"].([]interface{}) {
@@ -229,6 +366,11 @@ func TestAdminStatsDateRangeAndTrend(t *testing.T) {
 	require.Len(t, trend, 2, "范围外的日期不应出现在趋势里")
 	require.Equal(t, d1, trend[0].(map[string]interface{})["date"])
 	require.Equal(t, d0, trend[1].(map[string]interface{})["date"])
+	// 意向计数同样按范围收窄：d1 的案例浏览 1、d0 的案例浏览 1（d2 的无事件日不在内）
+	require.EqualValues(t, 1, trend[0].(map[string]interface{})["projectView"])
+	require.EqualValues(t, 1, trend[1].(map[string]interface{})["projectView"])
+	require.EqualValues(t, 1, trend[0].(map[string]interface{})["serviceView"])
+	require.EqualValues(t, 0, trend[1].(map[string]interface{})["serviceView"])
 
 	// 坏参数：from > to / 不存在的日期 / 错格式 —— 都必须 code:1
 	for _, q := range []string{"?from=" + d0 + "&to=" + d1, "?from=2026-02-31", "?to=2026-13-01", "?from=20260101"} {
@@ -279,30 +421,186 @@ func TestEmployeeStatDateRange(t *testing.T) {
 	require.EqualValues(t, 1, body["code"])
 }
 
+// ===== 2.5 内容意向汇总与 TOP 榜 =====
+
+// TestAdminStatsIntentSummaryAndTop：意向五计数 + TOP 案例/服务榜 +
+// 租户隔离 + 日期范围 + 已删对象回落「已删除」（计数不减，保对账）。
+func TestAdminStatsIntentSummaryAndTop(t *testing.T) {
+	r, db := setupStatEngine(t)
+	s1 := mkStatEmployee(t, db, 1, "张三", "工程师", "13800000090")
+	s2 := mkStatEmployee(t, db, 2, "乙公司员工", "销售", "13800000091")
+	caseHot := mkStatCase(t, db, 1, "热门案例")
+	caseCold := mkStatCase(t, db, 1, "冷门案例")
+	caseOther := mkStatCase(t, db, 2, "乙公司案例") // 别家案例：不进本家榜单
+	svc1 := mkStatService(t, db, 1, "服务一")
+
+	d := dayOffset(0)
+	mkStatEvent(t, db, s1, "project_view", d, caseHot)
+	mkStatEvent(t, db, s1, "project_view", d, caseHot)
+	mkStatEvent(t, db, s1, "project_view", d, caseCold)
+	mkStatEvent(t, db, s1, "service_view", d, svc1)
+	mkStatEvent(t, db, s1, "video_play", d)
+	mkStatEvent(t, db, s1, "share", d)
+	mkStatEvent(t, db, s1, "poster_save", d)
+	// 别家员工的事件：本家管理员的榜单与汇总都不该看到（staff 子查询隔离）
+	mkStatEvent(t, db, s2, "project_view", d, caseOther)
+
+	// 1 号租户的管理员（平台超管会合并两个租户，测不出隔离）
+	hash, err := auth.HashPassword("comp1pass")
+	require.NoError(t, err)
+	require.NoError(t, db.Create(&model.Admin{
+		CompanyID: 1, Username: "comp1", PasswordHash: hash,
+	}).Error)
+	c := newTestClient(r, t)
+	_, body := c.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "comp1", "password": "comp1pass",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	comp1 := c.cookies["access_token"]
+	require.NotEmpty(t, comp1)
+
+	_, body = c.do("GET", "/api/admin/stats", nil, comp1)
+	require.EqualValues(t, 0, body["code"])
+	data := body["data"].(map[string]interface{})
+	sum := data["summary"].(map[string]interface{})
+	require.EqualValues(t, 3, sum["projectView"])
+	require.EqualValues(t, 1, sum["serviceView"])
+	require.EqualValues(t, 1, sum["videoPlay"])
+	require.EqualValues(t, 1, sum["share"])
+	require.EqualValues(t, 1, sum["posterSave"])
+
+	// TOP 案例：热门案例 2 条居首；别家案例不在榜（staff 子查询隔离）
+	top := data["topProjects"].([]interface{})
+	require.Len(t, top, 2)
+	require.EqualValues(t, caseHot, top[0].(map[string]interface{})["targetId"])
+	require.Equal(t, "热门案例", top[0].(map[string]interface{})["name"])
+	require.EqualValues(t, 2, top[0].(map[string]interface{})["count"])
+	require.Equal(t, "冷门案例", top[1].(map[string]interface{})["name"])
+	require.EqualValues(t, 1, top[1].(map[string]interface{})["count"])
+
+	// TOP 服务：名称取 title 列（不是 name）
+	topSvc := data["topServices"].([]interface{})
+	require.Len(t, topSvc, 1)
+	require.EqualValues(t, svc1, topSvc[0].(map[string]interface{})["targetId"])
+	require.Equal(t, "服务一", topSvc[0].(map[string]interface{})["name"])
+
+	// 日期范围：排除今天 → 意向全 0、榜单空数组（不是 null）
+	_, body = c.do("GET", "/api/admin/stats?from=2020-01-01&to=2020-01-02", nil, comp1)
+	require.EqualValues(t, 0, body["code"])
+	data = body["data"].(map[string]interface{})
+	sum = data["summary"].(map[string]interface{})
+	require.EqualValues(t, 0, sum["projectView"])
+	require.EqualValues(t, 0, sum["serviceView"])
+	require.Empty(t, data["topProjects"].([]interface{}))
+	require.Empty(t, data["topServices"].([]interface{}))
+
+	// 已删对象：TOP 榜名字回落「已删除」但计数不减——否则榜单数字加起来
+	// 对不上汇总（「汇总说 3、榜单加起来 2」是最难排查的对账事故）
+	require.NoError(t, db.Delete(&model.ProjectCase{}, caseCold).Error)
+	_, body = c.do("GET", "/api/admin/stats", nil, comp1)
+	require.EqualValues(t, 0, body["code"])
+	top = body["data"].(map[string]interface{})["topProjects"].([]interface{})
+	require.Len(t, top, 2, "对象删了事件还在，行数不能少")
+	require.EqualValues(t, 3, body["data"].(map[string]interface{})["summary"].(map[string]interface{})["projectView"])
+	byName := map[string]int64{}
+	for _, it := range top {
+		m := it.(map[string]interface{})
+		byName[m["name"].(string)] = int64(m["count"].(float64))
+	}
+	require.EqualValues(t, 2, byName["热门案例"])
+	require.EqualValues(t, 1, byName["已删除"])
+}
+
 // ===== 3. CSV 导出 =====
 
-// TestStatsExportCSV：BOM / 表头 / 公式注入 / 逗号引号转义 / 文件名。
+// TestStatsExportCSV：BOM / 表头 / 公式注入 / 逗号引号转义 / 文件名 / 意向列。
 func TestStatsExportCSV(t *testing.T) {
 	r, db := setupStatEngine(t)
 	// 姓名带公式注入前缀、职位带逗号与引号——Excel 打开时的两个经典坑
 	s1 := mkStatEmployee(t, db, 1, "=cmd|'/c calc'!A1", "销售, 高级\"顾问\"", "13800000030")
+	caseID := mkStatCase(t, db, 1, "导出案例")
 	mkStatEvent(t, db, s1, "visit", dayOffset(0))
+	mkStatEvent(t, db, s1, "project_view", dayOffset(0), caseID) // 意向列要有非零值
 
 	c := newTestClient(r, t)
 	admin := loginAdmin(t, c)
 	recs := exportCSVRecords(t, r, admin, "")
 
 	require.Len(t, recs, 2)
-	require.Equal(t, []string{"编号", "姓名", "职位", "访问", "拨号", "保存"}, recs[0])
+	require.Equal(t, []string{"编号", "姓名", "职位", "访问", "拨号", "保存",
+		"案例浏览", "服务浏览", "视频播放", "转发", "海报保存"}, recs[0])
 	// 公式注入被 ' 前缀挡下；逗号/引号经 csv 包裹后原样读回
 	require.Equal(t, "'=cmd|'/c calc'!A1", recs[1][1])
 	require.Equal(t, "销售, 高级\"顾问\"", recs[1][2])
-	require.Equal(t, "1", recs[1][3])
-	require.Equal(t, "0", recs[1][4])
-	require.Equal(t, "0", recs[1][5])
+	require.Equal(t, "1", recs[1][3]) // 访问
+	require.Equal(t, "0", recs[1][4]) // 拨号
+	require.Equal(t, "0", recs[1][5]) // 保存
+	require.Equal(t, "1", recs[1][6]) // 案例浏览（意向列与 byStaff 同源）
+	require.Equal(t, "0", recs[1][7]) // 服务浏览
+	require.Equal(t, "0", recs[1][8]) // 视频播放
+	require.Equal(t, "0", recs[1][9]) // 转发
+	require.Equal(t, "0", recs[1][10])
 }
 
 // ===== 4. 明细细列表 =====
+
+// TestStatsDetailTargetFilterAndNames：targetId 筛选 + 「对象」列——
+// 案例取 name、服务取 title、share 的 target 案例优先、无对象事件显示占位符、
+// 对象已删回落「已删除」（事件不消失，保对账）；坏 targetId 参数 code:1。
+func TestStatsDetailTargetFilterAndNames(t *testing.T) {
+	r, db := setupStatEngine(t)
+	s1 := mkStatEmployee(t, db, 1, "张三", "工程师", "13800000095")
+	case1 := mkStatCase(t, db, 1, "案例甲")
+	svc1 := mkStatService(t, db, 1, "服务甲")
+
+	d := dayOffset(0)
+	mkStatEvent(t, db, s1, "project_view", d, case1)
+	mkStatEvent(t, db, s1, "project_view", d, case1)
+	mkStatEvent(t, db, s1, "service_view", d, svc1)
+	mkStatEvent(t, db, s1, "share", d, case1) // 转发案例：target 案例优先
+	mkStatEvent(t, db, s1, "visit", d)        // 无关联对象
+
+	c := newTestClient(r, t)
+	admin := loginAdmin(t, c)
+
+	// targetId 筛选：该案例的 project_view 恰好 2 条，对象名带出
+	_, body := c.do("GET", "/api/admin/stats/detail?eventType=project_view&targetId="+
+		strconv.FormatInt(case1, 10), nil, admin)
+	require.EqualValues(t, 0, body["code"])
+	require.EqualValues(t, 2, body["total"])
+	for _, it := range body["data"].([]interface{}) {
+		m := it.(map[string]interface{})
+		require.EqualValues(t, case1, m["targetId"])
+		require.Equal(t, "案例甲", m["targetName"])
+	}
+
+	// 服务详情的对象名取 title 列
+	_, body = c.do("GET", "/api/admin/stats/detail?eventType=service_view", nil, admin)
+	require.EqualValues(t, 1, body["total"])
+	require.Equal(t, "服务甲", body["data"].([]interface{})[0].(map[string]interface{})["targetName"])
+
+	// share 的 targetId 是案例 id → 显示案例名（纯展示，不聚计入 TOP 榜）
+	_, body = c.do("GET", "/api/admin/stats/detail?eventType=share", nil, admin)
+	require.Equal(t, "案例甲", body["data"].([]interface{})[0].(map[string]interface{})["targetName"])
+
+	// visit 无关联对象：targetId=0 + 占位符
+	_, body = c.do("GET", "/api/admin/stats/detail?eventType=visit", nil, admin)
+	m := body["data"].([]interface{})[0].(map[string]interface{})
+	require.EqualValues(t, 0, m["targetId"])
+	require.Equal(t, "—", m["targetName"])
+
+	// 对象被删：事件仍在（明细是汇总的下钻，行数不能少），名字回落「已删除」
+	require.NoError(t, db.Delete(&model.ProjectCase{}, case1).Error)
+	_, body = c.do("GET", "/api/admin/stats/detail?eventType=project_view", nil, admin)
+	require.EqualValues(t, 2, body["total"], "对象删了事件也不能少")
+	require.Equal(t, "已删除", body["data"].([]interface{})[0].(map[string]interface{})["targetName"])
+
+	// 坏 targetId 参数 → code:1（静默忽略会让「筛了却没生效」）
+	for _, q := range []string{"?targetId=abc", "?targetId=0", "?targetId=-1"} {
+		_, body = c.do("GET", "/api/admin/stats/detail"+q, nil, admin)
+		require.EqualValues(t, 1, body["code"], q)
+	}
+}
 
 // TestStatsDetailPaginationAndFilters：倒序 + 分页信封 + 三类筛选各自生效且可组合；
 // stat_date 必须是 YYYY-MM-DD（CAST 归一，MySQL DATE 列直接扫会带 T00:00:00Z）；
@@ -472,6 +770,9 @@ func TestStatsDetailBadParams(t *testing.T) {
 		"?staffId=abc",              // 非数字
 		"?staffId=0",                // 非正数
 		"?staffId=-1",               // 负数
+		"?targetId=abc",             // 非数字
+		"?targetId=0",               // 非正数（TOP 榜下钻传的永远是正 id）
+		"?targetId=-1",              // 负数
 	} {
 		_, body = c.do("GET", "/api/admin/stats/detail"+q, nil, admin)
 		require.EqualValues(t, 1, body["code"], "坏参数应被拒绝: %s", q)

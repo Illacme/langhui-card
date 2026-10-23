@@ -574,6 +574,114 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		require.EqualValues(t, 0, body["code"])
 	})
 
+	// ===== 6.5 内容意向埋点与 TOP 榜 =====
+	// parity 重点：target_id 落库值、按 target 聚合 + LEFT JOIN 对象名
+	// （COALESCE 回落「已删除」）、明细 targetId 筛选——这几种 SQL 形状
+	// 在 MySQL 8.0 与 SQLite 上必须同结果，故进共用流（migrations/0021）。
+	t.Run("内容意向埋点与TOP榜", func(t *testing.T) {
+		_, body := c.do("POST", "/api/admin/categories", map[string]interface{}{
+			"name": "意向分类", "icon": "ic", "sort": 20, "isLocked": false,
+		}, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		catID := int64(body["data"].(map[string]interface{})["id"].(float64))
+
+		_, body = c.do("POST", "/api/admin/projects", map[string]interface{}{
+			"categoryId": catID, "name": "意向案例", "summary": "s", "detail": "d",
+			"album": []string{}, "isHomeFeatured": false, "enabled": true, "sort": 1,
+		}, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		projID := int64(body["data"].(map[string]interface{})["id"].(float64))
+
+		_, body = c.do("POST", "/api/admin/services", map[string]interface{}{
+			"title": "意向服务", "content": "<p>t</p>", "sort": 5,
+		}, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		svcID := int64(body["data"].(map[string]interface{})["id"].(float64))
+
+		// 进水口：project_view 必须带合法 targetId（该值直接进 TOP 榜的 JOIN）
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": newStaffID, "eventType": "project_view",
+		}, "")
+		require.EqualValues(t, 1, body["code"])
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": newStaffID, "eventType": "project_view", "targetId": 999999,
+		}, "")
+		require.EqualValues(t, 1, body["code"])
+
+		// 五类意向事件（project_view 两条同 target，share 带案例 id）
+		for _, ev := range []map[string]interface{}{
+			{"staffId": newStaffID, "eventType": "project_view", "targetId": projID},
+			{"staffId": newStaffID, "eventType": "project_view", "targetId": projID},
+			{"staffId": newStaffID, "eventType": "service_view", "targetId": svcID},
+			{"staffId": newStaffID, "eventType": "video_play"},
+			{"staffId": newStaffID, "eventType": "share", "targetId": projID},
+			{"staffId": newStaffID, "eventType": "poster_save"},
+		} {
+			_, body = c.do("POST", "/api/stat/track", ev, "")
+			require.EqualValues(t, 0, body["code"])
+		}
+
+		// 汇总：意向五计数（别名 snake_case，Scan 才收得到——见 statRowsByStaff 注释）
+		_, body = c.do("GET", "/api/admin/stats", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		sum := body["data"].(map[string]interface{})["summary"].(map[string]interface{})
+		require.EqualValues(t, 2, sum["projectView"])
+		require.EqualValues(t, 1, sum["serviceView"])
+		require.EqualValues(t, 1, sum["videoPlay"])
+		require.EqualValues(t, 1, sum["share"])
+		require.EqualValues(t, 1, sum["posterSave"])
+
+		// 趋势行同样带意向计数：新加的 5 个 SUM(CASE) 别名必须 snake_case 才扫得进来，
+		// 写成驼峰会**静默恒 0**（不报错），parity 是唯一能稳定抓到它的地方
+		tr := body["data"].(map[string]interface{})["trend"].([]interface{})
+		require.NotEmpty(t, tr)
+		lastDay := tr[len(tr)-1].(map[string]interface{})
+		require.Equal(t, time.Now().Format("2006-01-02"), lastDay["date"])
+		require.EqualValues(t, 2, lastDay["projectView"])
+		require.EqualValues(t, 1, lastDay["serviceView"])
+		require.EqualValues(t, 1, lastDay["videoPlay"])
+		require.EqualValues(t, 1, lastDay["share"])
+		require.EqualValues(t, 1, lastDay["posterSave"])
+
+		// TOP 榜：LEFT JOIN + COALESCE 取对象名（服务取 title 列）
+		top := body["data"].(map[string]interface{})["topProjects"].([]interface{})
+		require.NotEmpty(t, top)
+		require.Equal(t, "意向案例", top[0].(map[string]interface{})["name"])
+		require.EqualValues(t, 2, top[0].(map[string]interface{})["count"])
+		topSvc := body["data"].(map[string]interface{})["topServices"].([]interface{})
+		require.NotEmpty(t, topSvc)
+		require.Equal(t, "意向服务", topSvc[0].(map[string]interface{})["name"])
+		require.EqualValues(t, 1, topSvc[0].(map[string]interface{})["count"])
+
+		// 明细下钻：targetId 筛选 + 对象名列
+		_, body = c.do("GET", fmt.Sprintf("/api/admin/stats/detail?eventType=project_view&targetId=%d", projID), nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		require.EqualValues(t, 2, body["total"])
+		for _, it := range body["data"].([]interface{}) {
+			m := it.(map[string]interface{})
+			require.EqualValues(t, projID, m["targetId"])
+			require.Equal(t, "意向案例", m["targetName"])
+		}
+		_, body = c.do("GET", "/api/admin/stats/detail?targetId=abc", nil, adminToken)
+		require.EqualValues(t, 1, body["code"])
+
+		// 对象删除后：TOP 榜名字回落「已删除」但计数不减（汇总与榜单可对账）
+		_, body = c.do("DELETE", fmt.Sprintf("/api/admin/projects/%d", projID), nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		_, body = c.do("GET", "/api/admin/stats", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		top = body["data"].(map[string]interface{})["topProjects"].([]interface{})
+		require.NotEmpty(t, top)
+		require.Equal(t, "已删除", top[0].(map[string]interface{})["name"])
+		require.EqualValues(t, 2, top[0].(map[string]interface{})["count"])
+
+		// 清理：服务与分类（项目已删）
+		_, body = c.do("DELETE", fmt.Sprintf("/api/admin/services/%d", svcID), nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		_, body = c.do("DELETE", fmt.Sprintf("/api/admin/categories/%d", catID), nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+	})
+
 	// ===== 7. 企业信息与首页布局 =====
 	t.Run("企业内容与布局", func(t *testing.T) {
 		_, body := c.do("PUT", "/api/admin/company-info", map[string]interface{}{

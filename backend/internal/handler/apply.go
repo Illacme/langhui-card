@@ -515,6 +515,9 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 	//      反引号在 SQLite 同样合法（MySQL 兼容引用符），两边都能跑。
 	//   4. ?from=&to= 日期范围（YYYY-MM-DD 闭区间，可缺省）：stat_date 有索引，
 	//      字符串字典序即时间序，范围查询直接走索引；缺省即「全部时间」。
+	//   5. summary 后五个 + topProjects/topServices 是「内容意向」：事件带
+	//      target_id（migrations/0021），按 target 聚合 JOIN 对象名，回答
+	//      「访客对什么内容感兴趣」——统计对企业客户的核心价值。
 	r.GET("/api/admin/stats", middleware.AuthMiddleware(db, "admin"), func(c *gin.Context) {
 		from, to, ok := statDateRange(c)
 		if !ok {
@@ -531,12 +534,28 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
 		}
+		topProjects, err := statTopTargets(c, db, from, to, "project_view", "project_cases", "name", statTopLimit)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
+		}
+		topServices, err := statTopTargets(c, db, from, to, "service_view", "biz_services", "title", statTopLimit)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
+		}
 		list := make([]gin.H, 0, len(rows))
 		var sumVisit, sumCall, sumSave int64
+		var sumProjectView, sumServiceView, sumVideoPlay, sumShare, sumPosterSave int64
 		for _, r := range rows {
 			sumVisit += r.Visit
 			sumCall += r.Call
 			sumSave += r.Save
+			sumProjectView += r.ProjectView
+			sumServiceView += r.ServiceView
+			sumVideoPlay += r.VideoPlay
+			sumShare += r.Share
+			sumPosterSave += r.PosterSave
 			list = append(list, gin.H{
 				"staffId": r.StaffID,
 				"name":    r.Name,
@@ -545,20 +564,42 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 				"visit":   r.Visit,
 				"call":    r.Call,
 				"save":    r.Save,
+				// 意向计数随行返回（CSV 同源），PC 表格不展示——列宽装不下
+				"projectView": r.ProjectView,
+				"serviceView": r.ServiceView,
+				"videoPlay":   r.VideoPlay,
+				"share":       r.Share,
+				"posterSave":  r.PosterSave,
 			})
 		}
 		trendList := make([]gin.H, 0, len(trend))
 		for _, t := range trend {
 			trendList = append(trendList, gin.H{
+				// 八项全给：前端图例可点选，勾到哪个指标都要有线
 				"date": t.Day, "visit": t.Visit, "call": t.Call, "save": t.Save,
+				"projectView": t.ProjectView, "serviceView": t.ServiceView,
+				"videoPlay": t.VideoPlay, "share": t.Share, "posterSave": t.PosterSave,
 			})
+		}
+		topList := func(rows []statTopRow) []gin.H {
+			out := make([]gin.H, 0, len(rows))
+			for _, r := range rows {
+				out = append(out, gin.H{"targetId": r.TargetID, "name": r.Name, "count": r.Count})
+			}
+			return out
 		}
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": gin.H{
-				"summary": gin.H{"visit": sumVisit, "call": sumCall, "save": sumSave},
-				"byStaff": list,
-				"trend":   trendList,
+				"summary": gin.H{
+					"visit": sumVisit, "call": sumCall, "save": sumSave,
+					"projectView": sumProjectView, "serviceView": sumServiceView,
+					"videoPlay": sumVideoPlay, "share": sumShare, "posterSave": sumPosterSave,
+				},
+				"byStaff":     list,
+				"trend":       trendList,
+				"topProjects": topList(topProjects),
+				"topServices": topList(topServices),
 			},
 		})
 	})

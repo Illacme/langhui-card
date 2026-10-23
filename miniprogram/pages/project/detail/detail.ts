@@ -2,6 +2,7 @@ import { request, assetUrl } from '../../../utils/request'
 import { parseRich } from '../../../utils/richtext'
 import { formatDateTime } from '../../../utils/datetime'
 import { getCompanyId } from '../../../utils/tenant'
+import { track } from '../../../utils/track'
 
 Page({
   data: {
@@ -42,15 +43,22 @@ Page({
         updatedAtText: r.data.updatedAt ? formatDateTime(r.data.updatedAt) : '',
         loading: false,
       })
+      // 内容意向埋点：案例详情加载成功才算一次「浏览」——加载失败/不存在不计，
+      // 否则统计里的案例热度混进大量根本没看到内容的误报。targetId 必须带：
+      // 后台「内容意向 TOP 榜」靠它回答「哪个案例热」（后端校验存在+同租户）。
+      track('project_view', this.data.staffId, this.data.id)
     } catch {
       this.setData({ loading: false, error: true })
     }
   },
   // 分享带回 staffId 与 companyId：从分享入口进来的访客仍落在对应员工名片链、
-  // 对应企业的内容上（不依赖本机粘滞）
+  // 对应企业的内容上（不依赖本机粘滞）。
+  // 转发埋点的 targetId = 案例 id（0 表示转名片）——转发不进 TOP 榜聚合，
+  // 只在明细里可查「这个案例被转发了多少次」。
   onShareAppMessage() {
     const p = this.data.project
     const cid = getCompanyId()
+    track('share', this.data.staffId, this.data.id)
     return {
       title: p ? p.name : '项目案例',
       path:

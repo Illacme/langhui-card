@@ -166,4 +166,46 @@ describe('project/detail 页', () => {
 
     expect(p.onShareAppMessage().title).toBe('项目案例')
   })
+
+  // ---- 内容意向埋点（后台「内容意向 TOP 榜」的数据源） ----
+
+  // 加载成功才计一次浏览：失败/不存在不计，否则案例热度里混进
+  // 根本没看到内容的误报——TOP 榜是运营调内容配比的依据，口径必须干净
+  it('详情加载成功后上报 project_view（targetId=案例 id）', async () => {
+    mocks.request.mockResolvedValueOnce({ code: 0, data: detail() })
+    const p = await page({ id: '7', staffId: '42' })
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0][2]).toEqual({ staffId: 42, eventType: 'project_view', targetId: 7 })
+  })
+
+  it('案例不存在：不上报 project_view', async () => {
+    mocks.request.mockResolvedValueOnce({ code: 1, msg: 'not found' })
+    await page({ id: '7', staffId: '42' })
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(0)
+  })
+
+  it('请求异常：不上报 project_view', async () => {
+    mocks.request.mockRejectedValueOnce(new Error('offline'))
+    await page({ id: '7', staffId: '42' })
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(0)
+  })
+
+  // 转发埋点 targetId=案例 id（转发不进 TOP 榜聚合，只在明细可查）。
+  // 此时应有两条：加载时的 project_view + 分享时的 share
+  it('分享案例：上报 share（targetId=案例 id）', async () => {
+    mocks.request.mockResolvedValueOnce({ code: 0, data: detail() })
+    const p = await page({ id: '7', staffId: '42' })
+
+    p.onShareAppMessage()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(2)
+    expect(tracks[1][2]).toEqual({ staffId: 42, eventType: 'share', targetId: 7 })
+  })
 })

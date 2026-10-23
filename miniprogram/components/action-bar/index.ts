@@ -1,5 +1,5 @@
 import { saveCard } from '../../utils/contact'
-import { request } from '../../utils/request'
+import { track } from '../../utils/track'
 
 Component({
   options: { addGlobalClass: true },
@@ -13,11 +13,11 @@ Component({
       const phone = this.data.employee.phone
       if (!phone) return
       wx.makePhoneCall({ phoneNumber: phone })
-      request('POST', '/api/stat/track', { staffId: this.data.staffId, eventType: 'call' })
+      track('call', this.data.staffId)
     },
     onSave() {
       saveCard(this.data.employee, this.data.company)
-      request('POST', '/api/stat/track', { staffId: this.data.staffId, eventType: 'save' })
+      track('save', this.data.staffId)
     },
   },
 })

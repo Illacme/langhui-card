@@ -55,6 +55,7 @@
           videoUrl="{{profile.videoUrl}}"
           fallback="{{profile.videoFallbackUrl}}"
           cover="{{profile.cover}}"
+          staffId="{{staffId}}"
         />
         <view class="company-name">{{company.fullName}}</view>
         <!-- 企业名下分隔线：左蓝右灰分段线，与名片卡横线（ec-rows-line）同款 -->

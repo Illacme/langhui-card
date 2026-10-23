@@ -43,15 +43,23 @@ func (c dbRateCounter) Hit(key string, window time.Duration) (int, error) {
 func RegisterAuth(r *gin.Engine, db *gorm.DB, cfg config.Config) {
 	// 限流阈值取自系统设置（后台「系统设置 → 登录与令牌」可改，即时生效）；
 	// 缺省值同时是兜底：界面填 0 / 负数时仍按 10 / 60 次每分钟限流，不会把防爆破关掉。
+	//
+	// 桶键必须带动作前缀（login:/refresh:）：login/refresh/track 三个限流器
+	// 共用同一张 rate_limit_hits 表，若都用裸 IP 当键就会挤进同一行计数——
+	// 访客埋点刷够登录阈值（10/分）就能把同 IP 的登录打到 429，办公网
+	// NAT 共享出口 IP 时完全可达（2026-10-23 全量测试跑挂实测抓过：
+	// 表现是「登录莫名被限流」，排查时代码里两个限流器看起来毫不相干）。
 	loginLimiter := middleware.NewLoginRateLimiter(func() int {
 		return setting.GetInt("login_rate_limit_per_min", 10)
 	}, 10, time.Minute).
+		WithKey(func(c *gin.Context) string { return "login:" + c.ClientIP() }).
 		// 跨副本共享计数：否则每个副本各算一份，实际阈值 = 单副本阈值 × 副本数。
 		// 存储故障时中间件会自动降级到进程内计数，不会把登录接口打挂。
 		WithCounter(dbRateCounter{db: db})
 	refreshLimiter := middleware.NewLoginRateLimiter(func() int {
 		return setting.GetInt("refresh_rate_limit_per_min", 60)
 	}, 60, time.Minute).
+		WithKey(func(c *gin.Context) string { return "refresh:" + c.ClientIP() }).
 		WithCounter(dbRateCounter{db: db})
 
 	// 员工登录（按手机号）——小程序端，Bearer 头鉴权

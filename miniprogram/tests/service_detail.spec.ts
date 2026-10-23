@@ -110,4 +110,35 @@ describe('service/detail 页', () => {
 
     expect(p.onShareAppMessage().title).toBe('业务服务')
   })
+
+  // ---- 内容意向埋点（后台「内容意向 TOP 榜」的数据源） ----
+
+  // 同案例详情口径：加载成功才计浏览，失败/不存在不计
+  it('详情加载成功后上报 service_view（targetId=服务 id）', async () => {
+    mocks.request.mockResolvedValueOnce({ code: 0, data: service() })
+    const p = await page({ id: '3', staffId: '42' })
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(1)
+    expect(tracks[0][2]).toEqual({ staffId: 42, eventType: 'service_view', targetId: 3 })
+  })
+
+  it('服务不存在：不上报 service_view', async () => {
+    mocks.request.mockResolvedValueOnce({ code: 1, msg: 'not found' })
+    await page({ id: '3', staffId: '42' })
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(0)
+  })
+
+  it('分享服务：上报 share（targetId=服务 id）', async () => {
+    mocks.request.mockResolvedValueOnce({ code: 0, data: service() })
+    const p = await page({ id: '3', staffId: '42' })
+
+    p.onShareAppMessage()
+
+    const tracks = mocks.request.mock.calls.filter((c) => c[1] === '/api/stat/track')
+    expect(tracks).toHaveLength(2) // 加载时的 service_view + 分享时的 share
+    expect(tracks[1][2]).toEqual({ staffId: 42, eventType: 'share', targetId: 3 })
+  })
 })

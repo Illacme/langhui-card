@@ -1,4 +1,5 @@
 import { request, assetUrl } from '../../utils/request'
+import { track } from '../../utils/track'
 
 Page({
   data: {
@@ -110,7 +111,13 @@ Page({
     }
     wx.saveImageToPhotosAlbum({
       filePath: this.data.tempFilePath,
-      success: () => wx.showToast({ title: '已保存到相册' }),
+      success: () => {
+        // 海报保存成功才计一次（poster_save）：用户愿意把海报存进相册，
+        // 说明有线下发送的意图——比「打开过海报页」强得多的意向信号。
+        // 保存失败（权限拒绝 / 写入失败）不计，那只是没做成，不是没意愿。
+        track('poster_save', this.data.staffId)
+        wx.showToast({ title: '已保存到相册' })
+      },
       fail: (e: any) => {
         if (e.errMsg && e.errMsg.indexOf('auth') >= 0) {
           wx.showModal({ title: '提示', content: '需要相册权限，请在设置中开启', showCancel: false })

@@ -13,7 +13,8 @@ miniprogram/
 │   ├── types.ts        # 与后端 JSON 对齐的 TS 类型
 │   ├── richtext.ts     # <wx-video> 富文本拆分（视频号块 ↔ channel-video）
 │   ├── wechat.ts       # 微信身份：wx.login 换 openid / getUserProfile 授权昵称
-│   └── contact.ts      # 保存名片到通讯录（员工名片区 / 底部栏共用）
+│   ├── contact.ts      # 保存名片到通讯录（员工名片区 / 底部栏共用）
+│   └── track.ts        # 埋点上报：8 类事件统一入口（白名单就近丢弃，失败静默）
 ├── components/         # 7 个可复用组件（均开启 addGlobalClass）
 │   ├── employee-card / company-video / achievement-grid
 │   ├── featured-projects / service-grid / action-bar
@@ -30,13 +31,33 @@ miniprogram/
 ## 与后端接口对应
 | 页面 | 接口 |
 |---|---|
-| index | GET /api/card, /api/achievements, /api/services, /api/home-layout, POST /api/stat/track(visit) |
+| index | GET /api/card, /api/achievements, /api/services, /api/home-layout, POST /api/stat/track(visit / share) |
 | project/list | GET /api/projects?categoryId= |
-| project/detail | GET /api/projects/:id |
-| service/detail | GET /api/services/:id |
+| project/detail | GET /api/projects/:id + POST /api/stat/track(project_view / share，targetId=案例ID) |
+| service/detail | GET /api/services/:id + POST /api/stat/track(service_view / share，targetId=服务ID) |
 | employee/login → edit | POST /api/employee/login, GET /api/employee/me, PUT /api/employee/me, POST /api/employee/upload(头像) |
 | action-bar | wx.makePhoneCall + POST /api/stat/track(call/save) |
-| poster | GET /api/card, GET /api/wechat/wxacode?staffId= |
+| company-video | POST /api/stat/track(video_play，组件级去重) |
+| poster | GET /api/card, GET /api/wechat/wxacode?staffId= + POST /api/stat/track(poster_save，保存成功后) |
+
+## 埋点（utils/track.ts）
+- 统一入口 `track(event, staffId, targetId = 0)`：staffId ≤ 0 或事件不在白名单里**就地丢弃**（不发请求），
+  请求失败 `.catch(() => {})` 静默——埋点失败绝不能影响用户操作。
+- 事件表（权威定义在 `backend/internal/handler/stat.go` 文件头）：
+
+  | 事件 | 触发点 | targetId |
+  |---|---|---|
+  | visit | 首页 onShow | 0 |
+  | call / save | 底部操作栏点击 | 0 |
+  | project_view / service_view | 案例 / 服务详情页加载成功 | 对象 ID（后端强制校验存在 + 同租户） |
+  | video_play | company-video 的 `<video>` bindplay | 0 |
+  | share | 各页 onShareAppMessage | 0（名片）或对象 ID |
+  | poster_save | 海报保存成功回调 | 0 |
+
+- targetId 为 0 时**不传该字段**，保持 visit/call/save 的老载荷形状。
+- 已知边界：`<channel-video>`（视频号）官方只开放 `binderror`，无播放事件——视频号档
+  位的 video_play 缺失是文档级限制，不是实现缺陷；`<video>` 档位正常上报。
+- 埋点在 PC 后台「名片统计」消费：转化三指标 + 内容意向五指标 + TOP 案例/服务榜 + 明细下钻。
 
 ## 员工头像上传
 - 员工修改页 `pages/employee/edit` 的头像由「URL 文本输入」改为「选图上传」：用 `wx.chooseMedia` 选图，经 `wx.uploadFile` 调后端 `POST /api/employee/upload`（员工鉴权，复用同一 storage.Uploader），返回 URL 写回 `form.avatar`，再随 `PUT /api/employee/me` 提交审核。与 PC 端 `UploadField` 调用 `/api/admin/upload` 同一思路、同一存储层，仅鉴权角色不同。
