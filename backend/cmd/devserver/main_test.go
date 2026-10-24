@@ -1,12 +1,82 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+// TestDevRoutesMatchProduction 守卫：devserver 的路由装配必须与生产（cmd/server）一致。
+//
+// 历史事故（2026-10-24，同源、连抓两次）：
+//   - setup.RegisterStatus / RegisterSetupAlias：前端 main.ts 启动必探
+//     /api/setup/status，devserver 没挂 → 每次启动一条 404；
+//   - RegisterStatsExport / RegisterStatsDetail：/api/admin/stats 汇总本身在
+//     RegisterApply 里，所以统计页能开，但「明细」抽屉与 CSV 导出一点就 404。
+//
+// 共同点：devserver 文件头承诺「复用与生产完全一致的路由装配」，但每次新增
+// Register* 只改了 cmd/server，devserver **静默漂移**——漏注册不报编译错、
+// 不报启动错，只在「点开某个功能」时才暴露，是典型的静默失败。
+// 新增 handler.Register* 时两边都要加，否则本测试会红。
+func TestDevRoutesMatchProduction(t *testing.T) {
+	prod := handlerRegistrations(t, filepath.Join("..", "server", "main.go"))
+	dev := handlerRegistrations(t, "main.go")
+	if len(prod) == 0 {
+		t.Fatal("未从 cmd/server/main.go 解析到任何 handler.Register* 调用——正则失效？")
+	}
+	for _, name := range sortedKeys(prod) {
+		if !dev[name] {
+			t.Errorf("devserver 缺少路由注册 %s（生产 cmd/server 有）——联调点开该功能会静默 404", name)
+		}
+	}
+
+	// setup 的两个端点单列：生产在「已配置」分支挂它们，另有「未配置」分支的
+	// setup.Register（devserver 不该有），故不参与上面的集合比较。
+	devSrc := mustRead(t, "main.go")
+	for _, name := range []string{"setup.RegisterStatus(", "setup.RegisterSetupAlias("} {
+		if !strings.Contains(devSrc, name) {
+			t.Errorf("devserver 缺少 %s（生产已配置分支有）", name)
+		}
+	}
+}
+
+// handlerRegistrations 从 main.go 源码抽出 `handler.RegisterXxx(` 形式的路由注册。
+// 只认 handler 包：setup 包在生产里有「未配置」分支的调用，混进来会误报。
+func handlerRegistrations(t *testing.T, path string) map[string]bool {
+	t.Helper()
+	src := mustRead(t, path)
+	re := regexp.MustCompile(`handler\.Register([A-Za-z]*)\(`)
+	out := map[string]bool{}
+	for _, m := range re.FindAllStringSubmatch(src, -1) {
+		out["handler.Register"+m[1]] = true
+	}
+	return out
+}
+
+func mustRead(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	return string(b)
+}
+
+// sortedKeys 让报错顺序稳定（map 遍历顺序随机，多条红时不好读）。
+func sortedKeys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
 
 func TestUploadBaseURL(t *testing.T) {
 	t.Setenv("DEV_UPLOAD_BASE_URL", "")
