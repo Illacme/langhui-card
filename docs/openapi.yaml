@@ -480,6 +480,17 @@ paths:
                   format: int64
                   description: 关联对象 ID；0 或不传 = 无对象
                   example: 12
+                source:
+                  type: string
+                  description: |
+                    流量来源（仅统计维度，绝不参与权限 / 租户 / 计费判断）。
+                    服务端按白名单归一后落库：空串或纯空白→unknown，白名单原样，
+                    其余任意值→other（脏值不污染分布图）。
+                    白名单：scan（扫码 / 小程序码，含海报码）、share_card（转发卡片）、
+                    search（微信搜索）、poster（扫海报上的码）、unknown、other。
+                    小程序端由进入场景 scene 推导（见 miniprogram/utils/track.ts）。
+                  enum: [scan, share_card, search, poster, unknown, other]
+                  example: share_card
       responses:
         "200":
           description: code=0 成功；code=1 参数错误 / 对象不存在 / 上报失败；code=429 限流
@@ -1150,15 +1161,23 @@ paths:
   /api/admin/stats:
     get:
       tags: [超管-员工管理]
-      summary: 全局名片统计（汇总 + 按员工 + 按天趋势 + 内容意向 TOP 榜）
+      summary: 全局名片统计（汇总 + 按员工 + 按天趋势 + 内容意向 TOP 榜 + 来源分布 + 裂变榜）
       description: |
         汇总转化三指标（visit/call/save）+ 内容意向五指标（projectView/serviceView/
         videoPlay/share/posterSave），并按员工分组（零数据员工补 0）、按天趋势，
-        以及按 `target_id` 聚合的 TOP 案例 / TOP 服务榜。
+        以及按 `target_id` 聚合的 TOP 案例 / TOP 服务榜；另有按 `source` 聚合的
+        来源分布（sourceDist）与裂变榜（fissionTop）。
 
         TOP 榜对象已删除时 `name` 为「已删除」且**计数不减**——榜单与汇总口径
         对得上，不会出现「汇总 3 条、榜单加起来 2 条」的对账事故。
         与 /api/employee/me/stat（仅本人）互补，供 PC 后台「名片统计」页使用。
+
+        流量来源（source，迁移 0022）：只统计 `visit` 事件，取值经后端白名单归一
+        （空串→unknown、脏值→other，白名单外的值永不进分布）。
+        - `sourceDist`：回答「扫码 vs 转发 vs 搜索 vs 海报」各占多少；
+        - `fissionTop`：`visit` + `source='share_card'` 按员工聚合，回答
+          「谁的名片被转发带来的新访客最多」（裂变贡献排行）。
+        source 来自客户端，**只作统计维度**，绝不参与权限 / 租户 / 计费判断。
       security:
         - cookieAuth: []
       parameters:
@@ -1276,6 +1295,22 @@ paths:
                         description: TOP 服务（按 service_view 聚合，最多 10 条）
                         items:
                           $ref: "#/components/schemas/StatTopItem"
+                      sourceDist:
+                        type: array
+                        description: |
+                          流量来源分布：只统计 visit 事件，按归一后的 source 分组
+                          （最多 6 类，无数据 = 空数组不是 null）。
+                          source 取值见 track 接口的 source 字段说明。
+                        items:
+                          $ref: "#/components/schemas/StatSourceItem"
+                      fissionTop:
+                        type: array
+                        description: |
+                          裂变榜：`visit` + `source='share_card'` 按 staff_id 聚合
+                          （最多 10 条，降序），即「谁的名片被转发带来的新访客最多」。
+                          员工已删除时 name 为「已删除」。
+                        items:
+                          $ref: "#/components/schemas/StatFissionItem"
 
   /api/admin/stats/export:
     get:
@@ -3033,6 +3068,35 @@ components:
         name:
           type: string
           example: 车间改造
+        count:
+          type: integer
+
+    StatSourceItem:
+      type: object
+      description: |
+        流量来源分布的一行：按归一后的 source 分组出的来源与次数。
+        取值恒在白名单内（scan/share_card/search/poster/unknown/other），
+        故前端可直接做「占全部访问的比例」条形图。
+      properties:
+        source:
+          type: string
+          enum: [scan, share_card, search, poster, unknown, other]
+          example: share_card
+        count:
+          type: integer
+
+    StatFissionItem:
+      type: object
+      description: |
+        裂变榜的一行：`visit` + `source='share_card'` 按员工聚合出的贡献与次数。
+        员工已从库里删除（硬删除）时 name 为「已删除」。
+      properties:
+        staffId:
+          type: integer
+          format: int64
+        name:
+          type: string
+          example: 张三
         count:
           type: integer
 

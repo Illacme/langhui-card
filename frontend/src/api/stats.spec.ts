@@ -71,7 +71,7 @@ describe('adminStats', () => {
     expect(r.topServices).toEqual([])
   })
 
-  it('解包内容意向：TOP 榜与意向计数原样透出', async () => {
+  it('解包内容意向：TOP 榜与意向计数原样透出，并解包来源分布与裂变榜', async () => {
     mocks.httpGet.mockResolvedValue({
       data: {
         summary: { visit: 10, call: 2, save: 3, projectView: 7, serviceView: 5, videoPlay: 4, share: 6, posterSave: 1 },
@@ -79,6 +79,15 @@ describe('adminStats', () => {
         trend: [],
         topProjects: [{ targetId: 3, name: '朗汇车间改造', count: 5 }],
         topServices: [{ targetId: 9, name: '机电维保', count: 4 }],
+        // 迁移 0022 起：来源分布 + 裂变榜
+        sourceDist: [
+          { source: 'scan', count: 4 },
+          { source: 'share_card', count: 5 },
+        ],
+        fissionTop: [
+          { staffId: 1, name: '张三', count: 3 },
+          { staffId: 2, name: '李四', count: 2 },
+        ],
       },
     })
     const r = await adminStats()
@@ -86,6 +95,18 @@ describe('adminStats', () => {
     expect(r.summary.posterSave).toBe(1)
     expect(r.topProjects).toEqual([{ targetId: 3, name: '朗汇车间改造', count: 5 }])
     expect(r.topServices[0].name).toBe('机电维保')
+    expect(r.sourceDist).toEqual([
+      { source: 'scan', count: 4 },
+      { source: 'share_card', count: 5 },
+    ])
+    expect(r.fissionTop[0]).toEqual({ staffId: 1, name: '张三', count: 3 })
+  })
+
+  it('来源分布 / 裂变榜缺字段时回落空数组（老副本未跑迁移 0022）', async () => {
+    mocks.httpGet.mockResolvedValue({ data: { summary: { visit: 1, call: 2, save: 3 } } })
+    const r = await adminStats()
+    expect(r.sourceDist).toEqual([])
+    expect(r.fissionTop).toEqual([])
   })
 
   it('老副本只回三项时，意向项按 0 渲染（不出现 undefined / NaN）', async () => {

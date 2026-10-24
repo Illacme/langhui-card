@@ -71,3 +71,57 @@ describe('utils/track', () => {
     await new Promise((r) => setTimeout(r, 0)) // 放行微任务，确认没有未决 rejection
   })
 })
+
+// 流量来源（source）：端上推导的语义轻易写错——写错不报错，只表现为后台
+// 来源分布悄悄失真（比如把扫码全算成转发、海报渠道永远统计不到），故用测试钉住。
+describe('utils/track 来源推导', () => {
+  it('转发卡片场景 → share_card（裂变榜的数据来源）', async () => {
+    const { sceneToSource } = await loadTrack()
+    expect(sceneToSource(1007)).toBe('share_card')
+    expect(sceneToSource(1008)).toBe('share_card')
+    expect(sceneToSource(1036)).toBe('share_card')
+  })
+
+  it('扫码场景 → scan；搜索入口 → search', async () => {
+    const { sceneToSource } = await loadTrack()
+    expect(sceneToSource(1011)).toBe('scan')
+    expect(sceneToSource(1047)).toBe('scan')
+    expect(sceneToSource(1001)).toBe('search')
+  })
+
+  // 识别不了必须回落空串（而不是 'unknown'）：空串让 track() 省略该字段，
+  // 保持老载荷形状；后端对空串同样归一为 unknown，统计口径一致。
+  it('识别不了的场景 → 空串（不携带 source，后端归一为 unknown）', async () => {
+    const { sceneToSource } = await loadTrack()
+    expect(sceneToSource(0)).toBe('')
+    expect(sceneToSource(9999)).toBe('')
+  })
+
+  // 海报标记优先于 scene：扫海报码与扫普通码的 scene 同在扫码区间，
+  // 只有 from=poster 能区分（标记由后端埋进小程序码的 scene 串）。
+  it('deriveSource 优先认海报标记（query.from / query.scene 里的 from=poster）', async () => {
+    const { deriveSource } = await loadTrack()
+    expect(deriveSource(1011, { from: 'poster' })).toBe('poster')
+    expect(deriveSource(1011, { scene: encodeURIComponent('staffId=42&from=poster') })).toBe('poster')
+    // 同是扫码场景、无标记 → 就是普通扫码
+    expect(deriveSource(1011, { scene: encodeURIComponent('staffId=42') })).toBe('scan')
+    expect(deriveSource(1011)).toBe('scan')
+  })
+
+  it('确实有来源时才带 source 字段；空串省略（老载荷形状不变）', async () => {
+    const { track } = await loadTrack()
+
+    track('visit', 42, 0, 'share_card')
+    expect(mocks.request).toHaveBeenLastCalledWith('POST', '/api/stat/track', {
+      staffId: 42,
+      eventType: 'visit',
+      source: 'share_card',
+    })
+
+    track('visit', 42, 0, '')
+    expect(mocks.request).toHaveBeenLastCalledWith('POST', '/api/stat/track', {
+      staffId: 42,
+      eventType: 'visit',
+    })
+  })
+})

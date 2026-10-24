@@ -22,7 +22,10 @@ Page({
     const sid = this.data.staffId
     const [card, code] = await Promise.all([
       request('GET', '/api/card?staffId=' + sid),
-      request('GET', '/api/wechat/wxacode?staffId=' + sid),
+      // from=poster：后端把该标记埋进小程序码 scene（staffId=12&from=poster），
+      // 访客扫海报上的码打开名片时，scene 含 from=poster → 来源归为 poster，
+      // 与「扫普通码」区分开（两者 scene 都是 scan 区间，只能靠这个标记区分）。
+      request('GET', '/api/wechat/wxacode?staffId=' + sid + '&from=poster'),
     ])
     // /api/wechat/wxacode 成功返回 {code:0,data:{url}}（data.url 正确）；
     // /api/card 的 employee/company/profile 在响应根级（非 data 包裹），故此处直接存整个响应。

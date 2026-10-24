@@ -389,6 +389,10 @@ go run ./cmd/devserver          # 监听 :8080（PORT 可覆盖）
 
 - **进水口校验**：`validateStatTarget` 对 `project_view` / `service_view` 强制要求 targetId 存在且**与员工同租户**（`ProjectCase`/`BizService` 都带 `company_id`）；查不到或跨租户一律 `code:1`（同一句回包，不泄露别家对象是否存在）。这是防伪造——放过一个别家 targetId，别家案例名就会出现在自家 TOP 榜上。
 - **target_id 列**：`migrations/0021_stat_events_target_id.sql`（MySQL）+ 模型 `StatEvent.TargetID`（SQLite 由 AutoMigrate 补齐）。
+- **source 列（流量来源 / 裂变）**：`migrations/0022_stat_events_source.sql`（MySQL）+ 模型 `StatEvent.Source`（SQLite 由 AutoMigrate 补齐）。只统计 `visit` 事件：`statSourceDist` 按归一后的 source 分组出**来源分布**，`statFissionTop` 对 `source='share_card'` 的 visit 按员工聚合出**裂变榜**（回答「谁的名片被转发带来的新访客最多」）。归一白名单见 `stat.go` 的 `statSourceTypes`：空串 / 纯空白→`unknown`、白名单原样、其余任意值→`other`。
+  - **source 来自客户端，只作统计维度，绝不参与权限 / 租户 / 计费判断**——白名单归一就是为了挡住「谁都能塞一个自定义来源把分布图玩坏」（静默污染）。
+  - 裂变榜的 `LEFT JOIN employees` **不带 `deleted_at IS NULL`**：employees 表没有该列（员工是硬删除），带上会让 MySQL 直接报「无此列」。
+  - 两处 SQL 形状已进 `runAPIFlow`（`handler_test.go` 的「内容意向埋点与 TOP 榜」子测试），由 `TestAPIFlowMySQL` 用真 MySQL 跑同一套断言守着。
 - **趋势与按员工都给八项**：`statTrend` 与 `statRowsByStaff` 一次聚合八类事件（同一白名单），前端图例可点选——勾到哪个指标都要有线，否则「勾了却没线」就是静默缺数据。两条 SQL 的**别名必须 snake_case**（`project_view`），写驼峰会静默扫不进来、计数恒 0 不报错（`handler_test.go` 的「内容意向埋点与 TOP 榜」parity 断言守着这条）。
 - **口径一致性**：TOP 榜用 `LEFT JOIN` + `deleted_at IS NULL` + `COALESCE(name,'已删除')`——对象被删除后行仍在、计数不减，避免「汇总 3 条、榜单加起来 2 条」这类最难排查的对账事故。明细的「对象」列与榜单同源（`statTargetName`）。
 - **限流分桶**：埋点限流器的桶键带 `track:` 前缀，与 `login:` / `refresh:` 分开计数——三者共用 `rate_limit_hits` 表，键不隔离时办公网 NAT 下的访客埋点会把管理员登录挤到 429（回归测试 `TestTrackDoesNotStarveLogin`）。

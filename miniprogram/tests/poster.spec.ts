@@ -77,7 +77,10 @@ describe('poster 页', () => {
     expect(page.data.staffId).toBe(42)
     const urls = mocks.request.mock.calls.map((c) => c[1])
     expect(urls).toContain('/api/card?staffId=42')
-    expect(urls).toContain('/api/wechat/wxacode?staffId=42')
+    // 海报码必须带 from=poster：后端把它埋进 scene，扫这张码进来才能归到
+    // poster 来源（普通码与海报码的微信 scene 同在扫码区间，只有这个标记能区分）。
+    // 漏掉它就退化成「扫码」，海报渠道在来源分布里永远统计不到——静默失真。
+    expect(urls).toContain('/api/wechat/wxacode?staffId=42&from=poster')
   })
 
   // 扫码进入：微信把参数塞进 scene（URL 编码），拿不到 staffId 就等于海报空白

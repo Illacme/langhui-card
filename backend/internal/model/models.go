@@ -174,6 +174,10 @@ type StatEvent struct {
 	// 事件类型清单与各类型的 target 约定见 stat.go 的 statEventTypes 注释；
 	// 列由 migrations/0021 增加（MySQL），SQLite 走 AutoMigrate。
 	TargetID  int64     `gorm:"column:target_id;default:0" json:"targetId"`
+	// Source 流量来源（扫码 / 转发 / 搜索 / 海报 / 兜底）。仅作统计维度，
+	// 永不参与权限 / 租户 / 计费判断。取值由后端 normalizeSource 白名单归一，
+	// 列由 migrations/0022 增加（MySQL），SQLite 走 AutoMigrate。
+	Source    string    `gorm:"column:source;default:''" json:"source"`
 	StatDate  string    `gorm:"column:stat_date;index" json:"statDate"` // YYYY-MM-DD
 	CreatedAt time.Time `gorm:"column:created_at" json:"createdAt"`
 }

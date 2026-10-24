@@ -122,6 +122,42 @@
         </div>
       </section>
 
+      <!-- 折叠区：流量来源与裂变，默认收起（方案A 同页分区） -->
+      <section class="fold fold-source" :class="{ open: sourceOpen }">
+        <div class="fold-head" @click="sourceOpen = !sourceOpen">
+          <span class="fold-title">流量来源与裂变<span class="fold-sub">访客从哪来 · 谁的名片被转发带来新访客</span></span>
+          <el-icon class="fold-arrow"><ArrowDown /></el-icon>
+        </div>
+        <div v-show="sourceOpen" class="fold-body">
+          <!-- 流量来源分布：对 visit 事件按 source 分组（scan/share_card/search/poster/unknown/other）。
+               条形长度按占访问总量比例——一眼看出主渠道；未知/其他作为兜底项也展示。 -->
+          <div class="src-block">
+            <div class="intent-title">流量来源分布<span class="intent-sub">按进入名片的渠道拆分（visit 事件）</span></div>
+            <div class="src-rows">
+              <div class="src-row" v-for="row in sourceDist" :key="row.source">
+                <span class="src-label">{{ sourceLabel(row.source) }}</span>
+                <div class="src-bar-wrap">
+                  <div class="src-bar" :style="{ width: sourcePct(row.count) + '%' }"></div>
+                </div>
+                <span class="src-count">{{ row.count }}</span>
+              </div>
+            </div>
+            <p v-if="!loading && !sourceDist.length" class="top-empty">范围内暂无访问数据</p>
+          </div>
+          <!-- 裂变榜：source=share_card 的 visit 按员工聚合——谁的名片被转发带来新访客最多。
+               归因落在「被分享的名片主人」上（分享者本人无需单独记录），正是运营要的排行。 -->
+          <div class="fission-block">
+            <div class="intent-title">裂变榜 · 谁的名片被转发带来新访客<span class="intent-sub">share_card 来源的访问按员工聚合</span></div>
+            <el-table :data="fissionTop" class="top-table" border>
+              <el-table-column type="index" label="排名" width="60" align="center" />
+              <el-table-column prop="name" label="员工" min-width="120" show-overflow-tooltip />
+              <el-table-column prop="count" label="转发带来访问" width="130" align="right" />
+            </el-table>
+            <p v-if="!loading && !fissionTop.length" class="top-empty">范围内暂无转发带来的访问</p>
+          </div>
+        </div>
+      </section>
+
       <!-- 折叠区2：按员工（表格 + 口径说明 + 分页），默认收起（方案A 同页分区） -->
       <section class="fold fold-staff" :class="{ open: staffOpen }">
         <div class="fold-head" @click="staffOpen = !staffOpen">
@@ -187,7 +223,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Download, Refresh, Search, Tickets, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { adminStats, exportStatsCsv, type StatRange, type StatSummary, type StatTopItem } from '@/api/stats'
+import { adminStats, exportStatsCsv, type StatRange, type StatSummary, type StatTopItem, type StatSourceItem, type StatFissionItem, SOURCE_LABELS } from '@/api/stats'
 import StatTrend from '@/components/StatTrend.vue'
 import StatDetail from '@/components/StatDetail.vue'
 import { useTable } from '@/composables/useTable'
@@ -203,6 +239,7 @@ const loading = ref(false)
 // 常驻首屏只留工具条+转化三卡+趋势图，保住转化vs意向的同屏对比与下钻闭环，只给首屏减负。
 const intentOpen = ref(false)
 const staffOpen = ref(false)
+const sourceOpen = ref(false)
 // 八项汇总：visit/call/save 转化 + projectView/serviceView/videoPlay/share/posterSave 意向。
 // 初始值给全八项——缺项的卡片会渲染出「undefined」（后端未跑迁移 0021 时）。
 const summary = ref<StatSummary>({
@@ -218,6 +255,20 @@ const summary = ref<StatSummary>({
 const trend = ref<any[]>([])
 const topProjects = ref<StatTopItem[]>([])
 const topServices = ref<StatTopItem[]>([])
+// 流量来源分布 / 裂变榜（迁移 0022 起）：缺字段时给空数组，UI 显示空态而非报错。
+const sourceDist = ref<StatSourceItem[]>([])
+const fissionTop = ref<StatFissionItem[]>([])
+// 来源分布条形占比：以访问总量为分母（未知/其他也计入分母，避免比例和超过 100%）。
+const sourceTotal = computed(() =>
+  sourceDist.value.reduce((sum, r) => sum + (r.count || 0), 0)
+)
+function sourceLabel(s: string): string {
+  return SOURCE_LABELS[s] || s
+}
+function sourcePct(c: number): number {
+  const t = sourceTotal.value
+  return t > 0 ? Math.round((c / t) * 100) : 0
+}
 
 // null = 全部时间（不发 from/to）。日期快捷选项不放「全部」——
 // 清空输入框（×）即是全部，与后端缺省语义一致。
@@ -316,6 +367,9 @@ async function load() {
     trend.value = r.trend
     topProjects.value = r.topProjects
     topServices.value = r.topServices
+    // 老副本（未跑迁移 0022）缺这两个字段，兜底空数组——UI 显示空态而非崩溃
+    sourceDist.value = r.sourceDist || []
+    fissionTop.value = r.fissionTop || []
   } catch {
     /* 拦截器已提示 */
   } finally {
@@ -427,6 +481,49 @@ onMounted(load)
   background: #fafcff;
   border: 1px dashed #ebeef5;
   border-radius: 6px;
+}
+/* 流量来源分布：每行 = 标签 + 占比条形 + 计数；条形长度按占访问总量比例 */
+.src-block {
+  margin-bottom: 16px;
+}
+.src-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.src-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.src-label {
+  flex: 0 0 56px;
+  font-size: 13px;
+  color: #303133;
+}
+.src-bar-wrap {
+  flex: 1;
+  height: 12px;
+  background: #f0f2f5;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.src-bar {
+  height: 100%;
+  min-width: 2px;
+  background: linear-gradient(90deg, #409eff, #66b1ff);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+.src-count {
+  flex: 0 0 48px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+.fission-block {
+  margin-top: 4px;
 }
 .stat-label {
   color: #909399;

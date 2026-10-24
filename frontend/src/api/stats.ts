@@ -41,6 +41,30 @@ export interface StatTopItem {
   count: number
 }
 
+// 来源分布行：来源类别 + 其 visit 事件数。source 取值与后端 statSourceTypes 一致：
+// scan(扫码) / share_card(转发) / search(搜索) / poster(海报) / unknown(缺省) / other(脏值)。
+export interface StatSourceItem {
+  source: string
+  count: number
+}
+
+// 裂变榜行：被转发的员工 + 其名片靠转发带来的新访客数（source=share_card 的 visit 聚合）。
+export interface StatFissionItem {
+  staffId: number
+  name: string
+  count: number
+}
+
+// source 中文标签映射（后端只回英文类别，前端做展示翻译）。
+export const SOURCE_LABELS: Record<string, string> = {
+  scan: '扫码',
+  share_card: '转发',
+  search: '搜索',
+  poster: '海报',
+  unknown: '未知',
+  other: '其他',
+}
+
 const zeroSummary = (): StatSummary => ({
   visit: 0,
   call: 0,
@@ -68,6 +92,10 @@ export function adminStats(range: StatRange = {}) {
       trend: (r.data?.trend ?? []) as any[],
       topProjects: (r.data?.topProjects ?? []) as StatTopItem[],
       topServices: (r.data?.topServices ?? []) as StatTopItem[],
+      // 来源分布 / 裂变榜：迁移 0022 之前的旧副本缺这两个字段，兜底空数组。
+      // 老数据 source 全为 unknown，前端按英文类别翻译（SOURCE_LABELS）。
+      sourceDist: (r.data?.sourceDist ?? []) as StatSourceItem[],
+      fissionTop: (r.data?.fissionTop ?? []) as StatFissionItem[],
     }
   })
 }

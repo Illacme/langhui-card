@@ -92,6 +92,20 @@ func mkStatEvent(t *testing.T, db *gorm.DB, staffID int64, eventType, date strin
 	}).Error)
 }
 
+// mkStatEventSrc 同 mkStatEvent，但显式指定 source（流量来源 / 裂变测试用）。
+// 直写时 DB 层对空串 source 不兜底（与 track 进水口的 normalizeSource 不同），
+// 故测试须给明确值；想测「缺省归一」走 track 接口而非此 helper。
+func mkStatEventSrc(t *testing.T, db *gorm.DB, staffID int64, eventType, date, source string, targetID ...int64) {
+	t.Helper()
+	var tid int64
+	if len(targetID) > 0 {
+		tid = targetID[0]
+	}
+	require.NoError(t, db.Create(&model.StatEvent{
+		StaffID: staffID, EventType: eventType, StatDate: date, TargetID: tid, Source: source,
+	}).Error)
+}
+
 // mkStatCase 直建一个案例（统计测试只关心 target 存在与租户归属）。
 func mkStatCase(t *testing.T, db *gorm.DB, companyID int64, name string) int64 {
 	t.Helper()
@@ -509,6 +523,119 @@ func TestAdminStatsIntentSummaryAndTop(t *testing.T) {
 	}
 	require.EqualValues(t, 2, byName["热门案例"])
 	require.EqualValues(t, 1, byName["已删除"])
+}
+
+// ===== 2.6 流量来源分布 + 裂变榜 =====
+
+// TestNormalizeSource：normalizeSource 把来源钳进白名单，脏值不污染分布图。
+// 反向验证：本函数被 track 进水口调用，摘掉归一逻辑（改成原样返回）会让
+// TestTrackSourceNormalized 的「脏值归 other」断言失败。
+func TestNormalizeSource(t *testing.T) {
+	require.Equal(t, "unknown", normalizeSource(""))    // 空串兜底
+	require.Equal(t, "unknown", normalizeSource("   ")) // 纯空白同空串
+	require.Equal(t, "scan", normalizeSource("scan"))   // 白名单原样
+	require.Equal(t, "share_card", normalizeSource("share_card"))
+	require.Equal(t, "other", normalizeSource("DROP TABLE")) // 任意脏值归 other
+	require.Equal(t, "other", normalizeSource("SCAN"))       // 大小写敏感，非白名单即 other
+}
+
+// TestTrackSourceNormalized：track 进水口把客户端 source 归一后再落库——
+// 脏值变 other、空串变 unknown，且 source 仅作统计维度、不参与任何判断。
+func TestTrackSourceNormalized(t *testing.T) {
+	r, db := setupStatEngine(t)
+	staffID := mkStatEmployee(t, db, 1, "来源", "测试", "13800000077")
+	c := newTestClient(r, t)
+
+	// 脏值 → 落库为 other
+	_, body := c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": staffID, "eventType": "visit", "source": "hacked",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	// 空串 → 落库为 unknown
+	_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+		"staffId": staffID, "eventType": "visit",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+
+	var rows []model.StatEvent
+	require.NoError(t, db.Where("staff_id = ?", staffID).Order("id asc").Find(&rows).Error)
+	require.Len(t, rows, 2)
+	require.Equal(t, "other", rows[0].Source)
+	require.Equal(t, "unknown", rows[1].Source)
+}
+
+// TestAdminStatsSourceAndFission：来源分布 + 裂变榜的口径与租户隔离。
+func TestAdminStatsSourceAndFission(t *testing.T) {
+	r, db := setupStatEngine(t)
+	// 本家（company 1）两名员工
+	a := mkStatEmployee(t, db, 1, "裂变甲", "销售", "13800000101")
+	b := mkStatEmployee(t, db, 1, "裂变乙", "销售", "13800000102")
+	// 别家（company 2）一名员工：其事件不应出现在本家管理员视图
+	other := mkStatEmployee(t, db, 2, "别家公司", "销售", "13800000103")
+	d := dayOffset(0)
+
+	// 甲：扫码 2 + 搜索 1 + 转发带来 3 + 海报 1 = 7 次访问
+	mkStatEventSrc(t, db, a, "visit", d, "scan")
+	mkStatEventSrc(t, db, a, "visit", d, "scan")
+	mkStatEventSrc(t, db, a, "visit", d, "search")
+	mkStatEventSrc(t, db, a, "visit", d, "share_card")
+	mkStatEventSrc(t, db, a, "visit", d, "share_card")
+	mkStatEventSrc(t, db, a, "visit", d, "share_card")
+	mkStatEventSrc(t, db, a, "visit", d, "poster")
+	// 乙：转发带来 2 次访问
+	mkStatEventSrc(t, db, b, "visit", d, "share_card")
+	mkStatEventSrc(t, db, b, "visit", d, "share_card")
+	// 别家：转发带来 1 次——必须被租户隔离挡掉
+	mkStatEventSrc(t, db, other, "visit", d, "share_card")
+
+	c := newTestClient(r, t)
+	// 1 号租户管理员（本测试要验证租户隔离，必须用品管而非平台超管）
+	hash, err := auth.HashPassword("comp1pass")
+	require.NoError(t, err)
+	require.NoError(t, db.Create(&model.Admin{
+		CompanyID: 1, Username: "comp1", PasswordHash: hash,
+	}).Error)
+	_, body := c.do("POST", "/api/admin/login", map[string]interface{}{
+		"username": "comp1", "password": "comp1pass",
+	}, "")
+	require.EqualValues(t, 0, body["code"])
+	comp1 := c.cookies["access_token"]
+	require.NotEmpty(t, comp1)
+
+	_, body = c.do("GET", "/api/admin/stats", nil, comp1)
+	require.EqualValues(t, 0, body["code"])
+	data := body["data"].(map[string]interface{})
+
+	// 来源分布：只含本家（甲 7 + 乙 2 = 9 次访问），别家的 share_card 不计入
+	src := data["sourceDist"].([]interface{})
+	bySrc := map[string]int64{}
+	var srcTotal int64
+	for _, it := range src {
+		m := it.(map[string]interface{})
+		bySrc[m["source"].(string)] = int64(m["count"].(float64))
+		srcTotal += int64(m["count"].(float64))
+	}
+	require.EqualValues(t, 9, srcTotal, "别家的来源事件不应进入本家分布")
+	require.EqualValues(t, 2, bySrc["scan"])
+	require.EqualValues(t, 1, bySrc["search"])
+	require.EqualValues(t, 5, bySrc["share_card"], "甲 3 + 乙 2，同租户聚合")
+	require.EqualValues(t, 1, bySrc["poster"])
+
+	// 裂变榜：甲 3 > 乙 2，按 count 降序；别家不出现
+	fis := data["fissionTop"].([]interface{})
+	require.Len(t, fis, 2, "别家员工不应出现在本家裂变榜")
+	require.EqualValues(t, a, fis[0].(map[string]interface{})["staffId"])
+	require.Equal(t, "裂变甲", fis[0].(map[string]interface{})["name"])
+	require.EqualValues(t, 3, fis[0].(map[string]interface{})["count"])
+	require.EqualValues(t, b, fis[1].(map[string]interface{})["staffId"])
+	require.EqualValues(t, 2, fis[1].(map[string]interface{})["count"])
+
+	// 日期范围：排除今天 → 来源与裂变都空数组（不是 null）
+	_, body = c.do("GET", "/api/admin/stats?from=2020-01-01&to=2020-01-02", nil, comp1)
+	require.EqualValues(t, 0, body["code"])
+	data = body["data"].(map[string]interface{})
+	require.Empty(t, data["sourceDist"].([]interface{}))
+	require.Empty(t, data["fissionTop"].([]interface{}))
 }
 
 // ===== 3. CSV 导出 =====

@@ -544,6 +544,16 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
 			return
 		}
+		sourceDist, err := statSourceDist(c, db, from, to)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
+		}
+		fissionTop, err := statFissionTop(c, db, from, to, statFissionLimit)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "查询失败"})
+			return
+		}
 		list := make([]gin.H, 0, len(rows))
 		var sumVisit, sumCall, sumSave int64
 		var sumProjectView, sumServiceView, sumVideoPlay, sumShare, sumPosterSave int64
@@ -588,6 +598,22 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 			}
 			return out
 		}
+		// 来源分布行 → 响应：{source, count}
+		topListSource := func(rows []statSourceRow) []gin.H {
+			out := make([]gin.H, 0, len(rows))
+			for _, r := range rows {
+				out = append(out, gin.H{"source": r.Source, "count": r.Count})
+			}
+			return out
+		}
+		// 裂变榜行 → 响应：{staffId, name, count}
+		topListFission := func(rows []statFissionRow) []gin.H {
+			out := make([]gin.H, 0, len(rows))
+			for _, r := range rows {
+				out = append(out, gin.H{"staffId": r.StaffID, "name": r.Name, "count": r.Count})
+			}
+			return out
+		}
 		c.JSON(http.StatusOK, gin.H{
 			"code": 0,
 			"data": gin.H{
@@ -600,6 +626,10 @@ func RegisterApply(r *gin.Engine, db *gorm.DB) {
 				"trend":       trendList,
 				"topProjects": topList(topProjects),
 				"topServices": topList(topServices),
+				// 流量来源分布：visit 事件按 source 分组（scan/share_card/search/poster/unknown/other）
+				"sourceDist": topListSource(sourceDist),
+				// 裂变榜：按 staff_id 聚合「source=share_card 的 visit」（谁的名片被转发带来的新访客多）
+				"fissionTop": topListFission(fissionTop),
 			},
 		})
 	})

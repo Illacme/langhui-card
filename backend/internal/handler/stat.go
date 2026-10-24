@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"weichuan/internal/middleware"
@@ -55,6 +56,49 @@ var statEventTypes = map[string]bool{
 	"video_play":   true, // 播放公司视频
 	"share":        true, // 转发（targetId=0 名片 / 案例ID / 服务ID）
 	"poster_save":  true, // 保存海报
+}
+
+// statSourceTypes 流量来源白名单（与 stat_events.source 列的取值一一对应）。
+//
+// 为什么需要白名单归一：source 来自客户端（小程序按微信 scene / 海报标记上报），
+// 永不可信——任何脚本都能在 track 请求里塞任意 source 字符串。若直接落库，
+// 脏值会悄悄混进「来源分布」把图玩坏（静默数据污染）。normalizeSource 把
+// 取值钳进这五个已知类别 + 两个兜底（unknown/other），分布图永远干净。
+//
+// 重要：source 只作「统计维度」，绝不参与权限 / 租户 / 计费任何判断——
+// 即使有人伪造 source='vip' 也只会在统计里多一行 'other'，不会改变任何业务结果。
+//
+//	scan        扫码（二维码 / 小程序码，含海报上的码）
+//	share_card  转发卡片（聊天/群聊/App/小程序互跳，scene 1007/1008/1036/...）
+//	search      微信搜索 / 发现 / 我的小程序等入口
+//	poster      扫海报上的小程序码（poster 页生成码时带 &from=poster 标记）
+//	unknown     缺省（老客户端 / 历史数据未带 source，落库即空串）
+//	other       带了的、但不在白名单里的脏值
+var statSourceTypes = map[string]bool{
+	"scan":       true,
+	"share_card": true,
+	"search":     true,
+	"poster":     true,
+	"unknown":    true,
+	"other":      true,
+}
+
+// normalizeSource 把客户端上报的 source 钳进白名单。
+//   - 空串 → "unknown"（老客户端 / 历史数据兜底，落库即空串也归到这里统计）
+//   - 白名单值原样返回
+//   - 其余（任何脏值）→ "other"
+//
+// 抽成独立函数便于单测：verify 纪律要求「摘掉归一逻辑测试应 FAIL」，
+// 把归一集中在这里、调用点只剩一行，反向验证才干净。
+func normalizeSource(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return "unknown"
+	}
+	if statSourceTypes[s] {
+		return s
+	}
+	return "other"
 }
 
 // validateStatTarget 校验埋点的 targetId：project_view / service_view 必须
@@ -323,6 +367,97 @@ func statTopTargets(c *gin.Context, db *gorm.DB, from, to, eventType, table, nam
 		Group("stat_events.target_id, " + table + "." + nameCol).
 		// 次级排序固定 target_id：同票数时榜单顺序稳定（分页之外也让测试可断言）
 		Order("cnt DESC, stat_events.target_id ASC").
+		Limit(limit)
+	if from != "" {
+		q = q.Where("stat_date >= ?", from)
+	}
+	if to != "" {
+		q = q.Where("stat_date <= ?", to)
+	}
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ===== 流量来源分布 + 裂变榜 =====
+
+// statSourceLimit / statFissionLimit 两条榜的默认条数（与 TOP 榜同档，一屏放得下）。
+const (
+	statSourceLimit  = 6 // 来源类别固定 6 个（含 unknown/other 兜底），多给也无意义
+	statFissionLimit = 10
+)
+
+// statSourceRow 来源分布的一行：来源类别 + 其 visit 事件数。
+type statSourceRow struct {
+	Source string `gorm:"column:source"`
+	Count  int64  `gorm:"column:cnt"`
+}
+
+// statSourceDist 流量来源分布：对 visit（进入名片的入口事件）按 source 分组计数。
+//
+// 为什么只看 visit：source 的语义是「这次进入是从哪来的」，只有入口事件
+// 携带有意义的来源；call/save/project_view 等是进入之后的行为，其 source
+// 只是复用了进入时的上下文，聚合它们会重复计数把分布放大。
+//
+// 空串兜底：历史库（迁移 0022 之前）的 source 为空，按 '' 分组会多出一个
+// 空桶——用 CASE WHEN 归一成 'unknown'，与 normalizeSource 的缺省值对齐，
+// 历史数据自然落到 unknown 桶，分布图不出现裸空串。CASE WHEN 在 MySQL /
+// SQLite 同形态，不引方言分支。
+//
+// 租户隔离：事件先经 staff_id IN (当前可见员工) 圈进本租户，与汇总/趋势一致。
+func statSourceDist(c *gin.Context, db *gorm.DB, from, to string) ([]statSourceRow, error) {
+	var rows []statSourceRow
+	q := db.Model(&model.StatEvent{}).
+		Where("event_type = ?", "visit").
+		Where("staff_id IN (?)", db.Model(&model.Employee{}).Select("staff_id").Scopes(scopeCond(c))).
+		Select("CASE WHEN source = '' THEN 'unknown' ELSE source END AS `source`, COUNT(*) AS cnt").
+		Group("source").
+		Order("cnt DESC")
+	if from != "" {
+		q = q.Where("stat_date >= ?", from)
+	}
+	if to != "" {
+		q = q.Where("stat_date <= ?", to)
+	}
+	if err := q.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// statFissionRow 裂变榜的一行：被转发的员工 + 其名片靠转发带来的新访问数。
+type statFissionRow struct {
+	StaffID int64  `gorm:"column:staff_id"`
+	Name    string `gorm:"column:name"`
+	Count   int64  `gorm:"column:cnt"`
+}
+
+// statFissionTop 裂变榜：按 staff_id 聚合并发榜「谁的名片被转发带来的新访客最多」。
+//
+// 裂变归因复用现有分享链路，无需新增 ref_staff_id 字段：访客经由分享卡片打开时，
+// 微信 scene 落入 share_card 区间（1007/1008/1036/...），小程序据此把该次 visit
+// 的 source 记为 'share_card'、staff_id 仍是「被分享的那张名片的主人」。于是
+// 「某员工 + source=share_card 的 visit 数」就是他名片的裂变贡献——
+// 分享者本人无需单独记录，归因落在被分享的名片上（这正是运营要的排行）。
+//
+// 为什么 LEFT JOIN employees 取 name：staff_id 已在前置 IN 子查询里圈进本租户，
+// JOIN 只是补名字；被删员工的事件仍保留计数（name 回落「已删除」），
+// 与 TOP 榜「汇总与榜单对得上」的口径约定一致。
+func statFissionTop(c *gin.Context, db *gorm.DB, from, to string, limit int) ([]statFissionRow, error) {
+	var rows []statFissionRow
+	// 注意：employees 表无 deleted_at 列（员工是硬删除），故 JOIN 不带
+	// deleted_at 条件；被删员工在 employees 里已无行，LEFT JOIN 得 name=NULL，
+	// COALESCE 回落「已删除」，计数不减（与 TOP 榜对账约定一致）。
+	q := db.Table("stat_events").
+		Joins("LEFT JOIN employees ON employees.staff_id = stat_events.staff_id").
+		Where("stat_events.event_type = ?", "visit").
+		Where("stat_events.source = ?", "share_card").
+		Where("stat_events.staff_id IN (?)",
+			db.Model(&model.Employee{}).Select("staff_id").Scopes(scopeCond(c))).
+		Select("stat_events.staff_id AS staff_id, COALESCE(employees.name, '已删除') AS `name`, COUNT(*) AS cnt").
+		Group("stat_events.staff_id, employees.name").
+		Order("cnt DESC, stat_events.staff_id ASC").
 		Limit(limit)
 	if from != "" {
 		q = q.Where("stat_date >= ?", from)

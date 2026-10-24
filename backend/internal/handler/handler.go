@@ -204,6 +204,9 @@ func New(db *gorm.DB) *gin.Engine {
 			StaffID   int64  `json:"staffId"`
 			EventType string `json:"eventType"`
 			TargetID  int64  `json:"targetId"`
+			// Source 流量来源（可选）。来自客户端、不可信，落库前必须归一；
+			// 不参与任何权限 / 租户判断，只作统计维度（见 stat.go statSourceTypes）。
+			Source string `json:"source"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil || req.StaffID <= 0 || !statEventTypes[req.EventType] {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "参数错误"})
@@ -228,7 +231,9 @@ func New(db *gorm.DB) *gin.Engine {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
 			return
 		}
-		if err := repository.TrackStat(db, req.StaffID, req.EventType, req.TargetID); err != nil {
+		// source 归一后再落库：空串→unknown，白名单外脏值→other，
+		// 保证「来源分布」永远干净（见 stat.go normalizeSource）。
+		if err := repository.TrackStat(db, req.StaffID, req.EventType, req.TargetID, normalizeSource(req.Source)); err != nil {
 			c.JSON(http.StatusOK, gin.H{"code": 1, "msg": "上报失败"})
 			return
 		}

@@ -137,20 +137,39 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader, refre
 		if page == "" {
 			page = "pages/index/index"
 		}
+		// from 标记（仅认 whitelist 的 "poster"，其余一律忽略——防止任意字符串
+		// 被埋进小程序码 scene）。poster 页生成码时带 &from=poster，使扫海报进来的
+		// 访客来源可归为 poster，与「扫普通码」区分（两者 scene 都是 scan 区间）。
+		fromMark := c.Query("from")
+		if fromMark != "poster" {
+			fromMark = ""
+		}
 		scene := "staffId=" + strconv.FormatInt(staffID, 10)
+		if fromMark == "poster" {
+			scene += "&from=poster"
+		}
 
+		// 重新生成的码（不论命中/未命中缓存都会走到这里），e 在函数作用域内声明，
+		// 缓存命中的提前返回分支不会用到它，故放在外层。
+		var e wxacodeEntry
+		var ok bool
 		// 1) 命中缓存且二维码内容未过期：直接取（私有桶下当场签发短期 URL）
-		wxacodeMu.Lock()
-		e, ok := wxacodeCache[staffID]
-		wxacodeMu.Unlock()
-		if ok && time.Now().Before(e.expAt) {
-			url, err := resolveWxacodeURL(e, cfg, up)
-			if err != nil {
-				c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+		//    仅默认码（fromMark 为空）走缓存：海报码带 from=poster 标记、内容
+		//    与默认码不同，若共用 staffID 缓存键会互相污染（先生成海报码则默认
+		//    扫出来也是海报标记）。海报码低频、每次重生成代价可接受，故不缓存。
+		if fromMark == "" {
+			wxacodeMu.Lock()
+			e, ok = wxacodeCache[staffID]
+			wxacodeMu.Unlock()
+			if ok && time.Now().Before(e.expAt) {
+				url, err := resolveWxacodeURL(e, cfg, up)
+				if err != nil {
+					c.JSON(http.StatusOK, gin.H{"code": 1, "msg": err.Error()})
+					return
+				}
+				c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"url": url}})
 				return
 			}
-			c.JSON(http.StatusOK, gin.H{"code": 0, "data": gin.H{"url": url}})
-			return
 		}
 
 		// 2) 重新生成：调微信 -> 写入当前存储驱动 -> 缓存
@@ -166,7 +185,11 @@ func RegisterWechat(r *gin.Engine, cfg config.Config, up storage.Uploader, refre
 			return
 		}
 		e = wxacodeEntry{key: key, publicURL: publicURL, expAt: time.Now().Add(wxacodeTTL(cfg))}
-		wxacodePut(staffID, e)
+		// 仅默认码写入缓存；海报码（fromMark=poster）每次重生成、不缓存，
+		// 避免与默认码共用 staffID 键相互覆盖（见上方缓存读取处的注释）。
+		if fromMark == "" {
+			wxacodePut(staffID, e)
+		}
 		// 固定对象名的覆盖写：刷新的是公开形态 URL（私有桶下返回的短期签名 URL 每次都变，
 		// 交给 CDN 刷也没有意义；私有桶本身也不该被 CDN 缓存）
 		refreshCDN(refresher, e.publicURL)

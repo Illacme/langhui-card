@@ -1,6 +1,6 @@
 import { request, assetUrl } from '../../utils/request'
 import { bindCompanyFromScene, getCompanyId } from '../../utils/tenant'
-import { track } from '../../utils/track'
+import { track, deriveSource } from '../../utils/track'
 
 Page({
   data: {
@@ -39,6 +39,9 @@ Page({
     // 会再次触发 onShow——不去重的话切两个 tab 来回几下访问量就虚高。
     // 页面被销毁重建（重新进小程序）时 data 重置，会正常再计一次。
     lastVisitStaffId: 0,
+    // 本次进入的流量来源（由微信 scene / 海报标记推导）：仅 visit 埋点携带，
+    // 后端按它归「来源分布」与「裂变榜」。空串=端上未识别（后端归一为 unknown）。
+    source: '',
   },
   onLoad(query: any) {
     // 自定义顶栏：先按设备状态栏高度算出避让高度，避免内容被刘海/状态栏遮挡
@@ -67,8 +70,18 @@ Page({
       const app = getApp() as any
       staffId = (app && app.globalData && app.globalData.myStaffId) || 0
     }
+    // 推导流量来源：优先海报标记（from=poster），否则按微信启动场景值归类。
+    // wx.getEnterOptionsSync 在基础库 2.12+ 可用，老版本回退 getLaunchOptionsSync；
+    // 均不可用（如测试桩未实现）时 scene=0 → unknown，不影响后续流程。
+    let sceneNum = 0
+    try {
+      const enter = (wx.getEnterOptionsSync ? wx.getEnterOptionsSync() : wx.getLaunchOptionsSync ? wx.getLaunchOptionsSync() : {}) as any
+      sceneNum = Number(enter && enter.scene) || 0
+    } catch {
+      sceneNum = 0
+    }
     if (staffId) {
-      this.setData({ staffId })
+      this.setData({ staffId, source: deriveSource(sceneNum, query) })
       this.loadAll()
     } else {
       // 未携带 staffId（直接打开 / 无分享参数）：弹窗输入员工编号后进入（联调取数 / 演示用）
@@ -121,7 +134,8 @@ Page({
     const sid = this.data.staffId
     if (!sid || sid === this.data.lastVisitStaffId) return
     this.setData({ lastVisitStaffId: sid })
-    track('visit', sid)
+    // 入口事件携带推导出的来源（后端按 source 归「来源分布」与「裂变榜」）
+    track('visit', sid, 0, this.data.source)
   },
   // 输入员工编号进入名片（生产环境入口一般为分享链接 / 扫码，此处作为缺省兜底）
   promptStaffId() {

@@ -41,8 +41,9 @@ miniprogram/
 | poster | GET /api/card, GET /api/wechat/wxacode?staffId= + POST /api/stat/track(poster_save，保存成功后) |
 
 ## 埋点（utils/track.ts）
-- 统一入口 `track(event, staffId, targetId = 0)`：staffId ≤ 0 或事件不在白名单里**就地丢弃**（不发请求），
+- 统一入口 `track(event, staffId, targetId = 0, source = '')`：staffId ≤ 0 或事件不在白名单里**就地丢弃**（不发请求），
   请求失败 `.catch(() => {})` 静默——埋点失败绝不能影响用户操作。
+  第 4 个参数 `source` 是流量来源，空串时**不传该字段**，保持老载荷形状。
 - 事件表（权威定义在 `backend/internal/handler/stat.go` 文件头）：
 
   | 事件 | 触发点 | targetId |
@@ -55,9 +56,26 @@ miniprogram/
   | poster_save | 海报保存成功回调 | 0 |
 
 - targetId 为 0 时**不传该字段**，保持 visit/call/save 的老载荷形状。
+- **source（流量来源，迁移 0022）**：由进入场景 `scene` 推导，首页 `onLoad` 取
+  `wx.getEnterOptionsSync()`（回落 `getLaunchOptionsSync()`）的 scene，经
+  `deriveSource(scene, query)` 映射后随 `visit` 上报：
+
+  | source | 场景 | 说明 |
+  |---|---|---|
+  | scan | 扫码 / 小程序码区间（1011、1013、1047、1048 等） | 含海报上的码 |
+  | share_card | 转发卡片区间（1007、1008、1036 等） | 聊天 / 群聊 / App 互跳，即「裂变」来源 |
+  | search | 搜索 / 发现入口（1001、1020、1023 等） | 微信搜索、发现页、我的小程序 |
+  | poster | 扫**海报**上的码 | 普通码与海报码的 scene 同在扫码区间，靠 `query.scene` 里的 `from=poster` 标记区分（海报页请求 `/api/wechat/wxacode?staffId=&from=poster`，后端把标记埋进 scene） |
+  | unknown | 未识别 / 老客户端 | 端上不传该字段，后端对空串归一 |
+
+  只认明确区间——**识别不了就返回空串、不传该字段**（保持老载荷形状），
+  由后端归一为 `unknown`；两个端上口径完全一致，不会丢统计。
+  服务端还会再做一次白名单归一（脏值→other）：**source 只作统计维度**，
+  绝不参与权限 / 租户 / 计费判断。
 - 已知边界：`<channel-video>`（视频号）官方只开放 `binderror`，无播放事件——视频号档
   位的 video_play 缺失是文档级限制，不是实现缺陷；`<video>` 档位正常上报。
-- 埋点在 PC 后台「名片统计」消费：转化三指标 + 内容意向五指标 + TOP 案例/服务榜 + 明细下钻。
+- 埋点在 PC 后台「名片统计」消费：转化三指标 + 内容意向五指标 + TOP 案例/服务榜 +
+  明细下钻 + **流量来源分布 + 裂变榜**。
 
 ## 员工头像上传
 - 员工修改页 `pages/employee/edit` 的头像由「URL 文本输入」改为「选图上传」：用 `wx.chooseMedia` 选图，经 `wx.uploadFile` 调后端 `POST /api/employee/upload`（员工鉴权，复用同一 storage.Uploader），返回 URL 写回 `form.avatar`，再随 `PUT /api/employee/me` 提交审核。与 PC 端 `UploadField` 调用 `/api/admin/upload` 同一思路、同一存储层，仅鉴权角色不同。

@@ -665,6 +665,65 @@ func runAPIFlow(t *testing.T, c *testClient, adminToken string) {
 		_, body = c.do("GET", "/api/admin/stats/detail?targetId=abc", nil, adminToken)
 		require.EqualValues(t, 1, body["code"])
 
+		// ===== 2.5 来源分布 + 裂变榜（迁移 0022，parity 重点）=====
+		// 新建一名员工专供来源/裂变断言，避免与上面 newStaffID 既有的
+		// 1 条 unknown 来源 visit 计数耦合。这两处 SQL 形状——
+		//   * sourceDist：visit 按 source 分组，CASE WHEN source='' THEN 'unknown'
+		//     归一（历史空串数据也要落进 unknown，不能静默丢）；
+		//   * fissionTop：visit + source='share_card' 按 staff_id LEFT JOIN
+		//     employees 取名字（员工硬删除、employees 表无 deleted_at，JOIN 不能带
+		//     deleted_at IS NULL，否则 MySQL 直接报「无此列」）；
+		// ——只在 MySQL 8.0 上与 SQLite 有差异，故必须进共用流（让 TestAPIFlowMySQL
+		// 用真 MySQL 跑同一套断言）。scan/search/poster/share_card/other 这几种来源
+		// 全工程只有本员工发，故可下精确值；unknown 含 newStaffID 的那条，只断存在。
+		_, body = c.do("POST", "/api/admin/employees", map[string]interface{}{
+			"name": "来源员工", "phone": "13700000111", "email": "src@a.com", "title": "推广",
+		}, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		srcStaffID := int64(body["staffId"].(float64))
+
+		for _, ev := range []map[string]interface{}{
+			{"staffId": srcStaffID, "eventType": "visit", "source": "scan"},
+			{"staffId": srcStaffID, "eventType": "visit", "source": "scan"},
+			{"staffId": srcStaffID, "eventType": "visit", "source": "search"},
+			{"staffId": srcStaffID, "eventType": "visit", "source": "share_card"},
+			{"staffId": srcStaffID, "eventType": "visit", "source": "share_card"},
+			{"staffId": srcStaffID, "eventType": "visit", "source": "poster"},
+		} {
+			_, body = c.do("POST", "/api/stat/track", ev, "")
+			require.EqualValues(t, 0, body["code"])
+		}
+		// 脏值 → other；空串 → unknown（normalizeSource 在进水口生效，source 只作统计维度）
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": srcStaffID, "eventType": "visit", "source": "DROP TABLE",
+		}, "")
+		require.EqualValues(t, 0, body["code"])
+		_, body = c.do("POST", "/api/stat/track", map[string]interface{}{
+			"staffId": srcStaffID, "eventType": "visit",
+		}, "")
+		require.EqualValues(t, 0, body["code"])
+
+		_, body = c.do("GET", "/api/admin/stats", nil, adminToken)
+		require.EqualValues(t, 0, body["code"])
+		src := body["data"].(map[string]interface{})["sourceDist"].([]interface{})
+		bySrc := map[string]int64{}
+		for _, it := range src {
+			m := it.(map[string]interface{})
+			bySrc[m["source"].(string)] = int64(m["count"].(float64))
+		}
+		require.EqualValues(t, 2, bySrc["scan"])
+		require.EqualValues(t, 1, bySrc["search"])
+		require.EqualValues(t, 2, bySrc["share_card"])
+		require.EqualValues(t, 1, bySrc["poster"])
+		require.EqualValues(t, 1, bySrc["other"])
+		require.GreaterOrEqual(t, bySrc["unknown"], int64(1), "空串来源必须归一进 unknown")
+
+		fis := body["data"].(map[string]interface{})["fissionTop"].([]interface{})
+		require.Len(t, fis, 1, "只有 srcStaff 发了 share_card 来源的 visit")
+		require.EqualValues(t, srcStaffID, fis[0].(map[string]interface{})["staffId"])
+		require.Equal(t, "来源员工", fis[0].(map[string]interface{})["name"])
+		require.EqualValues(t, 2, fis[0].(map[string]interface{})["count"])
+
 		// 对象删除后：TOP 榜名字回落「已删除」但计数不减（汇总与榜单可对账）
 		_, body = c.do("DELETE", fmt.Sprintf("/api/admin/projects/%d", projID), nil, adminToken)
 		require.EqualValues(t, 0, body["code"])

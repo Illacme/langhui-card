@@ -11,6 +11,8 @@ vi.mock('element-plus', () => ({
 import { ElMessage } from 'element-plus'
 
 const mocks = vi.hoisted(() => ({
+  // SOURCE_LABELS 与组件共用同一份映射，mock 必须透出，否则组件 import 到 undefined 会崩
+  SOURCE_LABELS: { scan: '扫码', share_card: '转发', search: '搜索', poster: '海报', unknown: '未知', other: '其他' },
   adminStats: vi.fn(async () => ({
     summary: {
       visit: 12,
@@ -49,6 +51,17 @@ const mocks = vi.hoisted(() => ({
       { targetId: 4, name: '配电升级', count: 2 },
     ],
     topServices: [{ targetId: 9, name: '机电维保', count: 4 }],
+    // 流量来源分布 + 裂变榜（迁移 0022 起）：来源占比 = count / sum(count)
+    sourceDist: [
+      { source: 'scan', count: 4 },
+      { source: 'share_card', count: 5 },
+      { source: 'search', count: 2 },
+      { source: 'poster', count: 1 },
+    ],
+    fissionTop: [
+      { staffId: 1, name: '张三', count: 3 },
+      { staffId: 2, name: '李四', count: 2 },
+    ],
   })),
   adminStatsDetail: vi.fn(async () => ({ list: [], total: 0, page: 1, size: 20 })),
   exportStatsCsv: vi.fn(async () => {}),
@@ -192,8 +205,10 @@ function tablesOf(w: ReturnType<typeof mount>) {
   const all = w.findAllComponents(ElTable)
   const rows = (t: (typeof all)[number]): any[] => t.props('data') || []
   return {
+    // top = 有 targetId 的榜（案例/服务）；staff = 有 staffId 且带 visit 列的按员工表
+    // （裂变榜也有 staffId，但无 visit 列，靠 visit 区分，否则会误匹配裂变表）
     top: all.filter((t) => rows(t).some((r) => r.targetId !== undefined)), // 模板顺序：案例在前、服务在后
-    staff: all.find((t) => rows(t).some((r) => r.staffId !== undefined))!,
+    staff: all.find((t) => rows(t).some((r) => r.staffId !== undefined && r.visit !== undefined))!,
   }
 }
 
@@ -505,12 +520,17 @@ describe('Stats', () => {
       trend: [],
       topProjects: [],
       topServices: [],
+      sourceDist: [],
+      fissionTop: [],
     })
     const w = mount(Stats, mountOpts)
     await flushLoad(w)
 
     expect(w.text()).toContain('范围内暂无案例浏览')
     expect(w.text()).toContain('范围内暂无服务浏览')
+    // 来源分布 / 裂变榜同样空态文案，不抛
+    expect(w.text()).toContain('范围内暂无访问数据')
+    expect(w.text()).toContain('范围内暂无转发带来的访问')
   })
 
   it('内容意向折叠区默认收起，点标题展开（方案A 同页分区）', async () => {
@@ -537,5 +557,39 @@ describe('Stats', () => {
     expect((w.find('.fold-staff .fold-body').attributes('style') || '')).not.toContain('display: none')
     expect(tablesOf(w).staff.exists()).toBe(true)
     expect(w.find('.fold-staff').classes()).toContain('open')
+  })
+
+  it('流量来源与裂变折叠区：默认收起，展开后渲染来源分布条 + 裂变榜', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+    // 默认收起
+    expect((w.find('.fold-source .fold-body').attributes('style') || '')).toContain('display: none')
+    await w.find('.fold-source .fold-head').trigger('click')
+    await nextTick()
+    expect((w.find('.fold-source .fold-body').attributes('style') || '')).not.toContain('display: none')
+    expect(w.find('.fold-source').classes()).toContain('open')
+    // 来源分布：四条来源各一行（scan/share_card/search/poster），标签用中文映射
+    const rows = w.findAll('.src-row')
+    expect(rows).toHaveLength(4)
+    // 第一条来源标签应是「扫码」（SOURCE_LABELS.scan），计数为 4
+    expect(w.find('.src-label').text()).toBe('扫码')
+    expect(w.find('.src-count').text()).toBe('4')
+    // 裂变榜：两名员工各一行，含「张三 / 3」「李四 / 2」
+    const fis = w.findAll('.fission-block .el-table-row')
+    expect(fis).toHaveLength(2)
+    const fisText = w.find('.fission-block').text()
+    expect(fisText).toContain('张三')
+    expect(fisText).toContain('李四')
+    expect(fisText).toContain('3')
+  })
+
+  it('来源分布占比按访问总量计算（条码宽度 = count / 总访问）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+    await w.find('.fold-source .fold-head').trigger('click')
+    await nextTick()
+    // 总量 = 4+5+2+1 = 12；scan 行占比 = 4/12 ≈ 33%
+    const bar = w.find('.src-row .src-bar')
+    expect(bar.attributes('style')).toContain('width: 33%')
   })
 })
