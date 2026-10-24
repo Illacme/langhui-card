@@ -154,6 +154,12 @@ const ElTooltip = defineComponent({
   template: `<span class="el-tooltip"><slot /></span>`,
 })
 
+// 图标容器桩（折叠区箭头用 <el-icon>），透传默认槽
+const ElIcon = defineComponent({
+  name: 'ElIcon',
+  template: `<span class="el-icon"><slot /></span>`,
+})
+
 const mountOpts = {
   global: {
     stubs: {
@@ -165,6 +171,7 @@ const mountOpts = {
       'el-pagination': ElPagination,
       'el-date-picker': ElDatePicker,
       'el-tooltip': ElTooltip,
+      'el-icon': ElIcon,
       StatTrend: StatTrendStub,
       StatDetail: StatDetailStub,
     },
@@ -504,5 +511,31 @@ describe('Stats', () => {
 
     expect(w.text()).toContain('范围内暂无案例浏览')
     expect(w.text()).toContain('范围内暂无服务浏览')
+  })
+
+  it('内容意向折叠区默认收起，点标题展开（方案A 同页分区）', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+    // 默认收起：v-show 把 fold-body 设为 display:none
+    expect((w.find('.fold-intent .fold-body').attributes('style') || '')).toContain('display: none')
+    // 点分区标题展开
+    await w.find('.fold-intent .fold-head').trigger('click')
+    await nextTick()
+    expect((w.find('.fold-intent .fold-body').attributes('style') || '')).not.toContain('display: none')
+    // 展开后五卡与 TOP 榜仍在 DOM（数据渲染不依赖折叠态）
+    expect(w.find('.intent-block').exists()).toBe(true)
+    expect(tablesOf(w).top).toHaveLength(2)
+    expect(w.find('.fold-intent').classes()).toContain('open')
+  })
+
+  it('按员工折叠区默认收起，展开后含员工表', async () => {
+    const w = mount(Stats, mountOpts)
+    await flushLoad(w)
+    expect((w.find('.fold-staff .fold-body').attributes('style') || '')).toContain('display: none')
+    await w.find('.fold-staff .fold-head').trigger('click')
+    await nextTick()
+    expect((w.find('.fold-staff .fold-body').attributes('style') || '')).not.toContain('display: none')
+    expect(tablesOf(w).staff.exists()).toBe(true)
+    expect(w.find('.fold-staff').classes()).toContain('open')
   })
 })

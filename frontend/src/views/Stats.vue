@@ -47,108 +47,126 @@
         </div>
       </div>
 
-      <!-- 内容意向五卡：案例/服务/视频/转发/海报（事件与 targetId 口径见
-           backend/internal/handler/stat.go 文件头——与转化三卡分工明确） -->
-      <div class="intent-block">
-        <div class="intent-title">内容意向<span class="intent-sub">访客对什么内容感兴趣</span></div>
-        <div class="stat-cards intent-cards">
-          <div class="stat-card">
-            <div class="stat-label">案例浏览</div>
-            <div class="stat-value">{{ summary.projectView }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">服务浏览</div>
-            <div class="stat-value">{{ summary.serviceView }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">视频播放</div>
-            <div class="stat-value">{{ summary.videoPlay }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">转发</div>
-            <div class="stat-value">{{ summary.share }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">海报保存</div>
-            <div class="stat-value">{{ summary.posterSave }}</div>
-          </div>
-        </div>
-      </div>
       <p class="range-tip">统计范围：{{ rangeLabel }}（日期按浏览器本地时区与后端 TZ 一致计算）</p>
 
-      <!-- 按天趋势：只含所选范围内有事件的日期；点某一天可下钻当天明细 -->
+      <!-- 按天趋势：只含所选范围内有事件的日期；点某一天可下钻当天明细（常驻首屏，运营每天看健康度） -->
       <StatTrend :points="trend" @pick="onTrendPick" />
 
-      <!-- 内容意向 TOP 榜：按 target_id 聚合（口径见 stat.go statTopTargets）。
-           点某行直接下钻该对象的明细——「哪个案例热」到这里就有答案。
-           对象被删除后行仍在（计数不减），避免「汇总 3 条、榜单加起来 2 条」。 -->
-      <div class="top-boards">
-        <div class="top-board">
-          <div class="top-title">TOP 案例浏览<span class="top-sub">点行下钻明细</span></div>
-          <el-table
-            :data="topProjects"
-            class="top-table"
-            border
-            @row-click="(row: any) => onTopRowClick('project_view', row)"
-          >
-            <el-table-column type="index" label="排名" width="60" align="center" />
-            <el-table-column prop="name" label="案例" min-width="140" show-overflow-tooltip />
-            <el-table-column prop="count" label="次数" width="80" align="right" />
-          </el-table>
-          <p v-if="!loading && !topProjects.length" class="top-empty">范围内暂无案例浏览</p>
+      <!-- 折叠区1：内容意向（五卡 + TOP 双榜），默认收起，点标题展开（方案A 同页分区） -->
+      <section class="fold fold-intent" :class="{ open: intentOpen }">
+        <div class="fold-head" @click="intentOpen = !intentOpen">
+          <span class="fold-title">内容意向<span class="fold-sub">访客对什么内容感兴趣</span></span>
+          <el-icon class="fold-arrow"><ArrowDown /></el-icon>
         </div>
-        <div class="top-board">
-          <div class="top-title">TOP 服务浏览<span class="top-sub">点行下钻明细</span></div>
-          <el-table
-            :data="topServices"
-            class="top-table"
-            border
-            @row-click="(row: any) => onTopRowClick('service_view', row)"
-          >
-            <el-table-column type="index" label="排名" width="60" align="center" />
-            <el-table-column prop="name" label="服务" min-width="140" show-overflow-tooltip />
-            <el-table-column prop="count" label="次数" width="80" align="right" />
-          </el-table>
-          <p v-if="!loading && !topServices.length" class="top-empty">范围内暂无服务浏览</p>
+        <div v-show="intentOpen" class="fold-body">
+          <!-- 内容意向五卡：案例/服务/视频/转发/海报（事件与 targetId 口径见
+               backend/internal/handler/stat.go 文件头——与转化三卡分工明确） -->
+          <div class="intent-block">
+            <div class="intent-title">内容意向<span class="intent-sub">访客对什么内容感兴趣</span></div>
+            <div class="stat-cards intent-cards">
+              <div class="stat-card">
+                <div class="stat-label">案例浏览</div>
+                <div class="stat-value">{{ summary.projectView }}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">服务浏览</div>
+                <div class="stat-value">{{ summary.serviceView }}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">视频播放</div>
+                <div class="stat-value">{{ summary.videoPlay }}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">转发</div>
+                <div class="stat-value">{{ summary.share }}</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">海报保存</div>
+                <div class="stat-value">{{ summary.posterSave }}</div>
+              </div>
+            </div>
+          </div>
+          <!-- 内容意向 TOP 榜：按 target_id 聚合（口径见 stat.go statTopTargets）。
+               点某行直接下钻该对象的明细——「哪个案例热」到这里就有答案。
+               对象被删除后行仍在（计数不减），避免「汇总 3 条、榜单加起来 2 条」。 -->
+          <div class="top-boards">
+            <div class="top-board">
+              <div class="top-title">TOP 案例浏览<span class="top-sub">点行下钻明细</span></div>
+              <el-table
+                :data="topProjects"
+                class="top-table"
+                border
+                @row-click="(row: any) => onTopRowClick('project_view', row)"
+              >
+                <el-table-column type="index" label="排名" width="60" align="center" />
+                <el-table-column prop="name" label="案例" min-width="140" show-overflow-tooltip />
+                <el-table-column prop="count" label="次数" width="80" align="right" />
+              </el-table>
+              <p v-if="!loading && !topProjects.length" class="top-empty">范围内暂无案例浏览</p>
+            </div>
+            <div class="top-board">
+              <div class="top-title">TOP 服务浏览<span class="top-sub">点行下钻明细</span></div>
+              <el-table
+                :data="topServices"
+                class="top-table"
+                border
+                @row-click="(row: any) => onTopRowClick('service_view', row)"
+              >
+                <el-table-column type="index" label="排名" width="60" align="center" />
+                <el-table-column prop="name" label="服务" min-width="140" show-overflow-tooltip />
+                <el-table-column prop="count" label="次数" width="80" align="right" />
+              </el-table>
+              <p v-if="!loading && !topServices.length" class="top-empty">范围内暂无服务浏览</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <el-table :data="paged" v-loading="loading" border stripe>
-        <el-table-column prop="staffId" label="编号" width="80" align="center" />
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="title" label="职位" width="120" />
-        <el-table-column prop="visit" label="访问" width="110" align="right" sortable />
-        <el-table-column prop="call" label="拨号" width="110" align="right" sortable />
-        <el-table-column prop="save" label="保存" width="110" align="right" sortable />
-        <!-- 内容意向：五类意向事件的合计，悬浮看拆分。做成一列而不是五列——
-             五列会把表格推到 1200px+ 需要横向滚动，而「谁带来的意向多」用
-             一个数就够读；细分走行「明细」下钻（那里能按事件类型逐类筛） -->
-        <el-table-column prop="intent" label="内容意向" width="120" align="right" sortable>
-          <template #default="{ row }">
-            <el-tooltip placement="top" :content="intentTip(row)">
-              <span class="intent-cell">{{ row.intent }}</span>
-            </el-tooltip>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" width="80" align="center">
-          <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row.staffId)">明细</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <p class="tip">
-        口径：只记前端点击、不校验真实结果（需求 §6）。「内容意向」是案例浏览/服务浏览/视频播放/转发/海报保存五类事件的合计，悬浮可看拆分，行「明细」可逐类下钻。想看某员工的名片实际效果，在小程序首页输入其编号即可预览。
-      </p>
+      <!-- 折叠区2：按员工（表格 + 口径说明 + 分页），默认收起（方案A 同页分区） -->
+      <section class="fold fold-staff" :class="{ open: staffOpen }">
+        <div class="fold-head" @click="staffOpen = !staffOpen">
+          <span class="fold-title">按员工<span class="fold-sub">谁带来的访问与意向多</span></span>
+          <el-icon class="fold-arrow"><ArrowDown /></el-icon>
+        </div>
+        <div v-show="staffOpen" class="fold-body">
+          <el-table :data="paged" v-loading="loading" border stripe>
+            <el-table-column prop="staffId" label="编号" width="80" align="center" />
+            <el-table-column prop="name" label="姓名" width="120" />
+            <el-table-column prop="title" label="职位" width="120" />
+            <el-table-column prop="visit" label="访问" width="110" align="right" sortable />
+            <el-table-column prop="call" label="拨号" width="110" align="right" sortable />
+            <el-table-column prop="save" label="保存" width="110" align="right" sortable />
+            <!-- 内容意向：五类意向事件的合计，悬浮看拆分。做成一列而不是五列——
+                 五列会把表格推到 1200px+ 需要横向滚动，而「谁带来的意向多」用
+                 一个数就够读；细分走行「明细」下钻（那里能按事件类型逐类筛） -->
+            <el-table-column prop="intent" label="内容意向" width="120" align="right" sortable>
+              <template #default="{ row }">
+                <el-tooltip placement="top" :content="intentTip(row)">
+                  <span class="intent-cell">{{ row.intent }}</span>
+                </el-tooltip>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="80" align="center">
+              <template #default="{ row }">
+                <el-button link type="primary" @click="openDetail(row.staffId)">明细</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <p class="tip">
+            口径：只记前端点击、不校验真实结果（需求 §6）。「内容意向」是案例浏览/服务浏览/视频播放/转发/海报保存五类事件的合计，悬浮可看拆分，行「明细」可逐类下钻。想看某员工的名片实际效果，在小程序首页输入其编号即可预览。
+          </p>
 
-      <el-pagination
-        class="table-pager"
-        v-model:current-page="currentPage"
-        v-model:page-size="size"
-        :total="total"
-        :page-sizes="[10, 20, 50]"
-        layout="total, sizes, prev, pager, next"
-        background
-      />
+          <el-pagination
+            class="table-pager"
+            v-model:current-page="currentPage"
+            v-model:page-size="size"
+            :total="total"
+            :page-sizes="[10, 20, 50]"
+            layout="total, sizes, prev, pager, next"
+            background
+          />
+        </div>
+      </section>
     </el-card>
 
     <!-- 明细抽屉：员工行「明细」/「数据明细」按钮/趋势图点某天/TOP 榜行点击四个入口
@@ -167,7 +185,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { Download, Refresh, Search, Tickets } from '@element-plus/icons-vue'
+import { Download, Refresh, Search, Tickets, ArrowDown } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { adminStats, exportStatsCsv, type StatRange, type StatSummary, type StatTopItem } from '@/api/stats'
 import StatTrend from '@/components/StatTrend.vue'
@@ -181,6 +199,10 @@ const { keyword, currentPage, size, total, paged } = useTable(
     (r.name || '').toLowerCase().includes(kw) || (r.title || '').toLowerCase().includes(kw)
 )
 const loading = ref(false)
+// 方案A 同页分区折叠：内容意向（五卡+TOP榜）与按员工表默认收起，点分区标题展开。
+// 常驻首屏只留工具条+转化三卡+趋势图，保住转化vs意向的同屏对比与下钻闭环，只给首屏减负。
+const intentOpen = ref(false)
+const staffOpen = ref(false)
 // 八项汇总：visit/call/save 转化 + projectView/serviceView/videoPlay/share/posterSave 意向。
 // 初始值给全八项——缺项的卡片会渲染出「undefined」（后端未跑迁移 0021 时）。
 const summary = ref<StatSummary>({
@@ -425,6 +447,48 @@ onMounted(load)
   margin: 12px 0 0;
   color: #909399;
   font-size: 12px;
+}
+/* 分区折叠（方案A 同页分区）：常驻区之外的「内容意向」「按员工」默认收起，点标题展开。
+   折叠区本身在移动端即承担手风琴角色，配合下方媒体查询的堆叠即可，无需额外机制。 */
+.fold {
+  margin-bottom: 16px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+.fold-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: #fafcff;
+}
+.fold-head:hover {
+  background: #f2f6fc;
+}
+.fold-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+.fold-sub {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #909399;
+}
+.fold-arrow {
+  color: #909399;
+  transition: transform 0.2s ease;
+}
+.fold.open .fold-arrow {
+  transform: rotate(180deg);
+}
+.fold-body {
+  padding: 16px;
 }
 /* 手机端：三张汇总卡由横排改纵向堆叠，避免窄屏被压扁 */
 @media (max-width: 767px) {
