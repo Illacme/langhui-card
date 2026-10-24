@@ -31,6 +31,7 @@ import (
 	"weichuan/internal/middleware"
 	"weichuan/internal/model"
 	"weichuan/internal/setting"
+	"weichuan/internal/setup"
 	"weichuan/internal/storage"
 
 	"github.com/glebarez/sqlite"
@@ -65,6 +66,12 @@ func main() {
 	dbPath := tmpDB.Name()
 	tmpDB.Close()
 	log.Printf("dev db: %s", dbPath)
+	// 如实回写 DB_DSN：本进程是拿 dbPath 直连 gorm 的，**不经过 DB_DSN 配置**，
+	// 但 /api/setup/status（与生产同一套 StatusPayload）只认 DB_DSN——不回写就会
+	// 报 configured=false，前端 main.ts 据此去挂安装引导页而不是后台 App，
+	// 本地联调直接废掉（「接口查不到 → 按已配置」的兜底反而比「查到却说没配」安全）。
+	// 缺的从来是「DB_DSN 这个环境变量」而不是数据库，故这里补上真实值。
+	os.Setenv("DB_DSN", dbPath)
 
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
@@ -106,6 +113,9 @@ func main() {
 	cfg.StorageDriver = "local"
 	cfg.StoragePublic = true
 	cfg.JWTKey = "dev-jwt-key"
+	// 与上面的 os.Setenv 成对：让 cfg 里的 DSN 也是真实值（后台「系统设置」展示、
+	// 以及任何直接读 cfg.DBDSN 的地方都不会看到一个空串——那是「没连库」的假象）。
+	cfg.DBDSN = dbPath
 	log.Printf("dev server listening on :%s (storage=local, 上传返回相对路径 /uploads/<name>，由各端按源拼绝对)", port)
 	handler.SeedAdmin(db, cfg)
 
@@ -150,6 +160,14 @@ func main() {
 	handler.RegisterAssets(r, db, up, refresher)  // 常用素材库（内嵌图标/封面/LOGO）
 	handler.RegisterWechat(r, cfg, up, refresher) // 小程序码
 	handler.RegisterSettings(r, db, cfg)          // 系统设置：GET/PUT /api/admin/settings + GET /api/public/settings
+	// 安装状态查询与 /setup 别名：必须与生产（cmd/server）一致。
+	// 缺了前者会让前端启动探针 GET /api/setup/status 每次都吃 404——
+	// 功能上无碍（前端把查不到按「已配置」处理，见 api/setup.ts 的注释），
+	// 但既刷 [ACCESS] 404 噪声，也违背了本文件「复用与生产完全一致的路由装配，
+	// 保证联调即验证生产契约」的承诺：联调少验证两个端点，生产才暴露差异。
+	// devserver 一定有 DSN，故这里恒返回 configured=true，不会误触发安装向导。
+	setup.RegisterStatus(r)
+	setup.RegisterSetupAlias(r)
 
 	log.Printf("dev server listening on :%s (storage=local, db=sqlite)", port)
 	log.Printf("演示账号：平台超管 %s/%s；员工手机 13832603521 / 密码 weichuan123（高立新，业务经理）", cfg.AdminUser, cfg.AdminPass)
