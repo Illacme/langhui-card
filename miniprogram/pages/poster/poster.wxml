@@ -1,6 +1,19 @@
 <view class="poster-page">
-  <canvas type="2d" id="poster" class="poster-canvas"></canvas>
+  <!-- canvas 常驻不销毁：加载/失败态用覆盖层（.poster-mask）盖在同一块舞台上。
+       若改用 wx:if 把 canvas 摘掉，重试后节点重建，createSelectorQuery 可能
+       取不到刚渲染的节点 → draw() 静默画不出来，页面永远停在「生成中」。 -->
+  <view class="poster-stage">
+    <canvas type="2d" id="poster" class="poster-canvas"></canvas>
+    <view class="poster-mask" wx:if="{{loading}}">
+      <view class="loading">海报生成中…</view>
+    </view>
+    <view class="poster-mask" wx:if="{{error}}">
+      <view class="error-text">{{errorText}}</view>
+      <button class="retry-btn" bindtap="retry">重新生成</button>
+    </view>
+  </view>
   <view class="actions">
     <button class="save-btn" bindtap="save">保存到相册</button>
+    <button class="share-btn" bindtap="share">发送给好友</button>
   </view>
 </view>

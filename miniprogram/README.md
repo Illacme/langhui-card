@@ -24,6 +24,7 @@ miniprogram/
 │   ├── project/list/   # 项目列表（按分类）
 │   ├── project/detail/ # 项目详情（富文本+视频号拆分+相册）
 │   ├── service/detail/ # 服务详情（富文本+视频号拆分）
+│   ├── poster/         # 分享海报（canvas 合成 + 发送给好友 / 保存到相册）
 │   └── employee/       # 员工登录 login + 名片修改 edit（提交审核）
 └── tests/              # 纯逻辑单元测试（richtext 拆分 / request 刷新重试）
 ```
@@ -38,7 +39,7 @@ miniprogram/
 | employee/login → edit | POST /api/employee/login, GET /api/employee/me, PUT /api/employee/me, POST /api/employee/upload(头像) |
 | action-bar | wx.makePhoneCall + POST /api/stat/track(call/save) |
 | company-video | POST /api/stat/track(video_play，组件级去重) |
-| poster | GET /api/card, GET /api/wechat/wxacode?staffId= + POST /api/stat/track(poster_save，保存成功后) |
+| poster | GET /api/card, GET /api/wechat/wxacode?staffId=&from=poster + POST /api/stat/track(share：发送给好友 / 右上角转发；poster_save：保存成功后) |
 
 ## 埋点（utils/track.ts）
 - 统一入口 `track(event, staffId, targetId = 0, source = '')`：staffId ≤ 0 或事件不在白名单里**就地丢弃**（不发请求），
@@ -52,7 +53,7 @@ miniprogram/
   | call / save | 底部操作栏点击 | 0 |
   | project_view / service_view | 案例 / 服务详情页加载成功 | 对象 ID（后端强制校验存在 + 同租户） |
   | video_play | company-video 的 `<video>` bindplay | 0 |
-  | share | 各页 onShareAppMessage | 0（名片）或对象 ID |
+  | share | 各页 onShareAppMessage；海报页「发送给好友」 | 0（名片）或对象 ID |
   | poster_save | 海报保存成功回调 | 0 |
 
 - targetId 为 0 时**不传该字段**，保持 visit/call/save 的老载荷形状。
@@ -89,6 +90,37 @@ miniprogram/
 - 后端 `GET /api/wechat/wxacode?staffId=` 调用微信 `getwxacodeunlimit` 生成小程序码（scene=`staffId=12`），按员工磁盘缓存到 `uploads/wxacode/<id>.jpg` 并返回可访问 URL（复用 `/uploads` 静态托管），避免反复消耗微信配额；access_token 在服务端内存缓存并在失效时自动刷新重试。
 - 小程序端 `pages/poster/poster` 用 canvas 2d 把「头像 / 姓名 / 职位 / 公司 / 地址 / 电话 / 小程序码」合成为海报图，`wx.canvasToTempFilePath` 导出后 `wx.saveImageToPhotosAlbum` 保存到相册。
 - 首页「生成分享海报」与「我的」页「生成海报」均跳转到 poster 页（携带 staffId）。
+
+### 海报的分享闭环（裂变主路径）
+海报是「生成 → 分享 → 好友看海报 → 扫海报码进来记为 `poster` 来源」这一串的载体，
+**只做「保存到相册」等于把闭环断在最关键的一步**（发出去全靠用户自己想起来去相册里找），
+故海报页有两个分享出口：
+
+- **「发送给好友」按钮**：`wx.showShareImageMenu({ path })` 直接把画好的图发给好友 / 群
+  （基础库 **2.14.3** 起支持，官方文档）。先用 `wx.canIUse('showShareImageMenu')` 探测，
+  低版本**降级提示「先保存到相册再从相册发」**——不探测直接调用会抛 unknown api，
+  表现为点了按钮毫无反应（用户只会当成 bug）。
+  分享的图片消息默认带小程序入口（`needShowEntrance`，3.8.2+ 默认 true），
+  好友点图片即可进海报页，闭环下一段自然续上。
+- **右上角「转发」**（`onShareAppMessage`）：转发的是**海报页本身**（`?staffId=`），
+  好友打开即看到同一张海报，可继续保存或转发。
+
+两条出口都在发起时计一次 `share`（targetId=0，名片级，与首页转发同一把尺子）。
+口径说明：微信对 `showShareImageMenu` 只回「接口调用成功」（弹窗打开即 success），
+**不告知用户是否真的发出去**，所以按「发起分享」计数，与 `onShareAppMessage` 一致，
+不追求确认送达；用户取消（fail）不计。
+
+### 加载 / 失败 / 重试
+海报是「取数据 → 画 canvas → 导出图片」三步串联，任一步挂了都必须落到失败态并给
+「重新生成」入口——否则用户只看到一块白板，既不知道在加载也不知道失败了，只能退出重进。
+要点：
+
+- `Promise.all` **必须 catch**（此前没有，断网时 reject 冒泡出 async 函数，页面永远空白）；
+- `draw()` 取不到 canvas 节点、以及 `canvasToTempFilePath` 导出失败，都同样进失败态，
+  不能静默 `return` / 空 `fail` 回调；
+- 覆盖层（`.poster-mask`）叠在 canvas 上而**不用 `wx:if` 销毁 canvas**：节点销毁重建后
+  `createSelectorQuery` 可能取不到刚渲染的节点，重试反而更画不出来；
+- 重试时先清空 `tempFilePath`，否则导出失败后按钮仍拿着上一版海报，用户拿到旧图且不报错。
 - 通过小程序码扫码进入时，`index.onLoad` 解析 `query.scene`（形如 `staffId=12`）定位到对应员工名片。
 - 后端需配置 `WX_APPID` / `WX_APPSECRET`（环境变量）；未配置时接口返回明确错误。
 
@@ -173,6 +205,8 @@ python3 miniprogram/tests/audit_class_collision.py
 - `tests/richtext.spec.ts`：富文本与视频号拆分——自闭合 `<wx-video ... />`、成对 `<wx-video ...></wx-video>`（闭合标签必须一并消费，不能漏进后续 html 片段）、属性顺序无关、无视频号时整体作为一段 html、含 `channel-id` 缺失时不误判等。
 - `tests/request.spec.ts`：`wx.request` 封装——自动注入 `Authorization: Bearer`、`code=0` 直接 resolve、`code=401` 先用 refresh 令牌静默换发并重试一次（成功则放行）、刷新失败清 token 并 reject、`code!=0` 业务错误直接 reject 等。采用「同步挂起 + `respond(i, v)` 显式应答」模式驱动 Promise 链，不依赖真实计时器。
 - `tests/tenant.spec.ts`：多租户解析——平台模式扫码 scene / 分享 query 绑定并粘滞、无来源缺省 0、非法值拦截、`resetCompanyBinding` 清绑定；企业独立版恒返回锁定值且拒绝一切外部绑定（scene / query / Storage 残留）。
+- `tests/poster.spec.ts`（19 例）：海报页——`staffId` / 扫码 **scene** 解析（含混参与无参归 0）、头像与小程序码转绝对 URL、**保存成功才计 `poster_save`**（失败不计）、**分享图片计 `share` + 低版本降级 + 取消不计**、**取数 / 取不到 canvas / 导出失败三态与重试（重试先清旧图）**。选它是因为 scene 解析与分享 API 差异只在真机上暴露，本地开发永远复现不了。
+- `tests/track.spec.ts`：埋点入口的 targetId / staffId / 白名单 / 失败静默，以及 `source` 场景推导（含 `from=poster` 的 URL 解码）。
 
 ```bash
 cd frontend && npm test        # 前端 + 小程序 spec 一并运行

@@ -214,9 +214,12 @@ npm run dev        # 启动开发服务器（默认 http://localhost:5173）
 
 - `miniprogram/tests/richtext.spec.ts`：`<wx-video>` 富文本拆分（自闭合 / 成对 / 属性顺序无关）、无视频号时整体走 `rich-text` 等。
 - `miniprogram/tests/request.spec.ts`：`wx.request` 封装的 token 注入、`code=401` 静默 refresh 重试一次、失败清 token 等。
-- `miniprogram/tests/poster.spec.ts`（6 例）：分享海报页。桩掉全局 `Page` 捕获页面选项，再手工驱动 `onLoad`，
+- `miniprogram/tests/poster.spec.ts`（19 例）：分享海报页。桩掉全局 `Page` 捕获页面选项，再手工驱动 `onLoad`，
   覆盖「带 staffId 进入」「**扫码 scene 解析**（含混参 / 无参归 0）」「头像与小程序码转绝对 URL」
-  「小程序码接口无 data 时不崩」。选它是因为 scene 解析只在真机扫码才走得到，本地开发永远复现不了。
+  「小程序码接口无 data 时不崩」「**保存成功才计 poster_save（失败 / 未生成不计）**」
+  「**分享图片计 share + 低版本降级 + 用户取消不计**」
+  「**取数失败 / 取不到 canvas 节点 / 导出失败三态与重试（重试先清旧图）**」。
+  选它是因为 scene 解析只在真机扫码才走得到，本地开发永远复现不了。
 
 其余 11 个 spec（共 151 例）用同一套手法，公共桩在 `miniprogram/tests/helpers/harness.ts`
 （`installPageCapture` / `makeInstance` / `installWx` / `installApp` / `flush`）：
